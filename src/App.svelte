@@ -1,6 +1,7 @@
 <script>
     import { initializeApp } from "firebase/app";
     import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+    import PubListings from "./components/PubListings/PubListings.svelte";
 
     const firebaseApp = initializeApp({
         apiKey: "AIzaSyD7IVKm4pg_IG3FIYjzqrjVVet7KocGKcM",
@@ -12,21 +13,17 @@
         measurementId: "G-HC10EHXZBN"
     });
 
-    const db = getFirestore();    
+    const db = getFirestore();
+    let fullList = new Array;
 
-    let fullList = [];
-
-    async function readCollection() {
+    const readCollection = async() => {
         const allPubs = [];
         const querySnapshot = await getDocs(collection(db, "Pubs"));
         querySnapshot.forEach((doc) => {
-            console.log(doc.data());
             allPubs.push(doc.data());
-            console.log(allPubs)
         });
 
         fullList = allPubs;
-        console.log(fullList);
     }
 
     const push = async() => {
@@ -44,24 +41,19 @@
     }
 
     readCollection();
-
 </script>
 
 <main>
-	<div class="flex-row">
-        <div class="flex-column">
-            <h1>Pubs</h1>
-            <ul>
-                {#each fullList as item }
-                    <li>
-                        <b>{item.name}</b> - group size = {item.max_group}
-                    </li>
-                {/each}
-            </ul>
-        </div>
+	<div class="container mx-auto">
+        <h1 class="text-2xl">Pubs</h1>
+        {#key fullList}
+            <PubListings data={fullList} />
+        {/key}
     </div>
 </main>
 
-<style>
-	
+<style global type="scss">
+    li {
+        color: red;
+    }
 </style>

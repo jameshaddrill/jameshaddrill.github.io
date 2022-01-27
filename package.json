@@ -3,22 +3,34 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "watch:tailwind": "postcss public/tailwind.css -o public/index.css -w",
+    "build:tailwind": "cross-env NODE_ENV=production postcss public/tailwind.css -o public/index.css",
+    "build": "npm run build:tailwind && rollup -c",
+    "dev": "concurrently \"rollup -c -w\" \"npm run watch:tailwind\"",
     "start": "sirv public --no-clear"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
+    "autoprefixer": "^9.8.8",
+    "concurrently": "^7.0.0",
+    "cross-env": "^7.0.3",
     "firebase": "^9.6.4",
+    "postcss-cli": "^7.1.2",
     "rollup": "^2.66.1",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0"
+    "sass": "^1.49.0",
+    "svelte": "^3.0.0",
+    "svelte-preprocess": "^4.10.2",
+    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17"
   },
   "dependencies": {
-    "sirv-cli": "^2.0.0"
+    "@fortawesome/free-regular-svg-icons": "^5.15.4",
+    "postcss": "7",
+    "sirv-cli": "^2.0.0",
+    "svelte-awesome": "^2.4.4"
   }
 }
