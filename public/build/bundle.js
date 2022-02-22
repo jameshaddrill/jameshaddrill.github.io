@@ -13401,7 +13401,7 @@ var app = (function () {
     			span = element("span");
     			t = text(t_value);
     			attr_dev(span, "class", "md:hidden");
-    			add_location(span, file$3, 21, 8, 580);
+    			add_location(span, file$3, 21, 8, 590);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13427,7 +13427,7 @@ var app = (function () {
     }
 
     // (38:4) {:else}
-    function create_else_block$1(ctx) {
+    function create_else_block$2(ctx) {
     	let t_value = /*pubData*/ ctx[0][/*id*/ ctx[3]] + "";
     	let t;
 
@@ -13448,7 +13448,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$1.name,
+    		id: create_else_block$2.name,
     		type: "else",
     		source: "(38:4) {:else}",
     		ctx
@@ -13514,7 +13514,7 @@ var app = (function () {
     }
 
     // (30:36) 
-    function create_if_block_1$1(ctx) {
+    function create_if_block_1$2(ctx) {
     	let each_1_anchor;
 
     	let each_value_2 = {
@@ -13579,7 +13579,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$1.name,
+    		id: create_if_block_1$2.name,
     		type: "if",
     		source: "(30:36) ",
     		ctx
@@ -13589,7 +13589,7 @@ var app = (function () {
     }
 
     // (26:4) {#if id === 'drink_quality'}
-    function create_if_block$1(ctx) {
+    function create_if_block$2(ctx) {
     	let each_1_anchor;
 
     	let each_value_1 = {
@@ -13654,7 +13654,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$2.name,
     		type: "if",
     		source: "(26:4) {#if id === 'drink_quality'}",
     		ctx
@@ -13726,11 +13726,11 @@ var app = (function () {
     	let if_block0 = /*id*/ ctx[3] !== 'name' && create_if_block_4(ctx);
 
     	function select_block_type(ctx, dirty) {
-    		if (/*id*/ ctx[3] === 'drink_quality') return create_if_block$1;
-    		if (/*id*/ ctx[3] === 'drink_choice') return create_if_block_1$1;
+    		if (/*id*/ ctx[3] === 'drink_quality') return create_if_block$2;
+    		if (/*id*/ ctx[3] === 'drink_choice') return create_if_block_1$2;
     		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === true) return create_if_block_2;
     		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === false) return create_if_block_3;
-    		return create_else_block$1;
+    		return create_else_block$2;
     	}
 
     	let current_block_type = select_block_type(ctx);
@@ -13744,7 +13744,7 @@ var app = (function () {
     			if_block1.c();
     			t1 = space();
     			attr_dev(span, "class", span_class_value = "" + (null_to_empty(/*labelClasses*/ ctx[2](/*id*/ ctx[3])) + " svelte-tc4qn1"));
-    			add_location(span, file$3, 19, 0, 512);
+    			add_location(span, file$3, 19, 0, 522);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13909,7 +13909,7 @@ var app = (function () {
     		if (id === 'name') {
     			extraClasses = "border-b-2 w-full text-xl";
     		} else {
-    			extraClasses = "w-1/2";
+    			extraClasses = "w-1/2 md:w-full";
     		}
 
     		return `${base} ${extraClasses}`;
@@ -13963,8 +13963,62 @@ var app = (function () {
 
     const file$2 = "src\\components\\Filters\\Filters.svelte";
 
-    function create_fragment$2(ctx) {
-    	let section;
+    // (31:8) {:else}
+    function create_else_block$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("+");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block$1.name,
+    		type: "else",
+    		source: "(31:8) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (29:8) {#if showFilters}
+    function create_if_block_1$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("-");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$1.name,
+    		type: "if",
+    		source: "(29:8) {#if showFilters}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (40:4) {#if showFilters}
+    function create_if_block$1(ctx) {
     	let div0;
     	let label0;
     	let t1;
@@ -13990,7 +14044,6 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			section = element("section");
     			div0 = element("div");
     			label0 = element("label");
     			label0.textContent = "Group size";
@@ -14021,60 +14074,56 @@ var app = (function () {
     			option5 = element("option");
     			option5.textContent = "No";
     			attr_dev(label0, "for", "max_group");
-    			add_location(label0, file$2, 27, 8, 735);
+    			add_location(label0, file$2, 41, 8, 1032);
     			attr_dev(input, "type", "number");
     			attr_dev(input, "id", "max_group");
-    			attr_dev(input, "class", "filters__input");
-    			add_location(input, file$2, 28, 8, 786);
-    			attr_dev(div0, "class", "filters__section mr-4");
-    			add_location(div0, file$2, 26, 4, 690);
+    			attr_dev(input, "class", "filters__input w-full md:w-auto");
+    			add_location(input, file$2, 42, 8, 1083);
+    			attr_dev(div0, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
+    			add_location(div0, file$2, 40, 4, 946);
     			attr_dev(label1, "for", "food");
-    			add_location(label1, file$2, 32, 8, 935);
+    			add_location(label1, file$2, 46, 8, 1291);
     			option0.__value = 'both';
     			option0.value = option0.__value;
-    			add_location(option0, file$2, 35, 12, 1030);
+    			add_location(option0, file$2, 49, 12, 1411);
     			option1.__value = true;
     			option1.value = option1.__value;
-    			add_location(option1, file$2, 36, 12, 1088);
+    			add_location(option1, file$2, 50, 12, 1469);
     			option2.__value = false;
     			option2.value = option2.__value;
-    			add_location(option2, file$2, 37, 12, 1137);
+    			add_location(option2, file$2, 51, 12, 1518);
     			attr_dev(select0, "name", "food");
-    			if (/*food*/ ctx[1] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[4].call(select0));
-    			add_location(select0, file$2, 34, 8, 978);
-    			attr_dev(div1, "class", "filters__section mr-4");
-    			add_location(div1, file$2, 31, 4, 890);
+    			attr_dev(select0, "class", "w-full md:w-auto");
+    			if (/*food*/ ctx[1] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[6].call(select0));
+    			add_location(select0, file$2, 48, 8, 1334);
+    			attr_dev(div1, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
+    			add_location(div1, file$2, 45, 4, 1204);
     			attr_dev(label2, "for", "sport");
-    			add_location(label2, file$2, 42, 8, 1256);
+    			add_location(label2, file$2, 56, 8, 1679);
     			option3.__value = 'both';
     			option3.value = option3.__value;
-    			add_location(option3, file$2, 45, 12, 1360);
+    			add_location(option3, file$2, 59, 12, 1809);
     			option4.__value = true;
     			option4.value = option4.__value;
-    			add_location(option4, file$2, 46, 12, 1418);
+    			add_location(option4, file$2, 60, 12, 1867);
     			option5.__value = false;
     			option5.value = option5.__value;
-    			add_location(option5, file$2, 47, 12, 1467);
+    			add_location(option5, file$2, 61, 12, 1916);
     			attr_dev(select1, "name", "food");
-    			if (/*sport*/ ctx[2] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[5].call(select1));
-    			add_location(select1, file$2, 44, 8, 1307);
-    			attr_dev(div2, "class", "filters__section mr-4");
-    			add_location(div2, file$2, 41, 4, 1211);
-    			attr_dev(section, "class", "filters flex justify-center hidden md:block");
-    			add_location(section, file$2, 20, 0, 433);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    			attr_dev(select1, "class", "w-full md:w-auto");
+    			if (/*sport*/ ctx[2] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[7].call(select1));
+    			add_location(select1, file$2, 58, 8, 1730);
+    			attr_dev(div2, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
+    			add_location(div2, file$2, 55, 4, 1592);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, section, anchor);
-    			append_dev(section, div0);
+    			insert_dev(target, div0, anchor);
     			append_dev(div0, label0);
     			append_dev(div0, t1);
     			append_dev(div0, input);
     			set_input_value(input, /*groupSize*/ ctx[0]);
-    			append_dev(section, t2);
-    			append_dev(section, div1);
+    			insert_dev(target, t2, anchor);
+    			insert_dev(target, div1, anchor);
     			append_dev(div1, label1);
     			append_dev(div1, t4);
     			append_dev(div1, select0);
@@ -14082,8 +14131,8 @@ var app = (function () {
     			append_dev(select0, option1);
     			append_dev(select0, option2);
     			select_option(select0, /*food*/ ctx[1]);
-    			append_dev(section, t8);
-    			append_dev(section, div2);
+    			insert_dev(target, t8, anchor);
+    			insert_dev(target, div2, anchor);
     			append_dev(div2, label2);
     			append_dev(div2, t10);
     			append_dev(div2, select1);
@@ -14094,15 +14143,15 @@ var app = (function () {
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(input, "input", /*input_input_handler*/ ctx[3]),
-    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[4]),
-    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[5])
+    					listen_dev(input, "input", /*input_input_handler*/ ctx[5]),
+    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[6]),
+    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[7])
     				];
 
     				mounted = true;
     			}
     		},
-    		p: function update(ctx, [dirty]) {
+    		p: function update(ctx, dirty) {
     			if (dirty & /*groupSize*/ 1 && to_number(input.value) !== /*groupSize*/ ctx[0]) {
     				set_input_value(input, /*groupSize*/ ctx[0]);
     			}
@@ -14115,12 +14164,106 @@ var app = (function () {
     				select_option(select1, /*sport*/ ctx[2]);
     			}
     		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div0);
+    			if (detaching) detach_dev(t2);
+    			if (detaching) detach_dev(div1);
+    			if (detaching) detach_dev(t8);
+    			if (detaching) detach_dev(div2);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$1.name,
+    		type: "if",
+    		source: "(40:4) {#if showFilters}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$2(ctx) {
+    	let section;
+    	let h2;
+    	let t0;
+    	let t1;
+    	let mounted;
+    	let dispose;
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*showFilters*/ ctx[3]) return create_if_block_1$1;
+    		return create_else_block$1;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block0 = current_block_type(ctx);
+    	let if_block1 = /*showFilters*/ ctx[3] && create_if_block$1(ctx);
+
+    	const block = {
+    		c: function create() {
+    			section = element("section");
+    			h2 = element("h2");
+    			t0 = text("Filters \r\n\r\n        ");
+    			if_block0.c();
+    			t1 = space();
+    			if (if_block1) if_block1.c();
+    			attr_dev(h2, "class", "text-2xl md:hidden text-center mb-4 border-y-2");
+    			add_location(h2, file$2, 22, 4, 499);
+    			attr_dev(section, "class", "filters flex flex-col md:flex-row justify-center");
+    			add_location(section, file$2, 21, 0, 427);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, section, anchor);
+    			append_dev(section, h2);
+    			append_dev(h2, t0);
+    			if_block0.m(h2, null);
+    			append_dev(section, t1);
+    			if (if_block1) if_block1.m(section, null);
+
+    			if (!mounted) {
+    				dispose = listen_dev(h2, "click", /*toggleFilters*/ ctx[4], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (current_block_type !== (current_block_type = select_block_type(ctx))) {
+    				if_block0.d(1);
+    				if_block0 = current_block_type(ctx);
+
+    				if (if_block0) {
+    					if_block0.c();
+    					if_block0.m(h2, null);
+    				}
+    			}
+
+    			if (/*showFilters*/ ctx[3]) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block$1(ctx);
+    					if_block1.c();
+    					if_block1.m(section, null);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+    		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(section);
+    			if_block0.d();
+    			if (if_block1) if_block1.d();
     			mounted = false;
-    			run_all(dispose);
+    			dispose();
     		}
     	};
 
@@ -14141,19 +14284,18 @@ var app = (function () {
     	let { groupSize = 5 } = $$props;
     	let { food = 'both' } = $$props;
     	let { sport = 'both' } = $$props;
+    	let showFilters = true;
 
-    	const toggleSport = () => {
-    		let status = '';
+    	const toggleFilters = () => {
+    		$$invalidate(3, showFilters = !showFilters);
+    	};
 
-    		if (sport === 'both') {
-    			status = true;
-    		} else if (sport === true) {
-    			status = false;
+    	const filterClasses = () => {
+    		if (!showFilters) {
+    			return 'hidden';
     		} else {
-    			status = 'both';
+    			return 'block';
     		}
-
-    		$$invalidate(2, sport = status);
     	};
 
     	const writable_props = ['groupSize', 'food', 'sport'];
@@ -14183,12 +14325,20 @@ var app = (function () {
     		if ('sport' in $$props) $$invalidate(2, sport = $$props.sport);
     	};
 
-    	$$self.$capture_state = () => ({ groupSize, food, sport, toggleSport });
+    	$$self.$capture_state = () => ({
+    		groupSize,
+    		food,
+    		sport,
+    		showFilters,
+    		toggleFilters,
+    		filterClasses
+    	});
 
     	$$self.$inject_state = $$props => {
     		if ('groupSize' in $$props) $$invalidate(0, groupSize = $$props.groupSize);
     		if ('food' in $$props) $$invalidate(1, food = $$props.food);
     		if ('sport' in $$props) $$invalidate(2, sport = $$props.sport);
+    		if ('showFilters' in $$props) $$invalidate(3, showFilters = $$props.showFilters);
     	};
 
     	if ($$props && "$$inject" in $$props) {
@@ -14199,6 +14349,8 @@ var app = (function () {
     		groupSize,
     		food,
     		sport,
+    		showFilters,
+    		toggleFilters,
     		input_input_handler,
     		select0_change_handler,
     		select1_change_handler
@@ -14952,7 +15104,7 @@ var app = (function () {
     			h1.textContent = "Edinburgh Pub Finder";
     			t1 = space();
     			key_block.c();
-    			attr_dev(h1, "class", "text-center text-5xl p-6");
+    			attr_dev(h1, "class", "text-center text-4xl md:text-5xl p-6");
     			add_location(h1, file, 48, 8, 1506);
     			attr_dev(div, "class", "container mx-auto");
     			add_location(div, file, 47, 1, 1465);

@@ -46,7 +46,7 @@
 
 <main>
 	<div class="container mx-auto">
-        <h1 class="text-center text-5xl p-6">Edinburgh Pub Finder</h1>
+        <h1 class="text-center text-4xl md:text-5xl p-6">Edinburgh Pub Finder</h1>
 
         {#key fullList}
             <PubListings data={fullList} />

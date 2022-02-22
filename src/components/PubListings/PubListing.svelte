@@ -8,7 +8,7 @@
         if (id === 'name') {
             extraClasses = "border-b-2 w-full text-xl"
         } else {
-            extraClasses = "w-1/2"
+            extraClasses = "w-1/2 md:w-full"
         }
 
         return `${base} ${extraClasses}`;
