@@ -1,11 +1,8 @@
 <script>
-    export let name = '';
+    // export let name = '';
     export let groupSize = 5;
     export let food = 'both';
     export let sport = 'both';
-
-    import Icon from 'svelte-awesome';
-    import { faFutbol } from '@fortawesome/free-regular-svg-icons';
     
     const toggleSport = () => {
         let status = '';
@@ -21,12 +18,11 @@
     }
 </script>
 
-<section class="filters flex justify-start">
-    {sport}
-    <div class="filters__section mr-4">
+<section class="filters flex justify-center">
+    <!-- <div class="filters__section mr-4">
         <label for="name">Pub name</label>
         <input bind:value={name} type="text" id="name" class="filters__input" />
-    </div>
+    </div> -->
 
     <div class="filters__section mr-4">
         <label for="max_group">Group size</label>
@@ -34,67 +30,26 @@
     </div>
 
     <div class="filters__section mr-4">
-        <p>Food?</p>
+        <label for="food">Food?</label>
 
-        <label>
-            <input type="radio" bind:group={food} name="food" value={true} >
-            Yes
-        </label>
-        <label>
-            <input type="radio" bind:group={food} name="food" value={false} >
-            No
-        </label>
-        <label>
-            <input type="radio" bind:group={food} name="food" value={'both'} >
-            Don't care
-        </label>
+        <select name="food" bind:value={food}>
+            <option value="{'both'}">Don't care</option>
+            <option value="{true}">Yes</option>
+            <option value="{false}">No</option>
+        </select>
     </div>
 
     <div class="filters__section mr-4">
-        <div class="filters__icon" on:click="{toggleSport}">
-            <Icon data={faFutbol} scale="2" />
-        </div>
+        <label for="sport">Shows sport?</label>
 
-        <!-- <label>
-            <input type="radio" bind:group={sport} name="sport" value={true} >
-            Yes
-        </label>
-        <label>
-            <input type="radio" bind:group={sport} name="sport" value={false} >
-            No
-        </label>
-        <label>
-            <input type="radio" bind:group={sport} name="sport" value={'both'} >
-            Don't care
-        </label> -->
+        <select name="food" bind:value={sport}>
+            <option value="{'both'}">Don't care</option>
+            <option value="{true}">Yes</option>
+            <option value="{false}">No</option>
+        </select>
     </div>
 </section>
 
 <style type="scss">
-    .sr-only {
-        display: none;
-    }
 
-    .filters__icon {
-        opacity: 1;
-        position: relative;
-
-        &--off {
-           opacity: 0.2; 
-        }
-
-        &--both {
-            &::before {
-                content: '?';
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                font-size: 24px;
-                color: red;
-                left: 10px;
-                top: -2px;
-                font-weight: bold;
-            }
-        }
-    }
 </style>

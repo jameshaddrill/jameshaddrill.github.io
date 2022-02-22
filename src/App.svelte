@@ -2,6 +2,7 @@
     import { initializeApp } from "firebase/app";
     import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
     import PubListings from "./components/PubListings/PubListings.svelte";
+    import "./styles/main.scss";
 
     const firebaseApp = initializeApp({
         apiKey: "AIzaSyD7IVKm4pg_IG3FIYjzqrjVVet7KocGKcM",
@@ -45,15 +46,10 @@
 
 <main>
 	<div class="container mx-auto">
-        <h1 class="text-2xl">Pubs</h1>
+        <h1 class="text-center text-5xl p-6"> Edinburgh Pub Finder</h1>
+
         {#key fullList}
             <PubListings data={fullList} />
         {/key}
     </div>
 </main>
-
-<style global type="scss">
-    li {
-        color: red;
-    }
-</style>
