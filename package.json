@@ -7,7 +7,8 @@
     "build:tailwind": "cross-env NODE_ENV=production postcss public/tailwind.css -o public/index.css",
     "build": "npm run build:tailwind && rollup -c",
     "dev": "concurrently \"rollup -c -w\" \"npm run watch:tailwind\"",
-    "start": "sirv public --no-clear --port 5555"
+    "start": "sirv public --no-clear --port 5555",
+    "deploy": "npm run build && push-dir --dir=public --branch=gh-pages --cleanup"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
@@ -17,6 +18,7 @@
     "cross-env": "^7.0.3",
     "firebase": "^9.6.4",
     "postcss-cli": "^7.1.2",
+    "push-dir": "^0.4.1",
     "rollup": "^2.66.1",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
