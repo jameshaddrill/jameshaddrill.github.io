@@ -42,13 +42,6 @@
 {/each}
 
 <style type="scss">
-   .pub-listing {
-       background: #aaa;
-
-       &:nth-child(even) {
-           background: transparent;
-       }
-   }
 </style>
 
 

@@ -1,4 +1,5 @@
-.pub-listing.svelte-tc4qn1{background:#aaa}.pub-listing.svelte-tc4qn1:nth-child(even){background:transparent}5 {
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Serif:wght@500&display=swap");
+h1, h2, h3, h4, h5 {
   font-family: 'Roboto Serif', sans-serif;
   color: white; }
 
