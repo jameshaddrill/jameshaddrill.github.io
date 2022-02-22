@@ -546,6 +546,10 @@ video {
  * Ensure the default browser behavior of the `hidden` attribute.
  */
 
+[hidden] {
+  display: none;
+}
+
 *, ::before, ::after {
   --tw-border-opacity: 1;
   border-color: rgba(229, 231, 235, var(--tw-border-opacity));
@@ -590,6 +594,10 @@ video {
   margin-right: auto;
 }
 
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
 .mr-4 {
   margin-right: 1rem;
 }
@@ -602,8 +610,16 @@ video {
   display: table;
 }
 
-.grid {
-  display: grid;
+.hidden {
+  display: none;
+}
+
+.w-1\/2 {
+  width: 50%;
+}
+
+.w-full {
+  width: 100%;
 }
 
 @-webkit-keyframes spin {
@@ -672,16 +688,47 @@ video {
   }
 }
 
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.items-center {
+  align-items: center;
+}
+
 .justify-center {
   justify-content: center;
+}
+
+.border-b-2 {
+  border-bottom-width: 2px;
 }
 
 .p-6 {
   padding: 1.5rem;
 }
 
+.py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
 .text-center {
   text-align: center;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
 }
 
 .text-5xl {
@@ -719,6 +766,29 @@ video {
 }
 
 @media (min-width: 768px) {
+  .md\:block {
+    display: block;
+  }
+
+  .md\:grid {
+    display: grid;
+  }
+
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:flex-row {
+    flex-direction: row;
+  }
+
+  .md\:justify-start {
+    justify-content: flex-start;
+  }
+
+  .md\:border-b-2 {
+    border-bottom-width: 2px;
+  }
 }
 
 @media (min-width: 1024px) {

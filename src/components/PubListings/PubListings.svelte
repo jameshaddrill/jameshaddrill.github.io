@@ -19,14 +19,22 @@
 
     $: dataLoaded = () => {
         if (data.length > 0) {
-            headerCount = (Object.keys(data[0]).length) - 2;
+            headerCount = (Object.keys(data[0]).length) - 3;
             return true;
         };
     };
 
-    $: gridTemplate = `grid-template-columns: repeat(${headerCount}, 1fr);`;
+    $: gridTemplate = `grid-template-columns: repeat(${headerCount}, 1fr);`;        
     
-    const headings = ['name', 'max_group', 'food', 'sport', 'music', 'non_beer', 'drink_quality', 'drink_choice']
+    const categories = {
+        name: 'Name',
+        max_group: 'Max group size',
+        food: 'Food?',
+        sport: 'Sport?',
+        music: 'Music',
+        non_beer: 'Non-beer choice',
+        drink_choice: 'Drink variety',
+    }
 </script>
 
 <section class="pub-listings">
@@ -38,20 +46,16 @@
     />
 
     {#if filteredList.length > 0 && dataLoaded()}
-        <div class="grid table" style="{gridTemplate}">
-            <span class="table__header">Name</span>
-            <span class="table__header">Group size</span>
-            <span class="table__header">Food?</span>
-            <span class="table__header">Sports?</span>
-            <span class="table__header">Music?</span>
-            <span class="table__header">Non-beer choice</span>
-            <span class="table__header">Drink quality</span>
-            <span class="table__header">Drink choice</span>
+        <div class="flex flex-wrap md:grid mt-6" style="{gridTemplate}">
+            {#each Object.entries(categories) as [id, label]}
+                <span class="table__header text-lg hidden md:block">{label}</span>
+            {/each}
+           
             
             {#each filteredList as item }
                 <PubListing
                     pubData={item}
-                    headings={headings}
+                    headings={categories}
                 />
             {/each}
         </div>

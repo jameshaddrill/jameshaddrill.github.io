@@ -18,7 +18,7 @@
     }
 </script>
 
-<section class="filters flex justify-center">
+<section class="filters flex justify-center hidden md:block">
     <!-- <div class="filters__section mr-4">
         <label for="name">Pub name</label>
         <input bind:value={name} type="text" id="name" class="filters__input" />

@@ -1,5 +1,449 @@
-var app=function(){"use strict";function t(){}function e(t){return t()}function n(){return Object.create(null)}function s(t){t.forEach(e)}function i(t){return"function"==typeof t}function r(t,e){return t!=t?e==e:t!==e||t&&"object"==typeof t||"function"==typeof t}function o(t,e){t.appendChild(e)}function a(t,e,n){t.insertBefore(e,n||null)}function h(t){t.parentNode.removeChild(t)}function c(t,e){for(let n=0;n<t.length;n+=1)t[n]&&t[n].d(e)}function u(t){return document.createElement(t)}function l(t){return document.createTextNode(t)}function d(){return l(" ")}function f(t,e,n,s){return t.addEventListener(e,n,s),()=>t.removeEventListener(e,n,s)}function p(t,e,n){null==n?t.removeAttribute(e):t.getAttribute(e)!==n&&t.setAttribute(e,n)}function g(t){return""===t?null:+t}function m(t,e){t.value=null==e?"":e}function y(t,e){for(let n=0;n<t.options.length;n+=1){const s=t.options[n];if(s.__value===e)return void(s.selected=!0)}t.selectedIndex=-1}function v(t){const e=t.querySelector(":checked")||t.options[0];return e&&e.__value}let w;function E(t){w=t}const b=[],T=[],I=[],S=[],C=Promise.resolve();let A=!1;function _(t){I.push(t)}function N(t){S.push(t)}const D=new Set;let k=0;function R(){const t=w;do{for(;k<b.length;){const t=b[k];k++,E(t),L(t.$$)}for(E(null),b.length=0,k=0;T.length;)T.pop()();for(let t=0;t<I.length;t+=1){const e=I[t];D.has(e)||(D.add(e),e())}I.length=0}while(b.length);for(;S.length;)S.pop()();A=!1,D.clear(),E(t)}function L(t){if(null!==t.fragment){t.update(),s(t.before_update);const e=t.dirty;t.dirty=[-1],t.fragment&&t.fragment.p(t.ctx,e),t.after_update.forEach(_)}}const x=new Set;let O;function M(){O={r:0,c:[],p:O}}function P(){O.r||s(O.c),O=O.p}function V(t,e){t&&t.i&&(x.delete(t),t.i(e))}function F(t,e,n,s){if(t&&t.o){if(x.has(t))return;x.add(t),O.c.push((()=>{x.delete(t),s&&(n&&t.d(1),s())})),t.o(e)}}function U(t,e,n){const s=t.$$.props[e];void 0!==s&&(t.$$.bound[s]=n,n(t.$$.ctx[s]))}function $(t){t&&t.c()}function q(t,n,r,o){const{fragment:a,on_mount:h,on_destroy:c,after_update:u}=t.$$;a&&a.m(n,r),o||_((()=>{const n=h.map(e).filter(i);c?c.push(...n):s(n),t.$$.on_mount=[]})),u.forEach(_)}function B(t,e){const n=t.$$;null!==n.fragment&&(s(n.on_destroy),n.fragment&&n.fragment.d(e),n.on_destroy=n.fragment=null,n.ctx=[])}function j(t,e){-1===t.$$.dirty[0]&&(b.push(t),A||(A=!0,C.then(R)),t.$$.dirty.fill(0)),t.$$.dirty[e/31|0]|=1<<e%31}function H(e,i,r,o,a,c,u,l=[-1]){const d=w;E(e);const f=e.$$={fragment:null,ctx:null,props:c,update:t,not_equal:a,bound:n(),on_mount:[],on_destroy:[],on_disconnect:[],before_update:[],after_update:[],context:new Map(i.context||(d?d.$$.context:[])),callbacks:n(),dirty:l,skip_bound:!1,root:i.target||d.$$.root};u&&u(f.root);let p=!1;if(f.ctx=r?r(e,i.props||{},((t,n,...s)=>{const i=s.length?s[0]:n;return f.ctx&&a(f.ctx[t],f.ctx[t]=i)&&(!f.skip_bound&&f.bound[t]&&f.bound[t](i),p&&j(e,t)),n})):[],f.update(),p=!0,s(f.before_update),f.fragment=!!o&&o(f.ctx),i.target){if(i.hydrate){const t=function(t){return Array.from(t.childNodes)}(i.target);f.fragment&&f.fragment.l(t),t.forEach(h)}else f.fragment&&f.fragment.c();i.intro&&V(e.$$.fragment),q(e,i.target,i.anchor,i.customElement),R()}E(d)}class z{$destroy(){B(this,1),this.$destroy=t}$on(t,e){const n=this.$$.callbacks[t]||(this.$$.callbacks[t]=[]);return n.push(e),()=>{const t=n.indexOf(e);-1!==t&&n.splice(t,1)}}$set(t){var e;this.$$set&&(e=t,0!==Object.keys(e).length)&&(this.$$.skip_bound=!0,this.$$set(t),this.$$.skip_bound=!1)}}
-/**
+
+(function(l, r) { if (!l || l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (self.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(self.document);
+var app = (function () {
+    'use strict';
+
+    function noop() { }
+    function add_location(element, file, line, column, char) {
+        element.__svelte_meta = {
+            loc: { file, line, column, char }
+        };
+    }
+    function run(fn) {
+        return fn();
+    }
+    function blank_object() {
+        return Object.create(null);
+    }
+    function run_all(fns) {
+        fns.forEach(run);
+    }
+    function is_function(thing) {
+        return typeof thing === 'function';
+    }
+    function safe_not_equal(a, b) {
+        return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+    }
+    function is_empty(obj) {
+        return Object.keys(obj).length === 0;
+    }
+    function null_to_empty(value) {
+        return value == null ? '' : value;
+    }
+    function append(target, node) {
+        target.appendChild(node);
+    }
+    function insert(target, node, anchor) {
+        target.insertBefore(node, anchor || null);
+    }
+    function detach(node) {
+        node.parentNode.removeChild(node);
+    }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
+    }
+    function element(name) {
+        return document.createElement(name);
+    }
+    function text(data) {
+        return document.createTextNode(data);
+    }
+    function space() {
+        return text(' ');
+    }
+    function empty() {
+        return text('');
+    }
+    function listen(node, event, handler, options) {
+        node.addEventListener(event, handler, options);
+        return () => node.removeEventListener(event, handler, options);
+    }
+    function attr(node, attribute, value) {
+        if (value == null)
+            node.removeAttribute(attribute);
+        else if (node.getAttribute(attribute) !== value)
+            node.setAttribute(attribute, value);
+    }
+    function to_number(value) {
+        return value === '' ? null : +value;
+    }
+    function children(element) {
+        return Array.from(element.childNodes);
+    }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
+    }
+    function select_option(select, value) {
+        for (let i = 0; i < select.options.length; i += 1) {
+            const option = select.options[i];
+            if (option.__value === value) {
+                option.selected = true;
+                return;
+            }
+        }
+        select.selectedIndex = -1; // no option should be selected
+    }
+    function select_value(select) {
+        const selected_option = select.querySelector(':checked') || select.options[0];
+        return selected_option && selected_option.__value;
+    }
+    function custom_event(type, detail, bubbles = false) {
+        const e = document.createEvent('CustomEvent');
+        e.initCustomEvent(type, bubbles, false, detail);
+        return e;
+    }
+
+    let current_component;
+    function set_current_component(component) {
+        current_component = component;
+    }
+
+    const dirty_components = [];
+    const binding_callbacks = [];
+    const render_callbacks = [];
+    const flush_callbacks = [];
+    const resolved_promise = Promise.resolve();
+    let update_scheduled = false;
+    function schedule_update() {
+        if (!update_scheduled) {
+            update_scheduled = true;
+            resolved_promise.then(flush);
+        }
+    }
+    function add_render_callback(fn) {
+        render_callbacks.push(fn);
+    }
+    function add_flush_callback(fn) {
+        flush_callbacks.push(fn);
+    }
+    // flush() calls callbacks in this order:
+    // 1. All beforeUpdate callbacks, in order: parents before children
+    // 2. All bind:this callbacks, in reverse order: children before parents.
+    // 3. All afterUpdate callbacks, in order: parents before children. EXCEPT
+    //    for afterUpdates called during the initial onMount, which are called in
+    //    reverse order: children before parents.
+    // Since callbacks might update component values, which could trigger another
+    // call to flush(), the following steps guard against this:
+    // 1. During beforeUpdate, any updated components will be added to the
+    //    dirty_components array and will cause a reentrant call to flush(). Because
+    //    the flush index is kept outside the function, the reentrant call will pick
+    //    up where the earlier call left off and go through all dirty components. The
+    //    current_component value is saved and restored so that the reentrant call will
+    //    not interfere with the "parent" flush() call.
+    // 2. bind:this callbacks cannot trigger new flush() calls.
+    // 3. During afterUpdate, any updated components will NOT have their afterUpdate
+    //    callback called a second time; the seen_callbacks set, outside the flush()
+    //    function, guarantees this behavior.
+    const seen_callbacks = new Set();
+    let flushidx = 0; // Do *not* move this inside the flush() function
+    function flush() {
+        const saved_component = current_component;
+        do {
+            // first, call beforeUpdate functions
+            // and update components
+            while (flushidx < dirty_components.length) {
+                const component = dirty_components[flushidx];
+                flushidx++;
+                set_current_component(component);
+                update(component.$$);
+            }
+            set_current_component(null);
+            dirty_components.length = 0;
+            flushidx = 0;
+            while (binding_callbacks.length)
+                binding_callbacks.pop()();
+            // then, once components are updated, call
+            // afterUpdate functions. This may cause
+            // subsequent updates...
+            for (let i = 0; i < render_callbacks.length; i += 1) {
+                const callback = render_callbacks[i];
+                if (!seen_callbacks.has(callback)) {
+                    // ...so guard against infinite loops
+                    seen_callbacks.add(callback);
+                    callback();
+                }
+            }
+            render_callbacks.length = 0;
+        } while (dirty_components.length);
+        while (flush_callbacks.length) {
+            flush_callbacks.pop()();
+        }
+        update_scheduled = false;
+        seen_callbacks.clear();
+        set_current_component(saved_component);
+    }
+    function update($$) {
+        if ($$.fragment !== null) {
+            $$.update();
+            run_all($$.before_update);
+            const dirty = $$.dirty;
+            $$.dirty = [-1];
+            $$.fragment && $$.fragment.p($$.ctx, dirty);
+            $$.after_update.forEach(add_render_callback);
+        }
+    }
+    const outroing = new Set();
+    let outros;
+    function group_outros() {
+        outros = {
+            r: 0,
+            c: [],
+            p: outros // parent group
+        };
+    }
+    function check_outros() {
+        if (!outros.r) {
+            run_all(outros.c);
+        }
+        outros = outros.p;
+    }
+    function transition_in(block, local) {
+        if (block && block.i) {
+            outroing.delete(block);
+            block.i(local);
+        }
+    }
+    function transition_out(block, local, detach, callback) {
+        if (block && block.o) {
+            if (outroing.has(block))
+                return;
+            outroing.add(block);
+            outros.c.push(() => {
+                outroing.delete(block);
+                if (callback) {
+                    if (detach)
+                        block.d(1);
+                    callback();
+                }
+            });
+            block.o(local);
+        }
+    }
+
+    const globals = (typeof window !== 'undefined'
+        ? window
+        : typeof globalThis !== 'undefined'
+            ? globalThis
+            : global);
+
+    function bind(component, name, callback) {
+        const index = component.$$.props[name];
+        if (index !== undefined) {
+            component.$$.bound[index] = callback;
+            callback(component.$$.ctx[index]);
+        }
+    }
+    function create_component(block) {
+        block && block.c();
+    }
+    function mount_component(component, target, anchor, customElement) {
+        const { fragment, on_mount, on_destroy, after_update } = component.$$;
+        fragment && fragment.m(target, anchor);
+        if (!customElement) {
+            // onMount happens before the initial afterUpdate
+            add_render_callback(() => {
+                const new_on_destroy = on_mount.map(run).filter(is_function);
+                if (on_destroy) {
+                    on_destroy.push(...new_on_destroy);
+                }
+                else {
+                    // Edge case - component was destroyed immediately,
+                    // most likely as a result of a binding initialising
+                    run_all(new_on_destroy);
+                }
+                component.$$.on_mount = [];
+            });
+        }
+        after_update.forEach(add_render_callback);
+    }
+    function destroy_component(component, detaching) {
+        const $$ = component.$$;
+        if ($$.fragment !== null) {
+            run_all($$.on_destroy);
+            $$.fragment && $$.fragment.d(detaching);
+            // TODO null out other refs, including component.$$ (but need to
+            // preserve final state?)
+            $$.on_destroy = $$.fragment = null;
+            $$.ctx = [];
+        }
+    }
+    function make_dirty(component, i) {
+        if (component.$$.dirty[0] === -1) {
+            dirty_components.push(component);
+            schedule_update();
+            component.$$.dirty.fill(0);
+        }
+        component.$$.dirty[(i / 31) | 0] |= (1 << (i % 31));
+    }
+    function init(component, options, instance, create_fragment, not_equal, props, append_styles, dirty = [-1]) {
+        const parent_component = current_component;
+        set_current_component(component);
+        const $$ = component.$$ = {
+            fragment: null,
+            ctx: null,
+            // state
+            props,
+            update: noop,
+            not_equal,
+            bound: blank_object(),
+            // lifecycle
+            on_mount: [],
+            on_destroy: [],
+            on_disconnect: [],
+            before_update: [],
+            after_update: [],
+            context: new Map(options.context || (parent_component ? parent_component.$$.context : [])),
+            // everything else
+            callbacks: blank_object(),
+            dirty,
+            skip_bound: false,
+            root: options.target || parent_component.$$.root
+        };
+        append_styles && append_styles($$.root);
+        let ready = false;
+        $$.ctx = instance
+            ? instance(component, options.props || {}, (i, ret, ...rest) => {
+                const value = rest.length ? rest[0] : ret;
+                if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
+                    if (!$$.skip_bound && $$.bound[i])
+                        $$.bound[i](value);
+                    if (ready)
+                        make_dirty(component, i);
+                }
+                return ret;
+            })
+            : [];
+        $$.update();
+        ready = true;
+        run_all($$.before_update);
+        // `false` as a special case of no DOM component
+        $$.fragment = create_fragment ? create_fragment($$.ctx) : false;
+        if (options.target) {
+            if (options.hydrate) {
+                const nodes = children(options.target);
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                $$.fragment && $$.fragment.l(nodes);
+                nodes.forEach(detach);
+            }
+            else {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                $$.fragment && $$.fragment.c();
+            }
+            if (options.intro)
+                transition_in(component.$$.fragment);
+            mount_component(component, options.target, options.anchor, options.customElement);
+            flush();
+        }
+        set_current_component(parent_component);
+    }
+    /**
+     * Base class for Svelte components. Used when dev=false.
+     */
+    class SvelteComponent {
+        $destroy() {
+            destroy_component(this, 1);
+            this.$destroy = noop;
+        }
+        $on(type, callback) {
+            const callbacks = (this.$$.callbacks[type] || (this.$$.callbacks[type] = []));
+            callbacks.push(callback);
+            return () => {
+                const index = callbacks.indexOf(callback);
+                if (index !== -1)
+                    callbacks.splice(index, 1);
+            };
+        }
+        $set($$props) {
+            if (this.$$set && !is_empty($$props)) {
+                this.$$.skip_bound = true;
+                this.$$set($$props);
+                this.$$.skip_bound = false;
+            }
+        }
+    }
+
+    function dispatch_dev(type, detail) {
+        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.46.2' }, detail), true));
+    }
+    function append_dev(target, node) {
+        dispatch_dev('SvelteDOMInsert', { target, node });
+        append(target, node);
+    }
+    function insert_dev(target, node, anchor) {
+        dispatch_dev('SvelteDOMInsert', { target, node, anchor });
+        insert(target, node, anchor);
+    }
+    function detach_dev(node) {
+        dispatch_dev('SvelteDOMRemove', { node });
+        detach(node);
+    }
+    function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
+        const modifiers = options === true ? ['capture'] : options ? Array.from(Object.keys(options)) : [];
+        if (has_prevent_default)
+            modifiers.push('preventDefault');
+        if (has_stop_propagation)
+            modifiers.push('stopPropagation');
+        dispatch_dev('SvelteDOMAddEventListener', { node, event, handler, modifiers });
+        const dispose = listen(node, event, handler, options);
+        return () => {
+            dispatch_dev('SvelteDOMRemoveEventListener', { node, event, handler, modifiers });
+            dispose();
+        };
+    }
+    function attr_dev(node, attribute, value) {
+        attr(node, attribute, value);
+        if (value == null)
+            dispatch_dev('SvelteDOMRemoveAttribute', { node, attribute });
+        else
+            dispatch_dev('SvelteDOMSetAttribute', { node, attribute, value });
+    }
+    function set_data_dev(text, data) {
+        data = '' + data;
+        if (text.wholeText === data)
+            return;
+        dispatch_dev('SvelteDOMSetData', { node: text, data });
+        text.data = data;
+    }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
+    }
+    function validate_slots(name, slot, keys) {
+        for (const slot_key of Object.keys(slot)) {
+            if (!~keys.indexOf(slot_key)) {
+                console.warn(`<${name}> received an unexpected slot "${slot_key}".`);
+            }
+        }
+    }
+    /**
+     * Base class for Svelte components with some minor dev-enhancements. Used when dev=true.
+     */
+    class SvelteComponentDev extends SvelteComponent {
+        constructor(options) {
+            if (!options || (!options.target && !options.$$inline)) {
+                throw new Error("'target' is a required option");
+            }
+            super();
+        }
+        $destroy() {
+            super.$destroy();
+            this.$destroy = () => {
+                console.warn('Component was already destroyed'); // eslint-disable-line no-console
+            };
+        }
+        $capture_state() { }
+        $inject_state() { }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -15,7 +459,8 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-/**
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -30,8 +475,47 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class K{constructor(){this.reject=()=>{},this.resolve=()=>{},this.promise=new Promise(((t,e)=>{this.resolve=t,this.reject=e}))}wrapCallback(t){return(e,n)=>{e?this.reject(e):this.resolve(n),"function"==typeof t&&(this.promise.catch((()=>{})),1===t.length?t(e):t(e,n))}}}
-/**
+     */
+    class Deferred {
+        constructor() {
+            this.reject = () => { };
+            this.resolve = () => { };
+            this.promise = new Promise((resolve, reject) => {
+                this.resolve = resolve;
+                this.reject = reject;
+            });
+        }
+        /**
+         * Our API internals are not promiseified and cannot because our callback APIs have subtle expectations around
+         * invoking promises inline, which Promises are forbidden to do. This method accepts an optional node-style callback
+         * and returns a node-style callback which will resolve or reject the Deferred's promise.
+         */
+        wrapCallback(callback) {
+            return (error, value) => {
+                if (error) {
+                    this.reject(error);
+                }
+                else {
+                    this.resolve(value);
+                }
+                if (typeof callback === 'function') {
+                    // Attaching noop handler just in case developer wasn't expecting
+                    // promises
+                    this.promise.catch(() => { });
+                    // Some of our callbacks don't expect a value and our own tests
+                    // assert that the parameter length is 1
+                    if (callback.length === 1) {
+                        callback(error);
+                    }
+                    else {
+                        callback(error, value);
+                    }
+                }
+            };
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -46,8 +530,204 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function G(){return"undefined"!=typeof navigator&&"string"==typeof navigator.userAgent?navigator.userAgent:""}class W extends Error{constructor(t,e,n){super(e),this.code=t,this.customData=n,this.name="FirebaseError",Object.setPrototypeOf(this,W.prototype),Error.captureStackTrace&&Error.captureStackTrace(this,Y.prototype.create)}}class Y{constructor(t,e,n){this.service=t,this.serviceName=e,this.errors=n}create(t,...e){const n=e[0]||{},s=`${this.service}/${t}`,i=this.errors[t],r=i?function(t,e){return t.replace(Q,((t,n)=>{const s=e[n];return null!=s?String(s):`<${n}?>`}))}(i,n):"Error",o=`${this.serviceName}: ${r} (${s}).`;return new W(s,o,n)}}const Q=/\{\$([^}]+)}/g;function X(t,e){if(t===e)return!0;const n=Object.keys(t),s=Object.keys(e);for(const i of n){if(!s.includes(i))return!1;const n=t[i],r=e[i];if(J(n)&&J(r)){if(!X(n,r))return!1}else if(n!==r)return!1}for(const t of s)if(!n.includes(t))return!1;return!0}function J(t){return null!==t&&"object"==typeof t}
-/**
+     */
+    /**
+     * Returns navigator.userAgent string or '' if it's not defined.
+     * @return user agent string
+     */
+    function getUA() {
+        if (typeof navigator !== 'undefined' &&
+            typeof navigator['userAgent'] === 'string') {
+            return navigator['userAgent'];
+        }
+        else {
+            return '';
+        }
+    }
+    /**
+     * Detect Cordova / PhoneGap / Ionic frameworks on a mobile device.
+     *
+     * Deliberately does not rely on checking `file://` URLs (as this fails PhoneGap
+     * in the Ripple emulator) nor Cordova `onDeviceReady`, which would normally
+     * wait for a callback.
+     */
+    function isMobileCordova() {
+        return (typeof window !== 'undefined' &&
+            // @ts-ignore Setting up an broadly applicable index signature for Window
+            // just to deal with this case would probably be a bad idea.
+            !!(window['cordova'] || window['phonegap'] || window['PhoneGap']) &&
+            /ios|iphone|ipod|ipad|android|blackberry|iemobile/i.test(getUA()));
+    }
+    function isBrowserExtension() {
+        const runtime = typeof chrome === 'object'
+            ? chrome.runtime
+            : typeof browser === 'object'
+                ? browser.runtime
+                : undefined;
+        return typeof runtime === 'object' && runtime.id !== undefined;
+    }
+    /**
+     * Detect React Native.
+     *
+     * @return true if ReactNative environment is detected.
+     */
+    function isReactNative() {
+        return (typeof navigator === 'object' && navigator['product'] === 'ReactNative');
+    }
+    /** Detects Electron apps. */
+    function isElectron() {
+        return getUA().indexOf('Electron/') >= 0;
+    }
+    /** Detects Internet Explorer. */
+    function isIE() {
+        const ua = getUA();
+        return ua.indexOf('MSIE ') >= 0 || ua.indexOf('Trident/') >= 0;
+    }
+    /** Detects Universal Windows Platform apps. */
+    function isUWP() {
+        return getUA().indexOf('MSAppHost/') >= 0;
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * @fileoverview Standardized Firebase Error.
+     *
+     * Usage:
+     *
+     *   // Typescript string literals for type-safe codes
+     *   type Err =
+     *     'unknown' |
+     *     'object-not-found'
+     *     ;
+     *
+     *   // Closure enum for type-safe error codes
+     *   // at-enum {string}
+     *   var Err = {
+     *     UNKNOWN: 'unknown',
+     *     OBJECT_NOT_FOUND: 'object-not-found',
+     *   }
+     *
+     *   let errors: Map<Err, string> = {
+     *     'generic-error': "Unknown error",
+     *     'file-not-found': "Could not find file: {$file}",
+     *   };
+     *
+     *   // Type-safe function - must pass a valid error code as param.
+     *   let error = new ErrorFactory<Err>('service', 'Service', errors);
+     *
+     *   ...
+     *   throw error.create(Err.GENERIC);
+     *   ...
+     *   throw error.create(Err.FILE_NOT_FOUND, {'file': fileName});
+     *   ...
+     *   // Service: Could not file file: foo.txt (service/file-not-found).
+     *
+     *   catch (e) {
+     *     assert(e.message === "Could not find file: foo.txt.");
+     *     if (e.code === 'service/file-not-found') {
+     *       console.log("Could not read file: " + e['file']);
+     *     }
+     *   }
+     */
+    const ERROR_NAME = 'FirebaseError';
+    // Based on code from:
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Custom_Error_Types
+    class FirebaseError extends Error {
+        constructor(
+        /** The error code for this error. */
+        code, message, 
+        /** Custom data for this error. */
+        customData) {
+            super(message);
+            this.code = code;
+            this.customData = customData;
+            /** The custom name for all FirebaseErrors. */
+            this.name = ERROR_NAME;
+            // Fix For ES5
+            // https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+            Object.setPrototypeOf(this, FirebaseError.prototype);
+            // Maintains proper stack trace for where our error was thrown.
+            // Only available on V8.
+            if (Error.captureStackTrace) {
+                Error.captureStackTrace(this, ErrorFactory.prototype.create);
+            }
+        }
+    }
+    class ErrorFactory {
+        constructor(service, serviceName, errors) {
+            this.service = service;
+            this.serviceName = serviceName;
+            this.errors = errors;
+        }
+        create(code, ...data) {
+            const customData = data[0] || {};
+            const fullCode = `${this.service}/${code}`;
+            const template = this.errors[code];
+            const message = template ? replaceTemplate(template, customData) : 'Error';
+            // Service Name: Error message (service/code).
+            const fullMessage = `${this.serviceName}: ${message} (${fullCode}).`;
+            const error = new FirebaseError(fullCode, fullMessage, customData);
+            return error;
+        }
+    }
+    function replaceTemplate(template, data) {
+        return template.replace(PATTERN, (_, key) => {
+            const value = data[key];
+            return value != null ? String(value) : `<${key}?>`;
+        });
+    }
+    const PATTERN = /\{\$([^}]+)}/g;
+    /**
+     * Deep equal two objects. Support Arrays and Objects.
+     */
+    function deepEqual(a, b) {
+        if (a === b) {
+            return true;
+        }
+        const aKeys = Object.keys(a);
+        const bKeys = Object.keys(b);
+        for (const k of aKeys) {
+            if (!bKeys.includes(k)) {
+                return false;
+            }
+            const aProp = a[k];
+            const bProp = b[k];
+            if (isObject(aProp) && isObject(bProp)) {
+                if (!deepEqual(aProp, bProp)) {
+                    return false;
+                }
+            }
+            else if (aProp !== bProp) {
+                return false;
+            }
+        }
+        for (const k of bKeys) {
+            if (!aKeys.includes(k)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    function isObject(thing) {
+        return thing !== null && typeof thing === 'object';
+    }
+
+    /**
      * @license
      * Copyright 2021 Google LLC
      *
@@ -62,8 +742,57 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Z{constructor(t,e,n){this.name=t,this.instanceFactory=e,this.type=n,this.multipleInstances=!1,this.serviceProps={},this.instantiationMode="LAZY",this.onInstanceCreated=null}setInstantiationMode(t){return this.instantiationMode=t,this}setMultipleInstances(t){return this.multipleInstances=t,this}setServiceProps(t){return this.serviceProps=t,this}setInstanceCreatedCallback(t){return this.onInstanceCreated=t,this}}
-/**
+     */
+    function getModularInstance(service) {
+        if (service && service._delegate) {
+            return service._delegate;
+        }
+        else {
+            return service;
+        }
+    }
+
+    /**
+     * Component for service name T, e.g. `auth`, `auth-internal`
+     */
+    class Component {
+        /**
+         *
+         * @param name The public service name, e.g. app, auth, firestore, database
+         * @param instanceFactory Service factory responsible for creating the public interface
+         * @param type whether the service provided by the component is public or private
+         */
+        constructor(name, instanceFactory, type) {
+            this.name = name;
+            this.instanceFactory = instanceFactory;
+            this.type = type;
+            this.multipleInstances = false;
+            /**
+             * Properties to be added to the service namespace
+             */
+            this.serviceProps = {};
+            this.instantiationMode = "LAZY" /* LAZY */;
+            this.onInstanceCreated = null;
+        }
+        setInstantiationMode(mode) {
+            this.instantiationMode = mode;
+            return this;
+        }
+        setMultipleInstances(multipleInstances) {
+            this.multipleInstances = multipleInstances;
+            return this;
+        }
+        setServiceProps(props) {
+            this.serviceProps = props;
+            return this;
+        }
+        setInstanceCreatedCallback(callback) {
+            this.onInstanceCreated = callback;
+            return this;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -78,8 +807,10 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */const tt="[DEFAULT]";
-/**
+     */
+    const DEFAULT_ENTRY_NAME$1 = '[DEFAULT]';
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -94,8 +825,270 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class et{constructor(t,e){this.name=t,this.container=e,this.component=null,this.instances=new Map,this.instancesDeferred=new Map,this.instancesOptions=new Map,this.onInitCallbacks=new Map}get(t){const e=this.normalizeInstanceIdentifier(t);if(!this.instancesDeferred.has(e)){const t=new K;if(this.instancesDeferred.set(e,t),this.isInitialized(e)||this.shouldAutoInitialize())try{const n=this.getOrInitializeService({instanceIdentifier:e});n&&t.resolve(n)}catch(t){}}return this.instancesDeferred.get(e).promise}getImmediate(t){var e;const n=this.normalizeInstanceIdentifier(null==t?void 0:t.identifier),s=null!==(e=null==t?void 0:t.optional)&&void 0!==e&&e;if(!this.isInitialized(n)&&!this.shouldAutoInitialize()){if(s)return null;throw Error(`Service ${this.name} is not available`)}try{return this.getOrInitializeService({instanceIdentifier:n})}catch(t){if(s)return null;throw t}}getComponent(){return this.component}setComponent(t){if(t.name!==this.name)throw Error(`Mismatching Component ${t.name} for Provider ${this.name}.`);if(this.component)throw Error(`Component for ${this.name} has already been provided`);if(this.component=t,this.shouldAutoInitialize()){if(function(t){return"EAGER"===t.instantiationMode}
-/**
+     */
+    /**
+     * Provider for instance for service name T, e.g. 'auth', 'auth-internal'
+     * NameServiceMapping[T] is an alias for the type of the instance
+     */
+    class Provider {
+        constructor(name, container) {
+            this.name = name;
+            this.container = container;
+            this.component = null;
+            this.instances = new Map();
+            this.instancesDeferred = new Map();
+            this.instancesOptions = new Map();
+            this.onInitCallbacks = new Map();
+        }
+        /**
+         * @param identifier A provider can provide mulitple instances of a service
+         * if this.component.multipleInstances is true.
+         */
+        get(identifier) {
+            // if multipleInstances is not supported, use the default name
+            const normalizedIdentifier = this.normalizeInstanceIdentifier(identifier);
+            if (!this.instancesDeferred.has(normalizedIdentifier)) {
+                const deferred = new Deferred();
+                this.instancesDeferred.set(normalizedIdentifier, deferred);
+                if (this.isInitialized(normalizedIdentifier) ||
+                    this.shouldAutoInitialize()) {
+                    // initialize the service if it can be auto-initialized
+                    try {
+                        const instance = this.getOrInitializeService({
+                            instanceIdentifier: normalizedIdentifier
+                        });
+                        if (instance) {
+                            deferred.resolve(instance);
+                        }
+                    }
+                    catch (e) {
+                        // when the instance factory throws an exception during get(), it should not cause
+                        // a fatal error. We just return the unresolved promise in this case.
+                    }
+                }
+            }
+            return this.instancesDeferred.get(normalizedIdentifier).promise;
+        }
+        getImmediate(options) {
+            var _a;
+            // if multipleInstances is not supported, use the default name
+            const normalizedIdentifier = this.normalizeInstanceIdentifier(options === null || options === void 0 ? void 0 : options.identifier);
+            const optional = (_a = options === null || options === void 0 ? void 0 : options.optional) !== null && _a !== void 0 ? _a : false;
+            if (this.isInitialized(normalizedIdentifier) ||
+                this.shouldAutoInitialize()) {
+                try {
+                    return this.getOrInitializeService({
+                        instanceIdentifier: normalizedIdentifier
+                    });
+                }
+                catch (e) {
+                    if (optional) {
+                        return null;
+                    }
+                    else {
+                        throw e;
+                    }
+                }
+            }
+            else {
+                // In case a component is not initialized and should/can not be auto-initialized at the moment, return null if the optional flag is set, or throw
+                if (optional) {
+                    return null;
+                }
+                else {
+                    throw Error(`Service ${this.name} is not available`);
+                }
+            }
+        }
+        getComponent() {
+            return this.component;
+        }
+        setComponent(component) {
+            if (component.name !== this.name) {
+                throw Error(`Mismatching Component ${component.name} for Provider ${this.name}.`);
+            }
+            if (this.component) {
+                throw Error(`Component for ${this.name} has already been provided`);
+            }
+            this.component = component;
+            // return early without attempting to initialize the component if the component requires explicit initialization (calling `Provider.initialize()`)
+            if (!this.shouldAutoInitialize()) {
+                return;
+            }
+            // if the service is eager, initialize the default instance
+            if (isComponentEager(component)) {
+                try {
+                    this.getOrInitializeService({ instanceIdentifier: DEFAULT_ENTRY_NAME$1 });
+                }
+                catch (e) {
+                    // when the instance factory for an eager Component throws an exception during the eager
+                    // initialization, it should not cause a fatal error.
+                    // TODO: Investigate if we need to make it configurable, because some component may want to cause
+                    // a fatal error in this case?
+                }
+            }
+            // Create service instances for the pending promises and resolve them
+            // NOTE: if this.multipleInstances is false, only the default instance will be created
+            // and all promises with resolve with it regardless of the identifier.
+            for (const [instanceIdentifier, instanceDeferred] of this.instancesDeferred.entries()) {
+                const normalizedIdentifier = this.normalizeInstanceIdentifier(instanceIdentifier);
+                try {
+                    // `getOrInitializeService()` should always return a valid instance since a component is guaranteed. use ! to make typescript happy.
+                    const instance = this.getOrInitializeService({
+                        instanceIdentifier: normalizedIdentifier
+                    });
+                    instanceDeferred.resolve(instance);
+                }
+                catch (e) {
+                    // when the instance factory throws an exception, it should not cause
+                    // a fatal error. We just leave the promise unresolved.
+                }
+            }
+        }
+        clearInstance(identifier = DEFAULT_ENTRY_NAME$1) {
+            this.instancesDeferred.delete(identifier);
+            this.instancesOptions.delete(identifier);
+            this.instances.delete(identifier);
+        }
+        // app.delete() will call this method on every provider to delete the services
+        // TODO: should we mark the provider as deleted?
+        async delete() {
+            const services = Array.from(this.instances.values());
+            await Promise.all([
+                ...services
+                    .filter(service => 'INTERNAL' in service) // legacy services
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    .map(service => service.INTERNAL.delete()),
+                ...services
+                    .filter(service => '_delete' in service) // modularized services
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    .map(service => service._delete())
+            ]);
+        }
+        isComponentSet() {
+            return this.component != null;
+        }
+        isInitialized(identifier = DEFAULT_ENTRY_NAME$1) {
+            return this.instances.has(identifier);
+        }
+        getOptions(identifier = DEFAULT_ENTRY_NAME$1) {
+            return this.instancesOptions.get(identifier) || {};
+        }
+        initialize(opts = {}) {
+            const { options = {} } = opts;
+            const normalizedIdentifier = this.normalizeInstanceIdentifier(opts.instanceIdentifier);
+            if (this.isInitialized(normalizedIdentifier)) {
+                throw Error(`${this.name}(${normalizedIdentifier}) has already been initialized`);
+            }
+            if (!this.isComponentSet()) {
+                throw Error(`Component ${this.name} has not been registered yet`);
+            }
+            const instance = this.getOrInitializeService({
+                instanceIdentifier: normalizedIdentifier,
+                options
+            });
+            // resolve any pending promise waiting for the service instance
+            for (const [instanceIdentifier, instanceDeferred] of this.instancesDeferred.entries()) {
+                const normalizedDeferredIdentifier = this.normalizeInstanceIdentifier(instanceIdentifier);
+                if (normalizedIdentifier === normalizedDeferredIdentifier) {
+                    instanceDeferred.resolve(instance);
+                }
+            }
+            return instance;
+        }
+        /**
+         *
+         * @param callback - a function that will be invoked  after the provider has been initialized by calling provider.initialize().
+         * The function is invoked SYNCHRONOUSLY, so it should not execute any longrunning tasks in order to not block the program.
+         *
+         * @param identifier An optional instance identifier
+         * @returns a function to unregister the callback
+         */
+        onInit(callback, identifier) {
+            var _a;
+            const normalizedIdentifier = this.normalizeInstanceIdentifier(identifier);
+            const existingCallbacks = (_a = this.onInitCallbacks.get(normalizedIdentifier)) !== null && _a !== void 0 ? _a : new Set();
+            existingCallbacks.add(callback);
+            this.onInitCallbacks.set(normalizedIdentifier, existingCallbacks);
+            const existingInstance = this.instances.get(normalizedIdentifier);
+            if (existingInstance) {
+                callback(existingInstance, normalizedIdentifier);
+            }
+            return () => {
+                existingCallbacks.delete(callback);
+            };
+        }
+        /**
+         * Invoke onInit callbacks synchronously
+         * @param instance the service instance`
+         */
+        invokeOnInitCallbacks(instance, identifier) {
+            const callbacks = this.onInitCallbacks.get(identifier);
+            if (!callbacks) {
+                return;
+            }
+            for (const callback of callbacks) {
+                try {
+                    callback(instance, identifier);
+                }
+                catch (_a) {
+                    // ignore errors in the onInit callback
+                }
+            }
+        }
+        getOrInitializeService({ instanceIdentifier, options = {} }) {
+            let instance = this.instances.get(instanceIdentifier);
+            if (!instance && this.component) {
+                instance = this.component.instanceFactory(this.container, {
+                    instanceIdentifier: normalizeIdentifierForFactory(instanceIdentifier),
+                    options
+                });
+                this.instances.set(instanceIdentifier, instance);
+                this.instancesOptions.set(instanceIdentifier, options);
+                /**
+                 * Invoke onInit listeners.
+                 * Note this.component.onInstanceCreated is different, which is used by the component creator,
+                 * while onInit listeners are registered by consumers of the provider.
+                 */
+                this.invokeOnInitCallbacks(instance, instanceIdentifier);
+                /**
+                 * Order is important
+                 * onInstanceCreated() should be called after this.instances.set(instanceIdentifier, instance); which
+                 * makes `isInitialized()` return true.
+                 */
+                if (this.component.onInstanceCreated) {
+                    try {
+                        this.component.onInstanceCreated(this.container, instanceIdentifier, instance);
+                    }
+                    catch (_a) {
+                        // ignore errors in the onInstanceCreatedCallback
+                    }
+                }
+            }
+            return instance || null;
+        }
+        normalizeInstanceIdentifier(identifier = DEFAULT_ENTRY_NAME$1) {
+            if (this.component) {
+                return this.component.multipleInstances ? identifier : DEFAULT_ENTRY_NAME$1;
+            }
+            else {
+                return identifier; // assume multiple instances are supported before the component is provided.
+            }
+        }
+        shouldAutoInitialize() {
+            return (!!this.component &&
+                this.component.instantiationMode !== "EXPLICIT" /* EXPLICIT */);
+        }
+    }
+    // undefined should be passed to the service factory for the default instance
+    function normalizeIdentifierForFactory(identifier) {
+        return identifier === DEFAULT_ENTRY_NAME$1 ? undefined : identifier;
+    }
+    function isComponentEager(component) {
+        return component.instantiationMode === "EAGER" /* EAGER */;
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -110,8 +1103,61 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */(t))try{this.getOrInitializeService({instanceIdentifier:tt})}catch(t){}for(const[t,e]of this.instancesDeferred.entries()){const n=this.normalizeInstanceIdentifier(t);try{const t=this.getOrInitializeService({instanceIdentifier:n});e.resolve(t)}catch(t){}}}}clearInstance(t="[DEFAULT]"){this.instancesDeferred.delete(t),this.instancesOptions.delete(t),this.instances.delete(t)}async delete(){const t=Array.from(this.instances.values());await Promise.all([...t.filter((t=>"INTERNAL"in t)).map((t=>t.INTERNAL.delete())),...t.filter((t=>"_delete"in t)).map((t=>t._delete()))])}isComponentSet(){return null!=this.component}isInitialized(t="[DEFAULT]"){return this.instances.has(t)}getOptions(t="[DEFAULT]"){return this.instancesOptions.get(t)||{}}initialize(t={}){const{options:e={}}=t,n=this.normalizeInstanceIdentifier(t.instanceIdentifier);if(this.isInitialized(n))throw Error(`${this.name}(${n}) has already been initialized`);if(!this.isComponentSet())throw Error(`Component ${this.name} has not been registered yet`);const s=this.getOrInitializeService({instanceIdentifier:n,options:e});for(const[t,e]of this.instancesDeferred.entries()){n===this.normalizeInstanceIdentifier(t)&&e.resolve(s)}return s}onInit(t,e){var n;const s=this.normalizeInstanceIdentifier(e),i=null!==(n=this.onInitCallbacks.get(s))&&void 0!==n?n:new Set;i.add(t),this.onInitCallbacks.set(s,i);const r=this.instances.get(s);return r&&t(r,s),()=>{i.delete(t)}}invokeOnInitCallbacks(t,e){const n=this.onInitCallbacks.get(e);if(n)for(const s of n)try{s(t,e)}catch(t){}}getOrInitializeService({instanceIdentifier:t,options:e={}}){let n=this.instances.get(t);if(!n&&this.component&&(n=this.component.instanceFactory(this.container,{instanceIdentifier:(s=t,s===tt?void 0:s),options:e}),this.instances.set(t,n),this.instancesOptions.set(t,e),this.invokeOnInitCallbacks(n,t),this.component.onInstanceCreated))try{this.component.onInstanceCreated(this.container,t,n)}catch(t){}var s;return n||null}normalizeInstanceIdentifier(t="[DEFAULT]"){return this.component?this.component.multipleInstances?t:tt:t}shouldAutoInitialize(){return!!this.component&&"EXPLICIT"!==this.component.instantiationMode}}class nt{constructor(t){this.name=t,this.providers=new Map}addComponent(t){const e=this.getProvider(t.name);if(e.isComponentSet())throw new Error(`Component ${t.name} has already been registered with ${this.name}`);e.setComponent(t)}addOrOverwriteComponent(t){this.getProvider(t.name).isComponentSet()&&this.providers.delete(t.name),this.addComponent(t)}getProvider(t){if(this.providers.has(t))return this.providers.get(t);const e=new et(t,this);return this.providers.set(t,e),e}getProviders(){return Array.from(this.providers.values())}}
-/**
+     */
+    /**
+     * ComponentContainer that provides Providers for service name T, e.g. `auth`, `auth-internal`
+     */
+    class ComponentContainer {
+        constructor(name) {
+            this.name = name;
+            this.providers = new Map();
+        }
+        /**
+         *
+         * @param component Component being added
+         * @param overwrite When a component with the same name has already been registered,
+         * if overwrite is true: overwrite the existing component with the new component and create a new
+         * provider with the new component. It can be useful in tests where you want to use different mocks
+         * for different tests.
+         * if overwrite is false: throw an exception
+         */
+        addComponent(component) {
+            const provider = this.getProvider(component.name);
+            if (provider.isComponentSet()) {
+                throw new Error(`Component ${component.name} has already been registered with ${this.name}`);
+            }
+            provider.setComponent(component);
+        }
+        addOrOverwriteComponent(component) {
+            const provider = this.getProvider(component.name);
+            if (provider.isComponentSet()) {
+                // delete the existing provider from the container, so we can register the new component
+                this.providers.delete(component.name);
+            }
+            this.addComponent(component);
+        }
+        /**
+         * getProvider provides a type safe interface where it can only be called with a field name
+         * present in NameServiceMapping interface.
+         *
+         * Firebase SDKs providing services should extend NameServiceMapping interface to register
+         * themselves.
+         */
+        getProvider(name) {
+            if (this.providers.has(name)) {
+                return this.providers.get(name);
+            }
+            // create a Provider for a service that hasn't registered with Firebase
+            const provider = new Provider(name, this);
+            this.providers.set(name, provider);
+            return provider;
+        }
+        getProviders() {
+            return Array.from(this.providers.values());
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -126,24 +1172,148 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */var st;!function(t){t[t.DEBUG=0]="DEBUG",t[t.VERBOSE=1]="VERBOSE",t[t.INFO=2]="INFO",t[t.WARN=3]="WARN",t[t.ERROR=4]="ERROR",t[t.SILENT=5]="SILENT"}(st||(st={}));const it={debug:st.DEBUG,verbose:st.VERBOSE,info:st.INFO,warn:st.WARN,error:st.ERROR,silent:st.SILENT},rt=st.INFO,ot={[st.DEBUG]:"log",[st.VERBOSE]:"log",[st.INFO]:"info",[st.WARN]:"warn",[st.ERROR]:"error"},at=(t,e,...n)=>{if(e<t.logLevel)return;const s=(new Date).toISOString(),i=ot[e];if(!i)throw new Error(`Attempted to log a message with an invalid logType (value: ${e})`);console[i](`[${s}]  ${t.name}:`,...n)};class ht{constructor(t){this.name=t,this._logLevel=rt,this._logHandler=at,this._userLogHandler=null}get logLevel(){return this._logLevel}set logLevel(t){if(!(t in st))throw new TypeError(`Invalid value "${t}" assigned to \`logLevel\``);this._logLevel=t}setLogLevel(t){this._logLevel="string"==typeof t?it[t]:t}get logHandler(){return this._logHandler}set logHandler(t){if("function"!=typeof t)throw new TypeError("Value assigned to `logHandler` must be a function");this._logHandler=t}get userLogHandler(){return this._userLogHandler}set userLogHandler(t){this._userLogHandler=t}debug(...t){this._userLogHandler&&this._userLogHandler(this,st.DEBUG,...t),this._logHandler(this,st.DEBUG,...t)}log(...t){this._userLogHandler&&this._userLogHandler(this,st.VERBOSE,...t),this._logHandler(this,st.VERBOSE,...t)}info(...t){this._userLogHandler&&this._userLogHandler(this,st.INFO,...t),this._logHandler(this,st.INFO,...t)}warn(...t){this._userLogHandler&&this._userLogHandler(this,st.WARN,...t),this._logHandler(this,st.WARN,...t)}error(...t){this._userLogHandler&&this._userLogHandler(this,st.ERROR,...t),this._logHandler(this,st.ERROR,...t)}}
-/**
-     * @license
-     * Copyright 2019 Google LLC
+     */
+    /**
+     * The JS SDK supports 5 log levels and also allows a user the ability to
+     * silence the logs altogether.
      *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
+     * The order is a follows:
+     * DEBUG < VERBOSE < INFO < WARN < ERROR
      *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class ct{constructor(t){this.container=t}getPlatformInfoString(){return this.container.getProviders().map((t=>{if(function(t){const e=t.getComponent();return"VERSION"===(null==e?void 0:e.type)}(t)){const e=t.getImmediate();return`${e.library}/${e.version}`}return null})).filter((t=>t)).join(" ")}}const ut="@firebase/app",lt="0.7.14",dt=new ht("@firebase/app"),ft="[DEFAULT]",pt={[ut]:"fire-core","@firebase/app-compat":"fire-core-compat","@firebase/analytics":"fire-analytics","@firebase/analytics-compat":"fire-analytics-compat","@firebase/app-check":"fire-app-check","@firebase/app-check-compat":"fire-app-check-compat","@firebase/auth":"fire-auth","@firebase/auth-compat":"fire-auth-compat","@firebase/database":"fire-rtdb","@firebase/database-compat":"fire-rtdb-compat","@firebase/functions":"fire-fn","@firebase/functions-compat":"fire-fn-compat","@firebase/installations":"fire-iid","@firebase/installations-compat":"fire-iid-compat","@firebase/messaging":"fire-fcm","@firebase/messaging-compat":"fire-fcm-compat","@firebase/performance":"fire-perf","@firebase/performance-compat":"fire-perf-compat","@firebase/remote-config":"fire-rc","@firebase/remote-config-compat":"fire-rc-compat","@firebase/storage":"fire-gcs","@firebase/storage-compat":"fire-gcs-compat","@firebase/firestore":"fire-fst","@firebase/firestore-compat":"fire-fst-compat","fire-js":"fire-js",firebase:"fire-js-all"},gt=new Map,mt=new Map;function yt(t,e){try{t.container.addComponent(e)}catch(n){dt.debug(`Component ${e.name} failed to register with FirebaseApp ${t.name}`,n)}}function vt(t){const e=t.name;if(mt.has(e))return dt.debug(`There were multiple attempts to register component ${e}.`),!1;mt.set(e,t);for(const e of gt.values())yt(e,t);return!0}
-/**
+     * All of the log types above the current log level will be captured (i.e. if
+     * you set the log level to `INFO`, errors will still be logged, but `DEBUG` and
+     * `VERBOSE` logs will not)
+     */
+    var LogLevel;
+    (function (LogLevel) {
+        LogLevel[LogLevel["DEBUG"] = 0] = "DEBUG";
+        LogLevel[LogLevel["VERBOSE"] = 1] = "VERBOSE";
+        LogLevel[LogLevel["INFO"] = 2] = "INFO";
+        LogLevel[LogLevel["WARN"] = 3] = "WARN";
+        LogLevel[LogLevel["ERROR"] = 4] = "ERROR";
+        LogLevel[LogLevel["SILENT"] = 5] = "SILENT";
+    })(LogLevel || (LogLevel = {}));
+    const levelStringToEnum = {
+        'debug': LogLevel.DEBUG,
+        'verbose': LogLevel.VERBOSE,
+        'info': LogLevel.INFO,
+        'warn': LogLevel.WARN,
+        'error': LogLevel.ERROR,
+        'silent': LogLevel.SILENT
+    };
+    /**
+     * The default log level
+     */
+    const defaultLogLevel = LogLevel.INFO;
+    /**
+     * By default, `console.debug` is not displayed in the developer console (in
+     * chrome). To avoid forcing users to have to opt-in to these logs twice
+     * (i.e. once for firebase, and once in the console), we are sending `DEBUG`
+     * logs to the `console.log` function.
+     */
+    const ConsoleMethod = {
+        [LogLevel.DEBUG]: 'log',
+        [LogLevel.VERBOSE]: 'log',
+        [LogLevel.INFO]: 'info',
+        [LogLevel.WARN]: 'warn',
+        [LogLevel.ERROR]: 'error'
+    };
+    /**
+     * The default log handler will forward DEBUG, VERBOSE, INFO, WARN, and ERROR
+     * messages on to their corresponding console counterparts (if the log method
+     * is supported by the current log level)
+     */
+    const defaultLogHandler = (instance, logType, ...args) => {
+        if (logType < instance.logLevel) {
+            return;
+        }
+        const now = new Date().toISOString();
+        const method = ConsoleMethod[logType];
+        if (method) {
+            console[method](`[${now}]  ${instance.name}:`, ...args);
+        }
+        else {
+            throw new Error(`Attempted to log a message with an invalid logType (value: ${logType})`);
+        }
+    };
+    class Logger {
+        /**
+         * Gives you an instance of a Logger to capture messages according to
+         * Firebase's logging scheme.
+         *
+         * @param name The name that the logs will be associated with
+         */
+        constructor(name) {
+            this.name = name;
+            /**
+             * The log level of the given Logger instance.
+             */
+            this._logLevel = defaultLogLevel;
+            /**
+             * The main (internal) log handler for the Logger instance.
+             * Can be set to a new function in internal package code but not by user.
+             */
+            this._logHandler = defaultLogHandler;
+            /**
+             * The optional, additional, user-defined log handler for the Logger instance.
+             */
+            this._userLogHandler = null;
+        }
+        get logLevel() {
+            return this._logLevel;
+        }
+        set logLevel(val) {
+            if (!(val in LogLevel)) {
+                throw new TypeError(`Invalid value "${val}" assigned to \`logLevel\``);
+            }
+            this._logLevel = val;
+        }
+        // Workaround for setter/getter having to be the same type.
+        setLogLevel(val) {
+            this._logLevel = typeof val === 'string' ? levelStringToEnum[val] : val;
+        }
+        get logHandler() {
+            return this._logHandler;
+        }
+        set logHandler(val) {
+            if (typeof val !== 'function') {
+                throw new TypeError('Value assigned to `logHandler` must be a function');
+            }
+            this._logHandler = val;
+        }
+        get userLogHandler() {
+            return this._userLogHandler;
+        }
+        set userLogHandler(val) {
+            this._userLogHandler = val;
+        }
+        /**
+         * The functions below are all based on the `console` interface
+         */
+        debug(...args) {
+            this._userLogHandler && this._userLogHandler(this, LogLevel.DEBUG, ...args);
+            this._logHandler(this, LogLevel.DEBUG, ...args);
+        }
+        log(...args) {
+            this._userLogHandler &&
+                this._userLogHandler(this, LogLevel.VERBOSE, ...args);
+            this._logHandler(this, LogLevel.VERBOSE, ...args);
+        }
+        info(...args) {
+            this._userLogHandler && this._userLogHandler(this, LogLevel.INFO, ...args);
+            this._logHandler(this, LogLevel.INFO, ...args);
+        }
+        warn(...args) {
+            this._userLogHandler && this._userLogHandler(this, LogLevel.WARN, ...args);
+            this._logHandler(this, LogLevel.WARN, ...args);
+        }
+        error(...args) {
+            this._userLogHandler && this._userLogHandler(this, LogLevel.ERROR, ...args);
+            this._logHandler(this, LogLevel.ERROR, ...args);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -159,8 +1329,47 @@ var app=function(){"use strict";function t(){}function e(t){return t()}function 
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-const wt=new Y("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been created - call Firebase App.initializeApp()","bad-app-name":"Illegal App name: '{$appName}","duplicate-app":"Firebase App named '{$appName}' already exists with different options or config","app-deleted":"Firebase App named '{$appName}' already deleted","invalid-app-argument":"firebase.{$appName}() takes either no argument or a Firebase App instance.","invalid-log-argument":"First argument to `onLog` must be null or a function."});
-/**
+    class PlatformLoggerServiceImpl {
+        constructor(container) {
+            this.container = container;
+        }
+        // In initial implementation, this will be called by installations on
+        // auth token refresh, and installations will send this string.
+        getPlatformInfoString() {
+            const providers = this.container.getProviders();
+            // Loop through providers and get library/version pairs from any that are
+            // version components.
+            return providers
+                .map(provider => {
+                if (isVersionServiceProvider(provider)) {
+                    const service = provider.getImmediate();
+                    return `${service.library}/${service.version}`;
+                }
+                else {
+                    return null;
+                }
+            })
+                .filter(logString => logString)
+                .join(' ');
+        }
+    }
+    /**
+     *
+     * @param provider check if this provider provides a VersionService
+     *
+     * NOTE: Using Provider<'app-version'> is a hack to indicate that the provider
+     * provides VersionService. The provider is not necessarily a 'app-version'
+     * provider.
+     */
+    function isVersionServiceProvider(provider) {
+        const component = provider.getComponent();
+        return (component === null || component === void 0 ? void 0 : component.type) === "VERSION" /* VERSION */;
+    }
+
+    const name$o = "@firebase/app";
+    const version$1 = "0.7.14";
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -176,8 +1385,58 @@ const wt=new Y("app","Firebase",{"no-app":"No Firebase App '{$appName}' has been
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class Et{constructor(t,e,n){this._isDeleted=!1,this._options=Object.assign({},t),this._config=Object.assign({},e),this._name=e.name,this._automaticDataCollectionEnabled=e.automaticDataCollectionEnabled,this._container=n,this.container.addComponent(new Z("app",(()=>this),"PUBLIC"))}get automaticDataCollectionEnabled(){return this.checkDestroyed(),this._automaticDataCollectionEnabled}set automaticDataCollectionEnabled(t){this.checkDestroyed(),this._automaticDataCollectionEnabled=t}get name(){return this.checkDestroyed(),this._name}get options(){return this.checkDestroyed(),this._options}get config(){return this.checkDestroyed(),this._config}get container(){return this._container}get isDeleted(){return this._isDeleted}set isDeleted(t){this._isDeleted=t}checkDestroyed(){if(this.isDeleted)throw wt.create("app-deleted",{appName:this._name})}}
-/**
+    const logger = new Logger('@firebase/app');
+
+    const name$n = "@firebase/app-compat";
+
+    const name$m = "@firebase/analytics-compat";
+
+    const name$l = "@firebase/analytics";
+
+    const name$k = "@firebase/app-check-compat";
+
+    const name$j = "@firebase/app-check";
+
+    const name$i = "@firebase/auth";
+
+    const name$h = "@firebase/auth-compat";
+
+    const name$g = "@firebase/database";
+
+    const name$f = "@firebase/database-compat";
+
+    const name$e = "@firebase/functions";
+
+    const name$d = "@firebase/functions-compat";
+
+    const name$c = "@firebase/installations";
+
+    const name$b = "@firebase/installations-compat";
+
+    const name$a = "@firebase/messaging";
+
+    const name$9 = "@firebase/messaging-compat";
+
+    const name$8 = "@firebase/performance";
+
+    const name$7 = "@firebase/performance-compat";
+
+    const name$6 = "@firebase/remote-config";
+
+    const name$5 = "@firebase/remote-config-compat";
+
+    const name$4 = "@firebase/storage";
+
+    const name$3 = "@firebase/storage-compat";
+
+    const name$2 = "@firebase/firestore";
+
+    const name$1 = "@firebase/firestore-compat";
+
+    const name$p = "firebase";
+    const version$2 = "9.6.4";
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -192,8 +1451,43 @@ class Et{constructor(t,e,n){this._isDeleted=!1,this._options=Object.assign({},t)
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function bt(t,e,n){var s;let i=null!==(s=pt[t])&&void 0!==s?s:t;n&&(i+=`-${n}`);const r=i.match(/\s|\//),o=e.match(/\s|\//);if(r||o){const t=[`Unable to register library "${i}" with version "${e}":`];return r&&t.push(`library name "${i}" contains illegal characters (whitespace or "/")`),r&&o&&t.push("and"),o&&t.push(`version name "${e}" contains illegal characters (whitespace or "/")`),void dt.warn(t.join(" "))}vt(new Z(`${i}-version`,(()=>({library:i,version:e})),"VERSION"))}
-/**
+     */
+    /**
+     * The default app name
+     *
+     * @internal
+     */
+    const DEFAULT_ENTRY_NAME = '[DEFAULT]';
+    const PLATFORM_LOG_STRING = {
+        [name$o]: 'fire-core',
+        [name$n]: 'fire-core-compat',
+        [name$l]: 'fire-analytics',
+        [name$m]: 'fire-analytics-compat',
+        [name$j]: 'fire-app-check',
+        [name$k]: 'fire-app-check-compat',
+        [name$i]: 'fire-auth',
+        [name$h]: 'fire-auth-compat',
+        [name$g]: 'fire-rtdb',
+        [name$f]: 'fire-rtdb-compat',
+        [name$e]: 'fire-fn',
+        [name$d]: 'fire-fn-compat',
+        [name$c]: 'fire-iid',
+        [name$b]: 'fire-iid-compat',
+        [name$a]: 'fire-fcm',
+        [name$9]: 'fire-fcm-compat',
+        [name$8]: 'fire-perf',
+        [name$7]: 'fire-perf-compat',
+        [name$6]: 'fire-rc',
+        [name$5]: 'fire-rc-compat',
+        [name$4]: 'fire-gcs',
+        [name$3]: 'fire-gcs-compat',
+        [name$2]: 'fire-fst',
+        [name$1]: 'fire-fst-compat',
+        'fire-js': 'fire-js',
+        [name$p]: 'fire-js-all'
+    };
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -208,8 +1502,323 @@ class Et{constructor(t,e,n){this._isDeleted=!1,this._options=Object.assign({},t)
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */var Tt;Tt="",vt(new Z("platform-logger",(t=>new ct(t)),"PRIVATE")),bt(ut,lt,Tt),bt(ut,lt,"esm2017"),bt("fire-js","");
-/**
+     */
+    /**
+     * @internal
+     */
+    const _apps = new Map();
+    /**
+     * Registered components.
+     *
+     * @internal
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const _components = new Map();
+    /**
+     * @param component - the component being added to this app's container
+     *
+     * @internal
+     */
+    function _addComponent(app, component) {
+        try {
+            app.container.addComponent(component);
+        }
+        catch (e) {
+            logger.debug(`Component ${component.name} failed to register with FirebaseApp ${app.name}`, e);
+        }
+    }
+    /**
+     *
+     * @param component - the component to register
+     * @returns whether or not the component is registered successfully
+     *
+     * @internal
+     */
+    function _registerComponent(component) {
+        const componentName = component.name;
+        if (_components.has(componentName)) {
+            logger.debug(`There were multiple attempts to register component ${componentName}.`);
+            return false;
+        }
+        _components.set(componentName, component);
+        // add the component to existing app instances
+        for (const app of _apps.values()) {
+            _addComponent(app, component);
+        }
+        return true;
+    }
+    /**
+     *
+     * @param app - FirebaseApp instance
+     * @param name - service name
+     *
+     * @returns the provider for the service with the matching name
+     *
+     * @internal
+     */
+    function _getProvider(app, name) {
+        return app.container.getProvider(name);
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const ERRORS = {
+        ["no-app" /* NO_APP */]: "No Firebase App '{$appName}' has been created - " +
+            'call Firebase App.initializeApp()',
+        ["bad-app-name" /* BAD_APP_NAME */]: "Illegal App name: '{$appName}",
+        ["duplicate-app" /* DUPLICATE_APP */]: "Firebase App named '{$appName}' already exists with different options or config",
+        ["app-deleted" /* APP_DELETED */]: "Firebase App named '{$appName}' already deleted",
+        ["invalid-app-argument" /* INVALID_APP_ARGUMENT */]: 'firebase.{$appName}() takes either no argument or a ' +
+            'Firebase App instance.',
+        ["invalid-log-argument" /* INVALID_LOG_ARGUMENT */]: 'First argument to `onLog` must be null or a function.'
+    };
+    const ERROR_FACTORY = new ErrorFactory('app', 'Firebase', ERRORS);
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class FirebaseAppImpl {
+        constructor(options, config, container) {
+            this._isDeleted = false;
+            this._options = Object.assign({}, options);
+            this._config = Object.assign({}, config);
+            this._name = config.name;
+            this._automaticDataCollectionEnabled =
+                config.automaticDataCollectionEnabled;
+            this._container = container;
+            this.container.addComponent(new Component('app', () => this, "PUBLIC" /* PUBLIC */));
+        }
+        get automaticDataCollectionEnabled() {
+            this.checkDestroyed();
+            return this._automaticDataCollectionEnabled;
+        }
+        set automaticDataCollectionEnabled(val) {
+            this.checkDestroyed();
+            this._automaticDataCollectionEnabled = val;
+        }
+        get name() {
+            this.checkDestroyed();
+            return this._name;
+        }
+        get options() {
+            this.checkDestroyed();
+            return this._options;
+        }
+        get config() {
+            this.checkDestroyed();
+            return this._config;
+        }
+        get container() {
+            return this._container;
+        }
+        get isDeleted() {
+            return this._isDeleted;
+        }
+        set isDeleted(val) {
+            this._isDeleted = val;
+        }
+        /**
+         * This function will throw an Error if the App has already been deleted -
+         * use before performing API actions on the App.
+         */
+        checkDestroyed() {
+            if (this.isDeleted) {
+                throw ERROR_FACTORY.create("app-deleted" /* APP_DELETED */, { appName: this._name });
+            }
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * The current SDK version.
+     *
+     * @public
+     */
+    const SDK_VERSION = version$2;
+    function initializeApp(options, rawConfig = {}) {
+        if (typeof rawConfig !== 'object') {
+            const name = rawConfig;
+            rawConfig = { name };
+        }
+        const config = Object.assign({ name: DEFAULT_ENTRY_NAME, automaticDataCollectionEnabled: false }, rawConfig);
+        const name = config.name;
+        if (typeof name !== 'string' || !name) {
+            throw ERROR_FACTORY.create("bad-app-name" /* BAD_APP_NAME */, {
+                appName: String(name)
+            });
+        }
+        const existingApp = _apps.get(name);
+        if (existingApp) {
+            // return the existing app if options and config deep equal the ones in the existing app.
+            if (deepEqual(options, existingApp.options) &&
+                deepEqual(config, existingApp.config)) {
+                return existingApp;
+            }
+            else {
+                throw ERROR_FACTORY.create("duplicate-app" /* DUPLICATE_APP */, { appName: name });
+            }
+        }
+        const container = new ComponentContainer(name);
+        for (const component of _components.values()) {
+            container.addComponent(component);
+        }
+        const newApp = new FirebaseAppImpl(options, config, container);
+        _apps.set(name, newApp);
+        return newApp;
+    }
+    /**
+     * Retrieves a {@link @firebase/app#FirebaseApp} instance.
+     *
+     * When called with no arguments, the default app is returned. When an app name
+     * is provided, the app corresponding to that name is returned.
+     *
+     * An exception is thrown if the app being retrieved has not yet been
+     * initialized.
+     *
+     * @example
+     * ```javascript
+     * // Return the default app
+     * const app = getApp();
+     * ```
+     *
+     * @example
+     * ```javascript
+     * // Return a named app
+     * const otherApp = getApp("otherApp");
+     * ```
+     *
+     * @param name - Optional name of the app to return. If no name is
+     *   provided, the default is `"[DEFAULT]"`.
+     *
+     * @returns The app corresponding to the provided app name.
+     *   If no app name is provided, the default app is returned.
+     *
+     * @public
+     */
+    function getApp(name = DEFAULT_ENTRY_NAME) {
+        const app = _apps.get(name);
+        if (!app) {
+            throw ERROR_FACTORY.create("no-app" /* NO_APP */, { appName: name });
+        }
+        return app;
+    }
+    /**
+     * Registers a library's name and version for platform logging purposes.
+     * @param library - Name of 1p or 3p library (e.g. firestore, angularfire)
+     * @param version - Current version of that library.
+     * @param variant - Bundle variant, e.g., node, rn, etc.
+     *
+     * @public
+     */
+    function registerVersion(libraryKeyOrName, version, variant) {
+        var _a;
+        // TODO: We can use this check to whitelist strings when/if we set up
+        // a good whitelist system.
+        let library = (_a = PLATFORM_LOG_STRING[libraryKeyOrName]) !== null && _a !== void 0 ? _a : libraryKeyOrName;
+        if (variant) {
+            library += `-${variant}`;
+        }
+        const libraryMismatch = library.match(/\s|\//);
+        const versionMismatch = version.match(/\s|\//);
+        if (libraryMismatch || versionMismatch) {
+            const warning = [
+                `Unable to register library "${library}" with version "${version}":`
+            ];
+            if (libraryMismatch) {
+                warning.push(`library name "${library}" contains illegal characters (whitespace or "/")`);
+            }
+            if (libraryMismatch && versionMismatch) {
+                warning.push('and');
+            }
+            if (versionMismatch) {
+                warning.push(`version name "${version}" contains illegal characters (whitespace or "/")`);
+            }
+            logger.warn(warning.join(' '));
+            return;
+        }
+        _registerComponent(new Component(`${library}-version`, () => ({ library, version }), "VERSION" /* VERSION */));
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function registerCoreComponents(variant) {
+        _registerComponent(new Component('platform-logger', container => new PlatformLoggerServiceImpl(container), "PRIVATE" /* PRIVATE */));
+        // Register `app` package.
+        registerVersion(name$o, version$1, variant);
+        // BUILD_TARGET will be replaced by values like esm5, esm2017, cjs5, etc during the compilation
+        registerVersion(name$o, version$1, 'esm2017');
+        // Register platform SDK identifier (no version).
+        registerVersion('fire-js', '');
+    }
+
+    /**
+     * Firebase App
+     *
+     * @remarks This package coordinates the communication between the different Firebase components
+     * @packageDocumentation
+     */
+    registerCoreComponents('');
+
+    var name = "firebase";
+    var version = "9.6.4";
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -225,24 +1834,114 @@ class Et{constructor(t,e,n){this._isDeleted=!1,this._options=Object.assign({},t)
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-bt("firebase","9.6.4","app");var It,St="undefined"!=typeof globalThis?globalThis:"undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},Ct=Ct||{},At=St||self;function _t(){}function Nt(t){var e=typeof t;return"array"==(e="object"!=e?e:t?Array.isArray(t)?"array":e:"null")||"object"==e&&"number"==typeof t.length}function Dt(t){var e=typeof t;return"object"==e&&null!=t||"function"==e}var kt="closure_uid_"+(1e9*Math.random()>>>0),Rt=0;function Lt(t,e,n){return t.call.apply(t.bind,arguments)}function xt(t,e,n){if(!t)throw Error();if(2<arguments.length){var s=Array.prototype.slice.call(arguments,2);return function(){var n=Array.prototype.slice.call(arguments);return Array.prototype.unshift.apply(n,s),t.apply(e,n)}}return function(){return t.apply(e,arguments)}}function Ot(t,e,n){return(Ot=Function.prototype.bind&&-1!=Function.prototype.bind.toString().indexOf("native code")?Lt:xt).apply(null,arguments)}function Mt(t,e){var n=Array.prototype.slice.call(arguments,1);return function(){var e=n.slice();return e.push.apply(e,arguments),t.apply(this,e)}}function Pt(t,e){function n(){}n.prototype=e.prototype,t.Z=e.prototype,t.prototype=new n,t.prototype.constructor=t,t.Vb=function(t,n,s){for(var i=Array(arguments.length-2),r=2;r<arguments.length;r++)i[r-2]=arguments[r];return e.prototype[n].apply(t,i)}}function Vt(){this.s=this.s,this.o=this.o}var Ft={};Vt.prototype.s=!1,Vt.prototype.na=function(){if(!this.s&&(this.s=!0,this.M(),0)){var t=function(t){return Object.prototype.hasOwnProperty.call(t,kt)&&t[kt]||(t[kt]=++Rt)}(this);delete Ft[t]}},Vt.prototype.M=function(){if(this.o)for(;this.o.length;)this.o.shift()()};const Ut=Array.prototype.indexOf?function(t,e){return Array.prototype.indexOf.call(t,e,void 0)}:function(t,e){if("string"==typeof t)return"string"!=typeof e||1!=e.length?-1:t.indexOf(e,0);for(let n=0;n<t.length;n++)if(n in t&&t[n]===e)return n;return-1},$t=Array.prototype.forEach?function(t,e,n){Array.prototype.forEach.call(t,e,n)}:function(t,e,n){const s=t.length,i="string"==typeof t?t.split(""):t;for(let r=0;r<s;r++)r in i&&e.call(n,i[r],r,t)};function qt(t){return Array.prototype.concat.apply([],arguments)}function Bt(t){const e=t.length;if(0<e){const n=Array(e);for(let s=0;s<e;s++)n[s]=t[s];return n}return[]}function jt(t){return/^[\s\xa0]*$/.test(t)}var Ht,zt=String.prototype.trim?function(t){return t.trim()}:function(t){return/^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(t)[1]};function Kt(t,e){return-1!=t.indexOf(e)}function Gt(t,e){return t<e?-1:t>e?1:0}t:{var Wt=At.navigator;if(Wt){var Yt=Wt.userAgent;if(Yt){Ht=Yt;break t}}Ht=""}function Qt(t,e,n){for(const s in t)e.call(n,t[s],s,t)}function Xt(t){const e={};for(const n in t)e[n]=t[n];return e}var Jt="constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");function Zt(t,e){let n,s;for(let e=1;e<arguments.length;e++){for(n in s=arguments[e],s)t[n]=s[n];for(let e=0;e<Jt.length;e++)n=Jt[e],Object.prototype.hasOwnProperty.call(s,n)&&(t[n]=s[n])}}function te(t){return te[" "](t),t}te[" "]=_t;var ee,ne,se=Kt(Ht,"Opera"),ie=Kt(Ht,"Trident")||Kt(Ht,"MSIE"),re=Kt(Ht,"Edge"),oe=re||ie,ae=Kt(Ht,"Gecko")&&!(Kt(Ht.toLowerCase(),"webkit")&&!Kt(Ht,"Edge"))&&!(Kt(Ht,"Trident")||Kt(Ht,"MSIE"))&&!Kt(Ht,"Edge"),he=Kt(Ht.toLowerCase(),"webkit")&&!Kt(Ht,"Edge");function ce(){var t=At.document;return t?t.documentMode:void 0}t:{var ue="",le=(ne=Ht,ae?/rv:([^\);]+)(\)|;)/.exec(ne):re?/Edge\/([\d\.]+)/.exec(ne):ie?/\b(?:MSIE|rv)[: ]([^\);]+)(\)|;)/.exec(ne):he?/WebKit\/(\S+)/.exec(ne):se?/(?:Version)[ \/]?(\S+)/.exec(ne):void 0);if(le&&(ue=le?le[1]:""),ie){var de=ce();if(null!=de&&de>parseFloat(ue)){ee=String(de);break t}}ee=ue}var fe,pe={};function ge(){return function(t){var e=pe;return Object.prototype.hasOwnProperty.call(e,9)?e[9]:e[9]=t(9)}((function(){let t=0;const e=zt(String(ee)).split("."),n=zt("9").split("."),s=Math.max(e.length,n.length);for(let o=0;0==t&&o<s;o++){var i=e[o]||"",r=n[o]||"";do{if(i=/(\d*)(\D*)(.*)/.exec(i)||["","","",""],r=/(\d*)(\D*)(.*)/.exec(r)||["","","",""],0==i[0].length&&0==r[0].length)break;t=Gt(0==i[1].length?0:parseInt(i[1],10),0==r[1].length?0:parseInt(r[1],10))||Gt(0==i[2].length,0==r[2].length)||Gt(i[2],r[2]),i=i[3],r=r[3]}while(0==t)}return 0<=t}))}if(At.document&&ie){var me=ce();fe=me||(parseInt(ee,10)||void 0)}else fe=void 0;var ye=fe,ve=function(){if(!At.addEventListener||!Object.defineProperty)return!1;var t=!1,e=Object.defineProperty({},"passive",{get:function(){t=!0}});try{At.addEventListener("test",_t,e),At.removeEventListener("test",_t,e)}catch(t){}return t}();function we(t,e){this.type=t,this.g=this.target=e,this.defaultPrevented=!1}function Ee(t,e){if(we.call(this,t?t.type:""),this.relatedTarget=this.g=this.target=null,this.button=this.screenY=this.screenX=this.clientY=this.clientX=0,this.key="",this.metaKey=this.shiftKey=this.altKey=this.ctrlKey=!1,this.state=null,this.pointerId=0,this.pointerType="",this.i=null,t){var n=this.type=t.type,s=t.changedTouches&&t.changedTouches.length?t.changedTouches[0]:null;if(this.target=t.target||t.srcElement,this.g=e,e=t.relatedTarget){if(ae){t:{try{te(e.nodeName);var i=!0;break t}catch(t){}i=!1}i||(e=null)}}else"mouseover"==n?e=t.fromElement:"mouseout"==n&&(e=t.toElement);this.relatedTarget=e,s?(this.clientX=void 0!==s.clientX?s.clientX:s.pageX,this.clientY=void 0!==s.clientY?s.clientY:s.pageY,this.screenX=s.screenX||0,this.screenY=s.screenY||0):(this.clientX=void 0!==t.clientX?t.clientX:t.pageX,this.clientY=void 0!==t.clientY?t.clientY:t.pageY,this.screenX=t.screenX||0,this.screenY=t.screenY||0),this.button=t.button,this.key=t.key||"",this.ctrlKey=t.ctrlKey,this.altKey=t.altKey,this.shiftKey=t.shiftKey,this.metaKey=t.metaKey,this.pointerId=t.pointerId||0,this.pointerType="string"==typeof t.pointerType?t.pointerType:be[t.pointerType]||"",this.state=t.state,this.i=t,t.defaultPrevented&&Ee.Z.h.call(this)}}we.prototype.h=function(){this.defaultPrevented=!0},Pt(Ee,we);var be={2:"touch",3:"pen",4:"mouse"};Ee.prototype.h=function(){Ee.Z.h.call(this);var t=this.i;t.preventDefault?t.preventDefault():t.returnValue=!1};var Te="closure_listenable_"+(1e6*Math.random()|0),Ie=0;function Se(t,e,n,s,i){this.listener=t,this.proxy=null,this.src=e,this.type=n,this.capture=!!s,this.ia=i,this.key=++Ie,this.ca=this.fa=!1}function Ce(t){t.ca=!0,t.listener=null,t.proxy=null,t.src=null,t.ia=null}function Ae(t){this.src=t,this.g={},this.h=0}function _e(t,e){var n=e.type;if(n in t.g){var s,i=t.g[n],r=Ut(i,e);(s=0<=r)&&Array.prototype.splice.call(i,r,1),s&&(Ce(e),0==t.g[n].length&&(delete t.g[n],t.h--))}}function Ne(t,e,n,s){for(var i=0;i<t.length;++i){var r=t[i];if(!r.ca&&r.listener==e&&r.capture==!!n&&r.ia==s)return i}return-1}Ae.prototype.add=function(t,e,n,s,i){var r=t.toString();(t=this.g[r])||(t=this.g[r]=[],this.h++);var o=Ne(t,e,s,i);return-1<o?(e=t[o],n||(e.fa=!1)):((e=new Se(e,this.src,r,!!s,i)).fa=n,t.push(e)),e};var De="closure_lm_"+(1e6*Math.random()|0),ke={};function Re(t,e,n,s,i){if(s&&s.once)return xe(t,e,n,s,i);if(Array.isArray(e)){for(var r=0;r<e.length;r++)Re(t,e[r],n,s,i);return null}return n=$e(n),t&&t[Te]?t.N(e,n,Dt(s)?!!s.capture:!!s,i):Le(t,e,n,!1,s,i)}function Le(t,e,n,s,i,r){if(!e)throw Error("Invalid event type");var o=Dt(i)?!!i.capture:!!i,a=Fe(t);if(a||(t[De]=a=new Ae(t)),(n=a.add(e,n,s,o,r)).proxy)return n;if(s=function(){function t(n){return e.call(t.src,t.listener,n)}var e=Ve;return t}(),n.proxy=s,s.src=t,s.listener=n,t.addEventListener)ve||(i=o),void 0===i&&(i=!1),t.addEventListener(e.toString(),s,i);else if(t.attachEvent)t.attachEvent(Pe(e.toString()),s);else{if(!t.addListener||!t.removeListener)throw Error("addEventListener and attachEvent are unavailable.");t.addListener(s)}return n}function xe(t,e,n,s,i){if(Array.isArray(e)){for(var r=0;r<e.length;r++)xe(t,e[r],n,s,i);return null}return n=$e(n),t&&t[Te]?t.O(e,n,Dt(s)?!!s.capture:!!s,i):Le(t,e,n,!0,s,i)}function Oe(t,e,n,s,i){if(Array.isArray(e))for(var r=0;r<e.length;r++)Oe(t,e[r],n,s,i);else s=Dt(s)?!!s.capture:!!s,n=$e(n),t&&t[Te]?(t=t.i,(e=String(e).toString())in t.g&&(-1<(n=Ne(r=t.g[e],n,s,i))&&(Ce(r[n]),Array.prototype.splice.call(r,n,1),0==r.length&&(delete t.g[e],t.h--)))):t&&(t=Fe(t))&&(e=t.g[e.toString()],t=-1,e&&(t=Ne(e,n,s,i)),(n=-1<t?e[t]:null)&&Me(n))}function Me(t){if("number"!=typeof t&&t&&!t.ca){var e=t.src;if(e&&e[Te])_e(e.i,t);else{var n=t.type,s=t.proxy;e.removeEventListener?e.removeEventListener(n,s,t.capture):e.detachEvent?e.detachEvent(Pe(n),s):e.addListener&&e.removeListener&&e.removeListener(s),(n=Fe(e))?(_e(n,t),0==n.h&&(n.src=null,e[De]=null)):Ce(t)}}}function Pe(t){return t in ke?ke[t]:ke[t]="on"+t}function Ve(t,e){if(t.ca)t=!0;else{e=new Ee(e,this);var n=t.listener,s=t.ia||t.src;t.fa&&Me(t),t=n.call(s,e)}return t}function Fe(t){return(t=t[De])instanceof Ae?t:null}var Ue="__closure_events_fn_"+(1e9*Math.random()>>>0);function $e(t){return"function"==typeof t?t:(t[Ue]||(t[Ue]=function(e){return t.handleEvent(e)}),t[Ue])}function qe(){Vt.call(this),this.i=new Ae(this),this.P=this,this.I=null}function Be(t,e){var n,s=t.I;if(s)for(n=[];s;s=s.I)n.push(s);if(t=t.P,s=e.type||e,"string"==typeof e)e=new we(e,t);else if(e instanceof we)e.target=e.target||t;else{var i=e;Zt(e=new we(s,t),i)}if(i=!0,n)for(var r=n.length-1;0<=r;r--){var o=e.g=n[r];i=je(o,s,!0,e)&&i}if(i=je(o=e.g=t,s,!0,e)&&i,i=je(o,s,!1,e)&&i,n)for(r=0;r<n.length;r++)i=je(o=e.g=n[r],s,!1,e)&&i}function je(t,e,n,s){if(!(e=t.i.g[String(e)]))return!0;e=e.concat();for(var i=!0,r=0;r<e.length;++r){var o=e[r];if(o&&!o.ca&&o.capture==n){var a=o.listener,h=o.ia||o.src;o.fa&&_e(t.i,o),i=!1!==a.call(h,s)&&i}}return i&&!s.defaultPrevented}Pt(qe,Vt),qe.prototype[Te]=!0,qe.prototype.removeEventListener=function(t,e,n,s){Oe(this,t,e,n,s)},qe.prototype.M=function(){if(qe.Z.M.call(this),this.i){var t,e=this.i;for(t in e.g){for(var n=e.g[t],s=0;s<n.length;s++)Ce(n[s]);delete e.g[t],e.h--}}this.I=null},qe.prototype.N=function(t,e,n,s){return this.i.add(String(t),e,!1,n,s)},qe.prototype.O=function(t,e,n,s){return this.i.add(String(t),e,!0,n,s)};var He=At.JSON.stringify;function ze(){var t=Je;let e=null;return t.g&&(e=t.g,t.g=t.g.next,t.g||(t.h=null),e.next=null),e}var Ke,Ge=new class{constructor(t,e){this.i=t,this.j=e,this.h=0,this.g=null}get(){let t;return 0<this.h?(this.h--,t=this.g,this.g=t.next,t.next=null):t=this.i(),t}}((()=>new We),(t=>t.reset()));class We{constructor(){this.next=this.g=this.h=null}set(t,e){this.h=t,this.g=e,this.next=null}reset(){this.next=this.g=this.h=null}}function Ye(t){At.setTimeout((()=>{throw t}),0)}function Qe(t,e){Ke||function(){var t=At.Promise.resolve(void 0);Ke=function(){t.then(Ze)}}(),Xe||(Ke(),Xe=!0),Je.add(t,e)}var Xe=!1,Je=new class{constructor(){this.h=this.g=null}add(t,e){const n=Ge.get();n.set(t,e),this.h?this.h.next=n:this.g=n,this.h=n}};function Ze(){for(var t;t=ze();){try{t.h.call(t.g)}catch(t){Ye(t)}var e=Ge;e.j(t),100>e.h&&(e.h++,t.next=e.g,e.g=t)}Xe=!1}function tn(t,e){qe.call(this),this.h=t||1,this.g=e||At,this.j=Ot(this.kb,this),this.l=Date.now()}function en(t){t.da=!1,t.S&&(t.g.clearTimeout(t.S),t.S=null)}function nn(t,e,n){if("function"==typeof t)n&&(t=Ot(t,n));else{if(!t||"function"!=typeof t.handleEvent)throw Error("Invalid listener argument");t=Ot(t.handleEvent,t)}return 2147483647<Number(e)?-1:At.setTimeout(t,e||0)}function sn(t){t.g=nn((()=>{t.g=null,t.i&&(t.i=!1,sn(t))}),t.j);const e=t.h;t.h=null,t.m.apply(null,e)}Pt(tn,qe),(It=tn.prototype).da=!1,It.S=null,It.kb=function(){if(this.da){var t=Date.now()-this.l;0<t&&t<.8*this.h?this.S=this.g.setTimeout(this.j,this.h-t):(this.S&&(this.g.clearTimeout(this.S),this.S=null),Be(this,"tick"),this.da&&(en(this),this.start()))}},It.start=function(){this.da=!0,this.S||(this.S=this.g.setTimeout(this.j,this.h),this.l=Date.now())},It.M=function(){tn.Z.M.call(this),en(this),delete this.g};class rn extends Vt{constructor(t,e){super(),this.m=t,this.j=e,this.h=null,this.i=!1,this.g=null}l(t){this.h=arguments,this.g?this.i=!0:sn(this)}M(){super.M(),this.g&&(At.clearTimeout(this.g),this.g=null,this.i=!1,this.h=null)}}function on(t){Vt.call(this),this.h=t,this.g={}}Pt(on,Vt);var an=[];function hn(t,e,n,s){Array.isArray(n)||(n&&(an[0]=n.toString()),n=an);for(var i=0;i<n.length;i++){var r=Re(e,n[i],s||t.handleEvent,!1,t.h||t);if(!r)break;t.g[r.key]=r}}function cn(t){Qt(t.g,(function(t,e){this.g.hasOwnProperty(e)&&Me(t)}),t),t.g={}}function un(){this.g=!0}function ln(t,e,n,s){t.info((function(){return"XMLHTTP TEXT ("+e+"): "+function(t,e){if(!t.g)return e;if(!e)return null;try{var n=JSON.parse(e);if(n)for(t=0;t<n.length;t++)if(Array.isArray(n[t])){var s=n[t];if(!(2>s.length)){var i=s[1];if(Array.isArray(i)&&!(1>i.length)){var r=i[0];if("noop"!=r&&"stop"!=r&&"close"!=r)for(var o=1;o<i.length;o++)i[o]=""}}}return He(n)}catch(t){return e}}(t,n)+(s?" "+s:"")}))}on.prototype.M=function(){on.Z.M.call(this),cn(this)},on.prototype.handleEvent=function(){throw Error("EventHandler.handleEvent not implemented")},un.prototype.Aa=function(){this.g=!1},un.prototype.info=function(){};var dn={},fn=null;function pn(){return fn=fn||new qe}function gn(t){we.call(this,dn.Ma,t)}function mn(t){const e=pn();Be(e,new gn(e,t))}function yn(t,e){we.call(this,dn.STAT_EVENT,t),this.stat=e}function vn(t){const e=pn();Be(e,new yn(e,t))}function wn(t,e){we.call(this,dn.Na,t),this.size=e}function En(t,e){if("function"!=typeof t)throw Error("Fn must not be null and must be a function");return At.setTimeout((function(){t()}),e)}dn.Ma="serverreachability",Pt(gn,we),dn.STAT_EVENT="statevent",Pt(yn,we),dn.Na="timingevent",Pt(wn,we);var bn={NO_ERROR:0,lb:1,yb:2,xb:3,sb:4,wb:5,zb:6,Ja:7,TIMEOUT:8,Cb:9},Tn={qb:"complete",Mb:"success",Ka:"error",Ja:"abort",Eb:"ready",Fb:"readystatechange",TIMEOUT:"timeout",Ab:"incrementaldata",Db:"progress",tb:"downloadprogress",Ub:"uploadprogress"};function In(){}function Sn(t){return t.h||(t.h=t.i())}function Cn(){}In.prototype.h=null;var An,_n={OPEN:"a",pb:"b",Ka:"c",Bb:"d"};function Nn(){we.call(this,"d")}function Dn(){we.call(this,"c")}function kn(){}function Rn(t,e,n,s){this.l=t,this.j=e,this.m=n,this.X=s||1,this.V=new on(this),this.P=xn,t=oe?125:void 0,this.W=new tn(t),this.H=null,this.i=!1,this.s=this.A=this.v=this.K=this.F=this.Y=this.B=null,this.D=[],this.g=null,this.C=0,this.o=this.u=null,this.N=-1,this.I=!1,this.O=0,this.L=null,this.aa=this.J=this.$=this.U=!1,this.h=new Ln}function Ln(){this.i=null,this.g="",this.h=!1}Pt(Nn,we),Pt(Dn,we),Pt(kn,In),kn.prototype.g=function(){return new XMLHttpRequest},kn.prototype.i=function(){return{}},An=new kn;var xn=45e3,On={},Mn={};function Pn(t,e,n){t.K=1,t.v=rs(Zn(e)),t.s=n,t.U=!0,Vn(t,null)}function Vn(t,e){t.F=Date.now(),qn(t),t.A=Zn(t.v);var n=t.A,s=t.X;Array.isArray(s)||(s=[String(s)]),vs(n.h,"t",s),t.C=0,n=t.l.H,t.h=new Ln,t.g=vi(t.l,n?e:null,!t.s),0<t.O&&(t.L=new rn(Ot(t.Ia,t,t.g),t.O)),hn(t.V,t.g,"readystatechange",t.gb),e=t.H?Xt(t.H):{},t.s?(t.u||(t.u="POST"),e["Content-Type"]="application/x-www-form-urlencoded",t.g.ea(t.A,t.u,t.s,e)):(t.u="GET",t.g.ea(t.A,t.u,null,e)),mn(1),function(t,e,n,s,i,r){t.info((function(){if(t.g)if(r)for(var o="",a=r.split("&"),h=0;h<a.length;h++){var c=a[h].split("=");if(1<c.length){var u=c[0];c=c[1];var l=u.split("_");o=2<=l.length&&"type"==l[1]?o+(u+"=")+c+"&":o+(u+"=redacted&")}}else o=null;else o=r;return"XMLHTTP REQ ("+s+") [attempt "+i+"]: "+e+"\n"+n+"\n"+o}))}(t.j,t.u,t.A,t.m,t.X,t.s)}function Fn(t){return!!t.g&&("GET"==t.u&&2!=t.K&&t.l.Ba)}function Un(t,e,n){let s,i=!0;for(;!t.I&&t.C<n.length;){if(s=$n(t,n),s==Mn){4==e&&(t.o=4,vn(14),i=!1),ln(t.j,t.m,null,"[Incomplete Response]");break}if(s==On){t.o=4,vn(15),ln(t.j,t.m,n,"[Invalid Chunk]"),i=!1;break}ln(t.j,t.m,s,null),Kn(t,s)}Fn(t)&&s!=Mn&&s!=On&&(t.h.g="",t.C=0),4!=e||0!=n.length||t.h.h||(t.o=1,vn(16),i=!1),t.i=t.i&&i,i?0<n.length&&!t.aa&&(t.aa=!0,(e=t.l).g==t&&e.$&&!e.L&&(e.h.info("Great, no buffering proxy detected. Bytes received: "+n.length),ui(e),e.L=!0,vn(11))):(ln(t.j,t.m,n,"[Invalid Chunked Response]"),zn(t),Hn(t))}function $n(t,e){var n=t.C,s=e.indexOf("\n",n);return-1==s?Mn:(n=Number(e.substring(n,s)),isNaN(n)?On:(s+=1)+n>e.length?Mn:(e=e.substr(s,n),t.C=s+n,e))}function qn(t){t.Y=Date.now()+t.P,Bn(t,t.P)}function Bn(t,e){if(null!=t.B)throw Error("WatchDog timer not null");t.B=En(Ot(t.eb,t),e)}function jn(t){t.B&&(At.clearTimeout(t.B),t.B=null)}function Hn(t){0==t.l.G||t.I||fi(t.l,t)}function zn(t){jn(t);var e=t.L;e&&"function"==typeof e.na&&e.na(),t.L=null,en(t.W),cn(t.V),t.g&&(e=t.g,t.g=null,e.abort(),e.na())}function Kn(t,e){try{var n=t.l;if(0!=n.G&&(n.g==t||Ss(n.i,t)))if(n.I=t.N,!t.J&&Ss(n.i,t)&&3==n.G){try{var s=n.Ca.g.parse(e)}catch(t){s=null}if(Array.isArray(s)&&3==s.length){var i=s;if(0==i[0]){t:if(!n.u){if(n.g){if(!(n.g.F+3e3<t.F))break t;di(n),ei(n)}ci(n),vn(18)}}else n.ta=i[1],0<n.ta-n.U&&37500>i[2]&&n.N&&0==n.A&&!n.v&&(n.v=En(Ot(n.ab,n),6e3));if(1>=Is(n.i)&&n.ka){try{n.ka()}catch(t){}n.ka=void 0}}else gi(n,11)}else if((t.J||n.g==t)&&di(n),!jt(e))for(i=n.Ca.g.parse(e),e=0;e<i.length;e++){let c=i[e];if(n.U=c[0],c=c[1],2==n.G)if("c"==c[0]){n.J=c[1],n.la=c[2];const e=c[3];null!=e&&(n.ma=e,n.h.info("VER="+n.ma));const i=c[4];null!=i&&(n.za=i,n.h.info("SVER="+n.za));const u=c[5];null!=u&&"number"==typeof u&&0<u&&(s=1.5*u,n.K=s,n.h.info("backChannelRequestTimeoutMs_="+s)),s=n;const l=t.g;if(l){const t=l.g?l.g.getResponseHeader("X-Client-Wire-Protocol"):null;if(t){var r=s.i;!r.g&&(Kt(t,"spdy")||Kt(t,"quic")||Kt(t,"h2"))&&(r.j=r.l,r.g=new Set,r.h&&(Cs(r,r.h),r.h=null))}if(s.D){const t=l.g?l.g.getResponseHeader("X-HTTP-Session-Id"):null;t&&(s.sa=t,is(s.F,s.D,t))}}n.G=3,n.j&&n.j.xa(),n.$&&(n.O=Date.now()-t.F,n.h.info("Handshake RTT: "+n.O+"ms"));var o=t;if((s=n).oa=yi(s,s.H?s.la:null,s.W),o.J){As(s.i,o);var a=o,h=s.K;h&&a.setTimeout(h),a.B&&(jn(a),qn(a)),s.g=o}else hi(s);0<n.l.length&&ii(n)}else"stop"!=c[0]&&"close"!=c[0]||gi(n,7);else 3==n.G&&("stop"==c[0]||"close"==c[0]?"stop"==c[0]?gi(n,7):ti(n):"noop"!=c[0]&&n.j&&n.j.wa(c),n.A=0)}mn(4)}catch(t){}}function Gn(t,e){if(t.forEach&&"function"==typeof t.forEach)t.forEach(e,void 0);else if(Nt(t)||"string"==typeof t)$t(t,e,void 0);else{if(t.T&&"function"==typeof t.T)var n=t.T();else if(t.R&&"function"==typeof t.R)n=void 0;else if(Nt(t)||"string"==typeof t){n=[];for(var s=t.length,i=0;i<s;i++)n.push(i)}else for(i in n=[],s=0,t)n[s++]=i;s=function(t){if(t.R&&"function"==typeof t.R)return t.R();if("string"==typeof t)return t.split("");if(Nt(t)){for(var e=[],n=t.length,s=0;s<n;s++)e.push(t[s]);return e}for(s in e=[],n=0,t)e[n++]=t[s];return e}(t),i=s.length;for(var r=0;r<i;r++)e.call(void 0,s[r],n&&n[r],t)}}function Wn(t,e){this.h={},this.g=[],this.i=0;var n=arguments.length;if(1<n){if(n%2)throw Error("Uneven number of arguments");for(var s=0;s<n;s+=2)this.set(arguments[s],arguments[s+1])}else if(t)if(t instanceof Wn)for(n=t.T(),s=0;s<n.length;s++)this.set(n[s],t.get(n[s]));else for(s in t)this.set(s,t[s])}function Yn(t){if(t.i!=t.g.length){for(var e=0,n=0;e<t.g.length;){var s=t.g[e];Qn(t.h,s)&&(t.g[n++]=s),e++}t.g.length=n}if(t.i!=t.g.length){var i={};for(n=e=0;e<t.g.length;)Qn(i,s=t.g[e])||(t.g[n++]=s,i[s]=1),e++;t.g.length=n}}function Qn(t,e){return Object.prototype.hasOwnProperty.call(t,e)}(It=Rn.prototype).setTimeout=function(t){this.P=t},It.gb=function(t){t=t.target;const e=this.L;e&&3==Ys(t)?e.l():this.Ia(t)},It.Ia=function(t){try{if(t==this.g)t:{const u=Ys(this.g);var e=this.g.Da();const l=this.g.ba();if(!(3>u)&&(3!=u||oe||this.g&&(this.h.h||this.g.ga()||Qs(this.g)))){this.I||4!=u||7==e||mn(8==e||0>=l?3:2),jn(this);var n=this.g.ba();this.N=n;e:if(Fn(this)){var s=Qs(this.g);t="";var i=s.length,r=4==Ys(this.g);if(!this.h.i){if("undefined"==typeof TextDecoder){zn(this),Hn(this);var o="";break e}this.h.i=new At.TextDecoder}for(e=0;e<i;e++)this.h.h=!0,t+=this.h.i.decode(s[e],{stream:r&&e==i-1});s.splice(0,i),this.h.g+=t,this.C=0,o=this.h.g}else o=this.g.ga();if(this.i=200==n,function(t,e,n,s,i,r,o){t.info((function(){return"XMLHTTP RESP ("+s+") [ attempt "+i+"]: "+e+"\n"+n+"\n"+r+" "+o}))}(this.j,this.u,this.A,this.m,this.X,u,n),this.i){if(this.$&&!this.J){e:{if(this.g){var a,h=this.g;if((a=h.g?h.g.getResponseHeader("X-HTTP-Initial-Response"):null)&&!jt(a)){var c=a;break e}}c=null}if(!(n=c)){this.i=!1,this.o=3,vn(12),zn(this),Hn(this);break t}ln(this.j,this.m,n,"Initial handshake response via X-HTTP-Initial-Response"),this.J=!0,Kn(this,n)}this.U?(Un(this,u,o),oe&&this.i&&3==u&&(hn(this.V,this.W,"tick",this.fb),this.W.start())):(ln(this.j,this.m,o,null),Kn(this,o)),4==u&&zn(this),this.i&&!this.I&&(4==u?fi(this.l,this):(this.i=!1,qn(this)))}else 400==n&&0<o.indexOf("Unknown SID")?(this.o=3,vn(12)):(this.o=0,vn(13)),zn(this),Hn(this)}}}catch(t){}},It.fb=function(){if(this.g){var t=Ys(this.g),e=this.g.ga();this.C<e.length&&(jn(this),Un(this,t,e),this.i&&4!=t&&qn(this))}},It.cancel=function(){this.I=!0,zn(this)},It.eb=function(){this.B=null;const t=Date.now();0<=t-this.Y?(function(t,e){t.info((function(){return"TIMEOUT: "+e}))}(this.j,this.A),2!=this.K&&(mn(3),vn(17)),zn(this),this.o=2,Hn(this)):Bn(this,this.Y-t)},(It=Wn.prototype).R=function(){Yn(this);for(var t=[],e=0;e<this.g.length;e++)t.push(this.h[this.g[e]]);return t},It.T=function(){return Yn(this),this.g.concat()},It.get=function(t,e){return Qn(this.h,t)?this.h[t]:e},It.set=function(t,e){Qn(this.h,t)||(this.i++,this.g.push(t)),this.h[t]=e},It.forEach=function(t,e){for(var n=this.T(),s=0;s<n.length;s++){var i=n[s],r=this.get(i);t.call(e,r,i,this)}};var Xn=/^(?:([^:/?#.]+):)?(?:\/\/(?:([^\\/?#]*)@)?([^\\/?#]*?)(?::([0-9]+))?(?=[\\/?#]|$))?([^?#]+)?(?:\?([^#]*))?(?:#([\s\S]*))?$/;function Jn(t,e){if(this.i=this.s=this.j="",this.m=null,this.o=this.l="",this.g=!1,t instanceof Jn){this.g=void 0!==e?e:t.g,ts(this,t.j),this.s=t.s,es(this,t.i),ns(this,t.m),this.l=t.l,e=t.h;var n=new ps;n.i=e.i,e.g&&(n.g=new Wn(e.g),n.h=e.h),ss(this,n),this.o=t.o}else t&&(n=String(t).match(Xn))?(this.g=!!e,ts(this,n[1]||"",!0),this.s=os(n[2]||""),es(this,n[3]||"",!0),ns(this,n[4]),this.l=os(n[5]||"",!0),ss(this,n[6]||"",!0),this.o=os(n[7]||"")):(this.g=!!e,this.h=new ps(null,this.g))}function Zn(t){return new Jn(t)}function ts(t,e,n){t.j=n?os(e,!0):e,t.j&&(t.j=t.j.replace(/:$/,""))}function es(t,e,n){t.i=n?os(e,!0):e}function ns(t,e){if(e){if(e=Number(e),isNaN(e)||0>e)throw Error("Bad port number "+e);t.m=e}else t.m=null}function ss(t,e,n){e instanceof ps?(t.h=e,function(t,e){e&&!t.j&&(gs(t),t.i=null,t.g.forEach((function(t,e){var n=e.toLowerCase();e!=n&&(ms(this,e),vs(this,n,t))}),t)),t.j=e}(t.h,t.g)):(n||(e=as(e,ds)),t.h=new ps(e,t.g))}function is(t,e,n){t.h.set(e,n)}function rs(t){return is(t,"zx",Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^Date.now()).toString(36)),t}function os(t,e){return t?e?decodeURI(t.replace(/%25/g,"%2525")):decodeURIComponent(t):""}function as(t,e,n){return"string"==typeof t?(t=encodeURI(t).replace(e,hs),n&&(t=t.replace(/%25([0-9a-fA-F]{2})/g,"%$1")),t):null}function hs(t){return"%"+((t=t.charCodeAt(0))>>4&15).toString(16)+(15&t).toString(16)}Jn.prototype.toString=function(){var t=[],e=this.j;e&&t.push(as(e,cs,!0),":");var n=this.i;return(n||"file"==e)&&(t.push("//"),(e=this.s)&&t.push(as(e,cs,!0),"@"),t.push(encodeURIComponent(String(n)).replace(/%25([0-9a-fA-F]{2})/g,"%$1")),null!=(n=this.m)&&t.push(":",String(n))),(n=this.l)&&(this.i&&"/"!=n.charAt(0)&&t.push("/"),t.push(as(n,"/"==n.charAt(0)?ls:us,!0))),(n=this.h.toString())&&t.push("?",n),(n=this.o)&&t.push("#",as(n,fs)),t.join("")};var cs=/[#\/\?@]/g,us=/[#\?:]/g,ls=/[#\?]/g,ds=/[#\?@]/g,fs=/#/g;function ps(t,e){this.h=this.g=null,this.i=t||null,this.j=!!e}function gs(t){t.g||(t.g=new Wn,t.h=0,t.i&&function(t,e){if(t){t=t.split("&");for(var n=0;n<t.length;n++){var s=t[n].indexOf("="),i=null;if(0<=s){var r=t[n].substring(0,s);i=t[n].substring(s+1)}else r=t[n];e(r,i?decodeURIComponent(i.replace(/\+/g," ")):"")}}}(t.i,(function(e,n){t.add(decodeURIComponent(e.replace(/\+/g," ")),n)})))}function ms(t,e){gs(t),e=ws(t,e),Qn(t.g.h,e)&&(t.i=null,t.h-=t.g.get(e).length,Qn((t=t.g).h,e)&&(delete t.h[e],t.i--,t.g.length>2*t.i&&Yn(t)))}function ys(t,e){return gs(t),e=ws(t,e),Qn(t.g.h,e)}function vs(t,e,n){ms(t,e),0<n.length&&(t.i=null,t.g.set(ws(t,e),Bt(n)),t.h+=n.length)}function ws(t,e){return e=String(e),t.j&&(e=e.toLowerCase()),e}(It=ps.prototype).add=function(t,e){gs(this),this.i=null,t=ws(this,t);var n=this.g.get(t);return n||this.g.set(t,n=[]),n.push(e),this.h+=1,this},It.forEach=function(t,e){gs(this),this.g.forEach((function(n,s){$t(n,(function(n){t.call(e,n,s,this)}),this)}),this)},It.T=function(){gs(this);for(var t=this.g.R(),e=this.g.T(),n=[],s=0;s<e.length;s++)for(var i=t[s],r=0;r<i.length;r++)n.push(e[s]);return n},It.R=function(t){gs(this);var e=[];if("string"==typeof t)ys(this,t)&&(e=qt(e,this.g.get(ws(this,t))));else{t=this.g.R();for(var n=0;n<t.length;n++)e=qt(e,t[n])}return e},It.set=function(t,e){return gs(this),this.i=null,ys(this,t=ws(this,t))&&(this.h-=this.g.get(t).length),this.g.set(t,[e]),this.h+=1,this},It.get=function(t,e){return t&&0<(t=this.R(t)).length?String(t[0]):e},It.toString=function(){if(this.i)return this.i;if(!this.g)return"";for(var t=[],e=this.g.T(),n=0;n<e.length;n++){var s=e[n],i=encodeURIComponent(String(s));s=this.R(s);for(var r=0;r<s.length;r++){var o=i;""!==s[r]&&(o+="="+encodeURIComponent(String(s[r]))),t.push(o)}}return this.i=t.join("&")};function Es(t){this.l=t||bs,At.PerformanceNavigationTiming?t=0<(t=At.performance.getEntriesByType("navigation")).length&&("hq"==t[0].nextHopProtocol||"h2"==t[0].nextHopProtocol):t=!!(At.g&&At.g.Ea&&At.g.Ea()&&At.g.Ea().Zb),this.j=t?this.l:1,this.g=null,1<this.j&&(this.g=new Set),this.h=null,this.i=[]}var bs=10;function Ts(t){return!!t.h||!!t.g&&t.g.size>=t.j}function Is(t){return t.h?1:t.g?t.g.size:0}function Ss(t,e){return t.h?t.h==e:!!t.g&&t.g.has(e)}function Cs(t,e){t.g?t.g.add(e):t.h=e}function As(t,e){t.h&&t.h==e?t.h=null:t.g&&t.g.has(e)&&t.g.delete(e)}function _s(t){if(null!=t.h)return t.i.concat(t.h.D);if(null!=t.g&&0!==t.g.size){let e=t.i;for(const n of t.g.values())e=e.concat(n.D);return e}return Bt(t.i)}function Ns(){}function Ds(){this.g=new Ns}function ks(t,e,n){const s=n||"";try{Gn(t,(function(t,n){let i=t;Dt(t)&&(i=He(t)),e.push(s+n+"="+encodeURIComponent(i))}))}catch(t){throw e.push(s+"type="+encodeURIComponent("_badmap")),t}}function Rs(t,e,n,s,i){try{e.onload=null,e.onerror=null,e.onabort=null,e.ontimeout=null,i(s)}catch(t){}}function Ls(t){this.l=t.$b||null,this.j=t.ib||!1}function xs(t,e){qe.call(this),this.D=t,this.u=e,this.m=void 0,this.readyState=Os,this.status=0,this.responseType=this.responseText=this.response=this.statusText="",this.onreadystatechange=null,this.v=new Headers,this.h=null,this.C="GET",this.B="",this.g=!1,this.A=this.j=this.l=null}Es.prototype.cancel=function(){if(this.i=_s(this),this.h)this.h.cancel(),this.h=null;else if(this.g&&0!==this.g.size){for(const t of this.g.values())t.cancel();this.g.clear()}},Ns.prototype.stringify=function(t){return At.JSON.stringify(t,void 0)},Ns.prototype.parse=function(t){return At.JSON.parse(t,void 0)},Pt(Ls,In),Ls.prototype.g=function(){return new xs(this.l,this.j)},Ls.prototype.i=function(t){return function(){return t}}({}),Pt(xs,qe);var Os=0;function Ms(t){t.j.read().then(t.Sa.bind(t)).catch(t.ha.bind(t))}function Ps(t){t.readyState=4,t.l=null,t.j=null,t.A=null,Vs(t)}function Vs(t){t.onreadystatechange&&t.onreadystatechange.call(t)}(It=xs.prototype).open=function(t,e){if(this.readyState!=Os)throw this.abort(),Error("Error reopening a connection");this.C=t,this.B=e,this.readyState=1,Vs(this)},It.send=function(t){if(1!=this.readyState)throw this.abort(),Error("need to call open() first. ");this.g=!0;const e={headers:this.v,method:this.C,credentials:this.m,cache:void 0};t&&(e.body=t),(this.D||At).fetch(new Request(this.B,e)).then(this.Va.bind(this),this.ha.bind(this))},It.abort=function(){this.response=this.responseText="",this.v=new Headers,this.status=0,this.j&&this.j.cancel("Request was aborted."),1<=this.readyState&&this.g&&4!=this.readyState&&(this.g=!1,Ps(this)),this.readyState=Os},It.Va=function(t){if(this.g&&(this.l=t,this.h||(this.status=this.l.status,this.statusText=this.l.statusText,this.h=t.headers,this.readyState=2,Vs(this)),this.g&&(this.readyState=3,Vs(this),this.g)))if("arraybuffer"===this.responseType)t.arrayBuffer().then(this.Ta.bind(this),this.ha.bind(this));else if(void 0!==At.ReadableStream&&"body"in t){if(this.j=t.body.getReader(),this.u){if(this.responseType)throw Error('responseType must be empty for "streamBinaryChunks" mode responses.');this.response=[]}else this.response=this.responseText="",this.A=new TextDecoder;Ms(this)}else t.text().then(this.Ua.bind(this),this.ha.bind(this))},It.Sa=function(t){if(this.g){if(this.u&&t.value)this.response.push(t.value);else if(!this.u){var e=t.value?t.value:new Uint8Array(0);(e=this.A.decode(e,{stream:!t.done}))&&(this.response=this.responseText+=e)}t.done?Ps(this):Vs(this),3==this.readyState&&Ms(this)}},It.Ua=function(t){this.g&&(this.response=this.responseText=t,Ps(this))},It.Ta=function(t){this.g&&(this.response=t,Ps(this))},It.ha=function(){this.g&&Ps(this)},It.setRequestHeader=function(t,e){this.v.append(t,e)},It.getResponseHeader=function(t){return this.h&&this.h.get(t.toLowerCase())||""},It.getAllResponseHeaders=function(){if(!this.h)return"";const t=[],e=this.h.entries();for(var n=e.next();!n.done;)n=n.value,t.push(n[0]+": "+n[1]),n=e.next();return t.join("\r\n")},Object.defineProperty(xs.prototype,"withCredentials",{get:function(){return"include"===this.m},set:function(t){this.m=t?"include":"same-origin"}});var Fs=At.JSON.parse;function Us(t){qe.call(this),this.headers=new Wn,this.u=t||null,this.h=!1,this.C=this.g=null,this.H="",this.m=0,this.j="",this.l=this.F=this.v=this.D=!1,this.B=0,this.A=null,this.J=$s,this.K=this.L=!1}Pt(Us,qe);var $s="",qs=/^https?$/i,Bs=["POST","PUT"];function js(t){return"content-type"==t.toLowerCase()}function Hs(t,e){t.h=!1,t.g&&(t.l=!0,t.g.abort(),t.l=!1),t.j=e,t.m=5,zs(t),Gs(t)}function zs(t){t.D||(t.D=!0,Be(t,"complete"),Be(t,"error"))}function Ks(t){if(t.h&&void 0!==Ct&&(!t.C[1]||4!=Ys(t)||2!=t.ba()))if(t.v&&4==Ys(t))nn(t.Fa,0,t);else if(Be(t,"readystatechange"),4==Ys(t)){t.h=!1;try{const a=t.ba();t:switch(a){case 200:case 201:case 202:case 204:case 206:case 304:case 1223:var e=!0;break t;default:e=!1}var n;if(!(n=e)){var s;if(s=0===a){var i=String(t.H).match(Xn)[1]||null;if(!i&&At.self&&At.self.location){var r=At.self.location.protocol;i=r.substr(0,r.length-1)}s=!qs.test(i?i.toLowerCase():"")}n=s}if(n)Be(t,"complete"),Be(t,"success");else{t.m=6;try{var o=2<Ys(t)?t.g.statusText:""}catch(t){o=""}t.j=o+" ["+t.ba()+"]",zs(t)}}finally{Gs(t)}}}function Gs(t,e){if(t.g){Ws(t);const n=t.g,s=t.C[0]?_t:null;t.g=null,t.C=null,e||Be(t,"ready");try{n.onreadystatechange=s}catch(t){}}}function Ws(t){t.g&&t.K&&(t.g.ontimeout=null),t.A&&(At.clearTimeout(t.A),t.A=null)}function Ys(t){return t.g?t.g.readyState:0}function Qs(t){try{if(!t.g)return null;if("response"in t.g)return t.g.response;switch(t.J){case $s:case"text":return t.g.responseText;case"arraybuffer":if("mozResponseArrayBuffer"in t.g)return t.g.mozResponseArrayBuffer}return null}catch(t){return null}}function Xs(t,e,n){t:{for(s in n){var s=!1;break t}s=!0}s||(n=function(t){let e="";return Qt(t,(function(t,n){e+=n,e+=":",e+=t,e+="\r\n"})),e}(n),"string"==typeof t?null!=n&&encodeURIComponent(String(n)):is(t,e,n))}function Js(t,e,n){return n&&n.internalChannelParams&&n.internalChannelParams[t]||e}function Zs(t){this.za=0,this.l=[],this.h=new un,this.la=this.oa=this.F=this.W=this.g=this.sa=this.D=this.aa=this.o=this.P=this.s=null,this.Za=this.V=0,this.Xa=Js("failFast",!1,t),this.N=this.v=this.u=this.m=this.j=null,this.X=!0,this.I=this.ta=this.U=-1,this.Y=this.A=this.C=0,this.Pa=Js("baseRetryDelayMs",5e3,t),this.$a=Js("retryDelaySeedMs",1e4,t),this.Ya=Js("forwardChannelMaxRetries",2,t),this.ra=Js("forwardChannelRequestTimeoutMs",2e4,t),this.qa=t&&t.xmlHttpFactory||void 0,this.Ba=t&&t.Yb||!1,this.K=void 0,this.H=t&&t.supportsCrossDomainXhr||!1,this.J="",this.i=new Es(t&&t.concurrentRequestLimit),this.Ca=new Ds,this.ja=t&&t.fastHandshake||!1,this.Ra=t&&t.Wb||!1,t&&t.Aa&&this.h.Aa(),t&&t.forceLongPolling&&(this.X=!1),this.$=!this.ja&&this.X&&t&&t.detectBufferingProxy||!1,this.ka=void 0,this.O=0,this.L=!1,this.B=null,this.Wa=!t||!1!==t.Xb}function ti(t){if(ni(t),3==t.G){var e=t.V++,n=Zn(t.F);is(n,"SID",t.J),is(n,"RID",e),is(n,"TYPE","terminate"),oi(t,n),(e=new Rn(t,t.h,e,void 0)).K=2,e.v=rs(Zn(n)),n=!1,At.navigator&&At.navigator.sendBeacon&&(n=At.navigator.sendBeacon(e.v.toString(),"")),!n&&At.Image&&((new Image).src=e.v,n=!0),n||(e.g=vi(e.l,null),e.g.ea(e.v)),e.F=Date.now(),qn(e)}mi(t)}function ei(t){t.g&&(ui(t),t.g.cancel(),t.g=null)}function ni(t){ei(t),t.u&&(At.clearTimeout(t.u),t.u=null),di(t),t.i.cancel(),t.m&&("number"==typeof t.m&&At.clearTimeout(t.m),t.m=null)}function si(t,e){t.l.push(new class{constructor(t,e){this.h=t,this.g=e}}(t.Za++,e)),3==t.G&&ii(t)}function ii(t){Ts(t.i)||t.m||(t.m=!0,Qe(t.Ha,t),t.C=0)}function ri(t,e){var n;n=e?e.m:t.V++;const s=Zn(t.F);is(s,"SID",t.J),is(s,"RID",n),is(s,"AID",t.U),oi(t,s),t.o&&t.s&&Xs(s,t.o,t.s),n=new Rn(t,t.h,n,t.C+1),null===t.o&&(n.H=t.s),e&&(t.l=e.D.concat(t.l)),e=ai(t,n,1e3),n.setTimeout(Math.round(.5*t.ra)+Math.round(.5*t.ra*Math.random())),Cs(t.i,n),Pn(n,s,e)}function oi(t,e){t.j&&Gn({},(function(t,n){is(e,n,t)}))}function ai(t,e,n){n=Math.min(t.l.length,n);var s=t.j?Ot(t.j.Oa,t.j,t):null;t:{var i=t.l;let e=-1;for(;;){const t=["count="+n];-1==e?0<n?(e=i[0].h,t.push("ofs="+e)):e=0:t.push("ofs="+e);let r=!0;for(let o=0;o<n;o++){let n=i[o].h;const a=i[o].g;if(n-=e,0>n)e=Math.max(0,i[o].h-100),r=!1;else try{ks(a,t,"req"+n+"_")}catch(t){s&&s(a)}}if(r){s=t.join("&");break t}}}return t=t.l.splice(0,n),e.D=t,s}function hi(t){t.g||t.u||(t.Y=1,Qe(t.Ga,t),t.A=0)}function ci(t){return!(t.g||t.u||3<=t.A)&&(t.Y++,t.u=En(Ot(t.Ga,t),pi(t,t.A)),t.A++,!0)}function ui(t){null!=t.B&&(At.clearTimeout(t.B),t.B=null)}function li(t){t.g=new Rn(t,t.h,"rpc",t.Y),null===t.o&&(t.g.H=t.s),t.g.O=0;var e=Zn(t.oa);is(e,"RID","rpc"),is(e,"SID",t.J),is(e,"CI",t.N?"0":"1"),is(e,"AID",t.U),oi(t,e),is(e,"TYPE","xmlhttp"),t.o&&t.s&&Xs(e,t.o,t.s),t.K&&t.g.setTimeout(t.K);var n=t.g;t=t.la,n.K=1,n.v=rs(Zn(e)),n.s=null,n.U=!0,Vn(n,t)}function di(t){null!=t.v&&(At.clearTimeout(t.v),t.v=null)}function fi(t,e){var n=null;if(t.g==e){di(t),ui(t),t.g=null;var s=2}else{if(!Ss(t.i,e))return;n=e.D,As(t.i,e),s=1}if(t.I=e.N,0!=t.G)if(e.i)if(1==s){n=e.s?e.s.length:0,e=Date.now()-e.F;var i=t.C;Be(s=pn(),new wn(s,n,e,i)),ii(t)}else hi(t);else if(3==(i=e.o)||0==i&&0<t.I||!(1==s&&function(t,e){return!(Is(t.i)>=t.i.j-(t.m?1:0)||(t.m?(t.l=e.D.concat(t.l),0):1==t.G||2==t.G||t.C>=(t.Xa?0:t.Ya)||(t.m=En(Ot(t.Ha,t,e),pi(t,t.C)),t.C++,0)))}(t,e)||2==s&&ci(t)))switch(n&&0<n.length&&(e=t.i,e.i=e.i.concat(n)),i){case 1:gi(t,5);break;case 4:gi(t,10);break;case 3:gi(t,6);break;default:gi(t,2)}}function pi(t,e){let n=t.Pa+Math.floor(Math.random()*t.$a);return t.j||(n*=2),n*e}function gi(t,e){if(t.h.info("Error code "+e),2==e){var n=null;t.j&&(n=null);var s=Ot(t.jb,t);n||(n=new Jn("//www.google.com/images/cleardot.gif"),At.location&&"http"==At.location.protocol||ts(n,"https"),rs(n)),function(t,e){const n=new un;if(At.Image){const s=new Image;s.onload=Mt(Rs,n,s,"TestLoadImage: loaded",!0,e),s.onerror=Mt(Rs,n,s,"TestLoadImage: error",!1,e),s.onabort=Mt(Rs,n,s,"TestLoadImage: abort",!1,e),s.ontimeout=Mt(Rs,n,s,"TestLoadImage: timeout",!1,e),At.setTimeout((function(){s.ontimeout&&s.ontimeout()}),1e4),s.src=t}else e(!1)}(n.toString(),s)}else vn(2);t.G=0,t.j&&t.j.va(e),mi(t),ni(t)}function mi(t){t.G=0,t.I=-1,t.j&&(0==_s(t.i).length&&0==t.l.length||(t.i.i.length=0,Bt(t.l),t.l.length=0),t.j.ua())}function yi(t,e,n){let s=function(t){return t instanceof Jn?Zn(t):new Jn(t,void 0)}(n);if(""!=s.i)e&&es(s,e+"."+s.i),ns(s,s.m);else{const t=At.location;s=function(t,e,n,s){var i=new Jn(null,void 0);return t&&ts(i,t),e&&es(i,e),n&&ns(i,n),s&&(i.l=s),i}(t.protocol,e?e+"."+t.hostname:t.hostname,+t.port,n)}return t.aa&&Qt(t.aa,(function(t,e){is(s,e,t)})),e=t.D,n=t.sa,e&&n&&is(s,e,n),is(s,"VER",t.ma),oi(t,s),s}function vi(t,e,n){if(e&&!t.H)throw Error("Can't create secondary domain capable XhrIo object.");return(e=n&&t.Ba&&!t.qa?new Us(new Ls({ib:!0})):new Us(t.qa)).L=t.H,e}function wi(){}function Ei(){if(ie&&!(10<=Number(ye)))throw Error("Environmental error: no available transport.")}function bi(t,e){qe.call(this),this.g=new Zs(e),this.l=t,this.h=e&&e.messageUrlParams||null,t=e&&e.messageHeaders||null,e&&e.clientProtocolHeaderRequired&&(t?t["X-Client-Protocol"]="webchannel":t={"X-Client-Protocol":"webchannel"}),this.g.s=t,t=e&&e.initMessageHeaders||null,e&&e.messageContentType&&(t?t["X-WebChannel-Content-Type"]=e.messageContentType:t={"X-WebChannel-Content-Type":e.messageContentType}),e&&e.ya&&(t?t["X-WebChannel-Client-Profile"]=e.ya:t={"X-WebChannel-Client-Profile":e.ya}),this.g.P=t,(t=e&&e.httpHeadersOverwriteParam)&&!jt(t)&&(this.g.o=t),this.A=e&&e.supportsCrossDomainXhr||!1,this.v=e&&e.sendRawJson||!1,(e=e&&e.httpSessionIdParam)&&!jt(e)&&(this.g.D=e,null!==(t=this.h)&&e in t&&(e in(t=this.h)&&delete t[e])),this.j=new Si(this)}function Ti(t){Nn.call(this);var e=t.__sm__;if(e){t:{for(const n in e){t=n;break t}t=void 0}(this.i=t)&&(t=this.i,e=null!==e&&t in e?e[t]:void 0),this.data=e}else this.data=t}function Ii(){Dn.call(this),this.status=1}function Si(t){this.g=t}(It=Us.prototype).ea=function(t,e,n,s){if(this.g)throw Error("[goog.net.XhrIo] Object is active with another request="+this.H+"; newUri="+t);e=e?e.toUpperCase():"GET",this.H=t,this.j="",this.m=0,this.D=!1,this.h=!0,this.g=this.u?this.u.g():An.g(),this.C=this.u?Sn(this.u):Sn(An),this.g.onreadystatechange=Ot(this.Fa,this);try{this.F=!0,this.g.open(e,String(t),!0),this.F=!1}catch(t){return void Hs(this,t)}t=n||"";const i=new Wn(this.headers);s&&Gn(s,(function(t,e){i.set(e,t)})),s=function(t){t:{var e=js;const n=t.length,s="string"==typeof t?t.split(""):t;for(let i=0;i<n;i++)if(i in s&&e.call(void 0,s[i],i,t)){e=i;break t}e=-1}return 0>e?null:"string"==typeof t?t.charAt(e):t[e]}(i.T()),n=At.FormData&&t instanceof At.FormData,!(0<=Ut(Bs,e))||s||n||i.set("Content-Type","application/x-www-form-urlencoded;charset=utf-8"),i.forEach((function(t,e){this.g.setRequestHeader(e,t)}),this),this.J&&(this.g.responseType=this.J),"withCredentials"in this.g&&this.g.withCredentials!==this.L&&(this.g.withCredentials=this.L);try{Ws(this),0<this.B&&((this.K=function(t){return ie&&ge()&&"number"==typeof t.timeout&&void 0!==t.ontimeout}(this.g))?(this.g.timeout=this.B,this.g.ontimeout=Ot(this.pa,this)):this.A=nn(this.pa,this.B,this)),this.v=!0,this.g.send(t),this.v=!1}catch(t){Hs(this,t)}},It.pa=function(){void 0!==Ct&&this.g&&(this.j="Timed out after "+this.B+"ms, aborting",this.m=8,Be(this,"timeout"),this.abort(8))},It.abort=function(t){this.g&&this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1,this.m=t||7,Be(this,"complete"),Be(this,"abort"),Gs(this))},It.M=function(){this.g&&(this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1),Gs(this,!0)),Us.Z.M.call(this)},It.Fa=function(){this.s||(this.F||this.v||this.l?Ks(this):this.cb())},It.cb=function(){Ks(this)},It.ba=function(){try{return 2<Ys(this)?this.g.status:-1}catch(t){return-1}},It.ga=function(){try{return this.g?this.g.responseText:""}catch(t){return""}},It.Qa=function(t){if(this.g){var e=this.g.responseText;return t&&0==e.indexOf(t)&&(e=e.substring(t.length)),Fs(e)}},It.Da=function(){return this.m},It.La=function(){return"string"==typeof this.j?this.j:String(this.j)},(It=Zs.prototype).ma=8,It.G=1,It.hb=function(t){try{this.h.info("Origin Trials invoked: "+t)}catch(t){}},It.Ha=function(t){if(this.m)if(this.m=null,1==this.G){if(!t){this.V=Math.floor(1e5*Math.random()),t=this.V++;const i=new Rn(this,this.h,t,void 0);let r=this.s;if(this.P&&(r?(r=Xt(r),Zt(r,this.P)):r=this.P),null===this.o&&(i.H=r),this.ja)t:{for(var e=0,n=0;n<this.l.length;n++){var s=this.l[n];if(void 0===(s="__data__"in s.g&&"string"==typeof(s=s.g.__data__)?s.length:void 0))break;if(4096<(e+=s)){e=n;break t}if(4096===e||n===this.l.length-1){e=n+1;break t}}e=1e3}else e=1e3;e=ai(this,i,e),is(n=Zn(this.F),"RID",t),is(n,"CVER",22),this.D&&is(n,"X-HTTP-Session-Id",this.D),oi(this,n),this.o&&r&&Xs(n,this.o,r),Cs(this.i,i),this.Ra&&is(n,"TYPE","init"),this.ja?(is(n,"$req",e),is(n,"SID","null"),i.$=!0,Pn(i,n,null)):Pn(i,n,e),this.G=2}}else 3==this.G&&(t?ri(this,t):0==this.l.length||Ts(this.i)||ri(this))},It.Ga=function(){if(this.u=null,li(this),this.$&&!(this.L||null==this.g||0>=this.O)){var t=2*this.O;this.h.info("BP detection timer enabled: "+t),this.B=En(Ot(this.bb,this),t)}},It.bb=function(){this.B&&(this.B=null,this.h.info("BP detection timeout reached."),this.h.info("Buffering proxy detected and switch to long-polling!"),this.N=!1,this.L=!0,vn(10),ei(this),li(this))},It.ab=function(){null!=this.v&&(this.v=null,ei(this),ci(this),vn(19))},It.jb=function(t){t?(this.h.info("Successfully pinged google.com"),vn(2)):(this.h.info("Failed to ping google.com"),vn(1))},(It=wi.prototype).xa=function(){},It.wa=function(){},It.va=function(){},It.ua=function(){},It.Oa=function(){},Ei.prototype.g=function(t,e){return new bi(t,e)},Pt(bi,qe),bi.prototype.m=function(){this.g.j=this.j,this.A&&(this.g.H=!0);var t=this.g,e=this.l,n=this.h||void 0;t.Wa&&(t.h.info("Origin Trials enabled."),Qe(Ot(t.hb,t,e))),vn(0),t.W=e,t.aa=n||{},t.N=t.X,t.F=yi(t,null,t.W),ii(t)},bi.prototype.close=function(){ti(this.g)},bi.prototype.u=function(t){if("string"==typeof t){var e={};e.__data__=t,si(this.g,e)}else this.v?((e={}).__data__=He(t),si(this.g,e)):si(this.g,t)},bi.prototype.M=function(){this.g.j=null,delete this.j,ti(this.g),delete this.g,bi.Z.M.call(this)},Pt(Ti,Nn),Pt(Ii,Dn),Pt(Si,wi),Si.prototype.xa=function(){Be(this.g,"a")},Si.prototype.wa=function(t){Be(this.g,new Ti(t))},Si.prototype.va=function(t){Be(this.g,new Ii(t))},Si.prototype.ua=function(){Be(this.g,"b")},Ei.prototype.createWebChannel=Ei.prototype.g,bi.prototype.send=bi.prototype.u,bi.prototype.open=bi.prototype.m,bi.prototype.close=bi.prototype.close,bn.NO_ERROR=0,bn.TIMEOUT=8,bn.HTTP_ERROR=6,Tn.COMPLETE="complete",Cn.EventType=_n,_n.OPEN="a",_n.CLOSE="b",_n.ERROR="c",_n.MESSAGE="d",qe.prototype.listen=qe.prototype.N,Us.prototype.listenOnce=Us.prototype.O,Us.prototype.getLastError=Us.prototype.La,Us.prototype.getLastErrorCode=Us.prototype.Da,Us.prototype.getStatus=Us.prototype.ba,Us.prototype.getResponseJson=Us.prototype.Qa,Us.prototype.getResponseText=Us.prototype.ga,Us.prototype.send=Us.prototype.ea;var Ci=bn,Ai=Tn,_i=dn,Ni=10,Di=11,ki=Ls,Ri=Cn,Li=Us;const xi="@firebase/firestore";
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Oi{constructor(t){this.uid=t}isAuthenticated(){return null!=this.uid}toKey(){return this.isAuthenticated()?"uid:"+this.uid:"anonymous-user"}isEqual(t){return t.uid===this.uid}}Oi.UNAUTHENTICATED=new Oi(null),Oi.GOOGLE_CREDENTIALS=new Oi("google-credentials-uid"),Oi.FIRST_PARTY=new Oi("first-party-uid"),Oi.MOCK_USER=new Oi("mock-user");
-/**
+    registerVersion(name, version, 'app');
+
+    var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+    /*
+
+     Copyright The Closure Library Authors.
+     SPDX-License-Identifier: Apache-2.0
+    */
+    var k$1,goog=goog||{},l=commonjsGlobal||self;function aa$1(){}function ba(a){var b=typeof a;b="object"!=b?b:a?Array.isArray(a)?"array":b:"null";return "array"==b||"object"==b&&"number"==typeof a.length}function p(a){var b=typeof a;return "object"==b&&null!=a||"function"==b}function da$1(a){return Object.prototype.hasOwnProperty.call(a,ea$1)&&a[ea$1]||(a[ea$1]=++fa)}var ea$1="closure_uid_"+(1E9*Math.random()>>>0),fa=0;function ha(a,b,c){return a.call.apply(a.bind,arguments)}
+    function ia(a,b,c){if(!a)throw Error();if(2<arguments.length){var d=Array.prototype.slice.call(arguments,2);return function(){var e=Array.prototype.slice.call(arguments);Array.prototype.unshift.apply(e,d);return a.apply(b,e)}}return function(){return a.apply(b,arguments)}}function q(a,b,c){Function.prototype.bind&&-1!=Function.prototype.bind.toString().indexOf("native code")?q=ha:q=ia;return q.apply(null,arguments)}
+    function ja(a,b){var c=Array.prototype.slice.call(arguments,1);return function(){var d=c.slice();d.push.apply(d,arguments);return a.apply(this,d)}}function t(a,b){function c(){}c.prototype=b.prototype;a.Z=b.prototype;a.prototype=new c;a.prototype.constructor=a;a.Vb=function(d,e,f){for(var h=Array(arguments.length-2),n=2;n<arguments.length;n++)h[n-2]=arguments[n];return b.prototype[e].apply(d,h)};}function v(){this.s=this.s;this.o=this.o;}var ka=0,la={};v.prototype.s=!1;v.prototype.na=function(){if(!this.s&&(this.s=!0,this.M(),0!=ka)){var a=da$1(this);delete la[a];}};v.prototype.M=function(){if(this.o)for(;this.o.length;)this.o.shift()();};const ma$1=Array.prototype.indexOf?function(a,b){return Array.prototype.indexOf.call(a,b,void 0)}:function(a,b){if("string"===typeof a)return "string"!==typeof b||1!=b.length?-1:a.indexOf(b,0);for(let c=0;c<a.length;c++)if(c in a&&a[c]===b)return c;return -1},na$1=Array.prototype.forEach?function(a,b,c){Array.prototype.forEach.call(a,b,c);}:function(a,b,c){const d=a.length,e="string"===typeof a?a.split(""):a;for(let f=0;f<d;f++)f in e&&b.call(c,e[f],f,a);};
+    function oa(a){a:{var b=pa$1;const c=a.length,d="string"===typeof a?a.split(""):a;for(let e=0;e<c;e++)if(e in d&&b.call(void 0,d[e],e,a)){b=e;break a}b=-1;}return 0>b?null:"string"===typeof a?a.charAt(b):a[b]}function qa$1(a){return Array.prototype.concat.apply([],arguments)}function ra(a){const b=a.length;if(0<b){const c=Array(b);for(let d=0;d<b;d++)c[d]=a[d];return c}return []}function sa(a){return /^[\s\xa0]*$/.test(a)}var ta=String.prototype.trim?function(a){return a.trim()}:function(a){return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(a)[1]};function w(a,b){return -1!=a.indexOf(b)}function ua(a,b){return a<b?-1:a>b?1:0}var x$1;a:{var va$1=l.navigator;if(va$1){var wa$1=va$1.userAgent;if(wa$1){x$1=wa$1;break a}}x$1="";}function xa$1(a,b,c){for(const d in a)b.call(c,a[d],d,a);}function ya$1(a){const b={};for(const c in a)b[c]=a[c];return b}var za="constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");function Aa$1(a,b){let c,d;for(let e=1;e<arguments.length;e++){d=arguments[e];for(c in d)a[c]=d[c];for(let f=0;f<za.length;f++)c=za[f],Object.prototype.hasOwnProperty.call(d,c)&&(a[c]=d[c]);}}function Ca$1(a){Ca$1[" "](a);return a}Ca$1[" "]=aa$1;function Fa$1(a){var b=Ga;return Object.prototype.hasOwnProperty.call(b,9)?b[9]:b[9]=a(9)}var Ha=w(x$1,"Opera"),y=w(x$1,"Trident")||w(x$1,"MSIE"),Ia=w(x$1,"Edge"),Ja=Ia||y,Ka=w(x$1,"Gecko")&&!(w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge"))&&!(w(x$1,"Trident")||w(x$1,"MSIE"))&&!w(x$1,"Edge"),La=w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge");function Ma(){var a=l.document;return a?a.documentMode:void 0}var Na;
+    a:{var Oa="",Pa$1=function(){var a=x$1;if(Ka)return /rv:([^\);]+)(\)|;)/.exec(a);if(Ia)return /Edge\/([\d\.]+)/.exec(a);if(y)return /\b(?:MSIE|rv)[: ]([^\);]+)(\)|;)/.exec(a);if(La)return /WebKit\/(\S+)/.exec(a);if(Ha)return /(?:Version)[ \/]?(\S+)/.exec(a)}();Pa$1&&(Oa=Pa$1?Pa$1[1]:"");if(y){var Qa=Ma();if(null!=Qa&&Qa>parseFloat(Oa)){Na=String(Qa);break a}}Na=Oa;}var Ga={};
+    function Ra$1(){return Fa$1(function(){let a=0;const b=ta(String(Na)).split("."),c=ta("9").split("."),d=Math.max(b.length,c.length);for(let h=0;0==a&&h<d;h++){var e=b[h]||"",f=c[h]||"";do{e=/(\d*)(\D*)(.*)/.exec(e)||["","","",""];f=/(\d*)(\D*)(.*)/.exec(f)||["","","",""];if(0==e[0].length&&0==f[0].length)break;a=ua(0==e[1].length?0:parseInt(e[1],10),0==f[1].length?0:parseInt(f[1],10))||ua(0==e[2].length,0==f[2].length)||ua(e[2],f[2]);e=e[3];f=f[3];}while(0==a)}return 0<=a})}var Sa$1;
+    if(l.document&&y){var Ta$1=Ma();Sa$1=Ta$1?Ta$1:parseInt(Na,10)||void 0;}else Sa$1=void 0;var Ua$1=Sa$1;var Va$1=function(){if(!l.addEventListener||!Object.defineProperty)return !1;var a=!1,b=Object.defineProperty({},"passive",{get:function(){a=!0;}});try{l.addEventListener("test",aa$1,b),l.removeEventListener("test",aa$1,b);}catch(c){}return a}();function z$1(a,b){this.type=a;this.g=this.target=b;this.defaultPrevented=!1;}z$1.prototype.h=function(){this.defaultPrevented=!0;};function A(a,b){z$1.call(this,a?a.type:"");this.relatedTarget=this.g=this.target=null;this.button=this.screenY=this.screenX=this.clientY=this.clientX=0;this.key="";this.metaKey=this.shiftKey=this.altKey=this.ctrlKey=!1;this.state=null;this.pointerId=0;this.pointerType="";this.i=null;if(a){var c=this.type=a.type,d=a.changedTouches&&a.changedTouches.length?a.changedTouches[0]:null;this.target=a.target||a.srcElement;this.g=b;if(b=a.relatedTarget){if(Ka){a:{try{Ca$1(b.nodeName);var e=!0;break a}catch(f){}e=
+    !1;}e||(b=null);}}else "mouseover"==c?b=a.fromElement:"mouseout"==c&&(b=a.toElement);this.relatedTarget=b;d?(this.clientX=void 0!==d.clientX?d.clientX:d.pageX,this.clientY=void 0!==d.clientY?d.clientY:d.pageY,this.screenX=d.screenX||0,this.screenY=d.screenY||0):(this.clientX=void 0!==a.clientX?a.clientX:a.pageX,this.clientY=void 0!==a.clientY?a.clientY:a.pageY,this.screenX=a.screenX||0,this.screenY=a.screenY||0);this.button=a.button;this.key=a.key||"";this.ctrlKey=a.ctrlKey;this.altKey=a.altKey;this.shiftKey=
+    a.shiftKey;this.metaKey=a.metaKey;this.pointerId=a.pointerId||0;this.pointerType="string"===typeof a.pointerType?a.pointerType:Wa[a.pointerType]||"";this.state=a.state;this.i=a;a.defaultPrevented&&A.Z.h.call(this);}}t(A,z$1);var Wa={2:"touch",3:"pen",4:"mouse"};A.prototype.h=function(){A.Z.h.call(this);var a=this.i;a.preventDefault?a.preventDefault():a.returnValue=!1;};var B$1="closure_listenable_"+(1E6*Math.random()|0);var Xa=0;function Ya(a,b,c,d,e){this.listener=a;this.proxy=null;this.src=b;this.type=c;this.capture=!!d;this.ia=e;this.key=++Xa;this.ca=this.fa=!1;}function Za(a){a.ca=!0;a.listener=null;a.proxy=null;a.src=null;a.ia=null;}function $a(a){this.src=a;this.g={};this.h=0;}$a.prototype.add=function(a,b,c,d,e){var f=a.toString();a=this.g[f];a||(a=this.g[f]=[],this.h++);var h=ab(a,b,d,e);-1<h?(b=a[h],c||(b.fa=!1)):(b=new Ya(b,this.src,f,!!d,e),b.fa=c,a.push(b));return b};function bb(a,b){var c=b.type;if(c in a.g){var d=a.g[c],e=ma$1(d,b),f;(f=0<=e)&&Array.prototype.splice.call(d,e,1);f&&(Za(b),0==a.g[c].length&&(delete a.g[c],a.h--));}}
+    function ab(a,b,c,d){for(var e=0;e<a.length;++e){var f=a[e];if(!f.ca&&f.listener==b&&f.capture==!!c&&f.ia==d)return e}return -1}var cb="closure_lm_"+(1E6*Math.random()|0),db={};function fb(a,b,c,d,e){if(d&&d.once)return gb(a,b,c,d,e);if(Array.isArray(b)){for(var f=0;f<b.length;f++)fb(a,b[f],c,d,e);return null}c=hb(c);return a&&a[B$1]?a.N(b,c,p(d)?!!d.capture:!!d,e):ib(a,b,c,!1,d,e)}
+    function ib(a,b,c,d,e,f){if(!b)throw Error("Invalid event type");var h=p(e)?!!e.capture:!!e,n=jb(a);n||(a[cb]=n=new $a(a));c=n.add(b,c,d,h,f);if(c.proxy)return c;d=kb();c.proxy=d;d.src=a;d.listener=c;if(a.addEventListener)Va$1||(e=h),void 0===e&&(e=!1),a.addEventListener(b.toString(),d,e);else if(a.attachEvent)a.attachEvent(lb(b.toString()),d);else if(a.addListener&&a.removeListener)a.addListener(d);else throw Error("addEventListener and attachEvent are unavailable.");return c}
+    function kb(){function a(c){return b.call(a.src,a.listener,c)}var b=mb;return a}function gb(a,b,c,d,e){if(Array.isArray(b)){for(var f=0;f<b.length;f++)gb(a,b[f],c,d,e);return null}c=hb(c);return a&&a[B$1]?a.O(b,c,p(d)?!!d.capture:!!d,e):ib(a,b,c,!0,d,e)}
+    function nb(a,b,c,d,e){if(Array.isArray(b))for(var f=0;f<b.length;f++)nb(a,b[f],c,d,e);else (d=p(d)?!!d.capture:!!d,c=hb(c),a&&a[B$1])?(a=a.i,b=String(b).toString(),b in a.g&&(f=a.g[b],c=ab(f,c,d,e),-1<c&&(Za(f[c]),Array.prototype.splice.call(f,c,1),0==f.length&&(delete a.g[b],a.h--)))):a&&(a=jb(a))&&(b=a.g[b.toString()],a=-1,b&&(a=ab(b,c,d,e)),(c=-1<a?b[a]:null)&&ob(c));}
+    function ob(a){if("number"!==typeof a&&a&&!a.ca){var b=a.src;if(b&&b[B$1])bb(b.i,a);else {var c=a.type,d=a.proxy;b.removeEventListener?b.removeEventListener(c,d,a.capture):b.detachEvent?b.detachEvent(lb(c),d):b.addListener&&b.removeListener&&b.removeListener(d);(c=jb(b))?(bb(c,a),0==c.h&&(c.src=null,b[cb]=null)):Za(a);}}}function lb(a){return a in db?db[a]:db[a]="on"+a}function mb(a,b){if(a.ca)a=!0;else {b=new A(b,this);var c=a.listener,d=a.ia||a.src;a.fa&&ob(a);a=c.call(d,b);}return a}
+    function jb(a){a=a[cb];return a instanceof $a?a:null}var pb="__closure_events_fn_"+(1E9*Math.random()>>>0);function hb(a){if("function"===typeof a)return a;a[pb]||(a[pb]=function(b){return a.handleEvent(b)});return a[pb]}function C$1(){v.call(this);this.i=new $a(this);this.P=this;this.I=null;}t(C$1,v);C$1.prototype[B$1]=!0;C$1.prototype.removeEventListener=function(a,b,c,d){nb(this,a,b,c,d);};
+    function D$1(a,b){var c,d=a.I;if(d)for(c=[];d;d=d.I)c.push(d);a=a.P;d=b.type||b;if("string"===typeof b)b=new z$1(b,a);else if(b instanceof z$1)b.target=b.target||a;else {var e=b;b=new z$1(d,a);Aa$1(b,e);}e=!0;if(c)for(var f=c.length-1;0<=f;f--){var h=b.g=c[f];e=qb(h,d,!0,b)&&e;}h=b.g=a;e=qb(h,d,!0,b)&&e;e=qb(h,d,!1,b)&&e;if(c)for(f=0;f<c.length;f++)h=b.g=c[f],e=qb(h,d,!1,b)&&e;}
+    C$1.prototype.M=function(){C$1.Z.M.call(this);if(this.i){var a=this.i,c;for(c in a.g){for(var d=a.g[c],e=0;e<d.length;e++)Za(d[e]);delete a.g[c];a.h--;}}this.I=null;};C$1.prototype.N=function(a,b,c,d){return this.i.add(String(a),b,!1,c,d)};C$1.prototype.O=function(a,b,c,d){return this.i.add(String(a),b,!0,c,d)};
+    function qb(a,b,c,d){b=a.i.g[String(b)];if(!b)return !0;b=b.concat();for(var e=!0,f=0;f<b.length;++f){var h=b[f];if(h&&!h.ca&&h.capture==c){var n=h.listener,u=h.ia||h.src;h.fa&&bb(a.i,h);e=!1!==n.call(u,d)&&e;}}return e&&!d.defaultPrevented}var rb=l.JSON.stringify;function sb(){var a=tb;let b=null;a.g&&(b=a.g,a.g=a.g.next,a.g||(a.h=null),b.next=null);return b}class ub{constructor(){this.h=this.g=null;}add(a,b){const c=vb.get();c.set(a,b);this.h?this.h.next=c:this.g=c;this.h=c;}}var vb=new class{constructor(a,b){this.i=a;this.j=b;this.h=0;this.g=null;}get(){let a;0<this.h?(this.h--,a=this.g,this.g=a.next,a.next=null):a=this.i();return a}}(()=>new wb,a=>a.reset());
+    class wb{constructor(){this.next=this.g=this.h=null;}set(a,b){this.h=a;this.g=b;this.next=null;}reset(){this.next=this.g=this.h=null;}}function yb(a){l.setTimeout(()=>{throw a;},0);}function zb(a,b){Ab||Bb();Cb||(Ab(),Cb=!0);tb.add(a,b);}var Ab;function Bb(){var a=l.Promise.resolve(void 0);Ab=function(){a.then(Db);};}var Cb=!1,tb=new ub;function Db(){for(var a;a=sb();){try{a.h.call(a.g);}catch(c){yb(c);}var b=vb;b.j(a);100>b.h&&(b.h++,a.next=b.g,b.g=a);}Cb=!1;}function Eb(a,b){C$1.call(this);this.h=a||1;this.g=b||l;this.j=q(this.kb,this);this.l=Date.now();}t(Eb,C$1);k$1=Eb.prototype;k$1.da=!1;k$1.S=null;k$1.kb=function(){if(this.da){var a=Date.now()-this.l;0<a&&a<.8*this.h?this.S=this.g.setTimeout(this.j,this.h-a):(this.S&&(this.g.clearTimeout(this.S),this.S=null),D$1(this,"tick"),this.da&&(Fb(this),this.start()));}};k$1.start=function(){this.da=!0;this.S||(this.S=this.g.setTimeout(this.j,this.h),this.l=Date.now());};
+    function Fb(a){a.da=!1;a.S&&(a.g.clearTimeout(a.S),a.S=null);}k$1.M=function(){Eb.Z.M.call(this);Fb(this);delete this.g;};function Gb(a,b,c){if("function"===typeof a)c&&(a=q(a,c));else if(a&&"function"==typeof a.handleEvent)a=q(a.handleEvent,a);else throw Error("Invalid listener argument");return 2147483647<Number(b)?-1:l.setTimeout(a,b||0)}function Hb(a){a.g=Gb(()=>{a.g=null;a.i&&(a.i=!1,Hb(a));},a.j);const b=a.h;a.h=null;a.m.apply(null,b);}class Ib extends v{constructor(a,b){super();this.m=a;this.j=b;this.h=null;this.i=!1;this.g=null;}l(a){this.h=arguments;this.g?this.i=!0:Hb(this);}M(){super.M();this.g&&(l.clearTimeout(this.g),this.g=null,this.i=!1,this.h=null);}}function E(a){v.call(this);this.h=a;this.g={};}t(E,v);var Jb=[];function Kb(a,b,c,d){Array.isArray(c)||(c&&(Jb[0]=c.toString()),c=Jb);for(var e=0;e<c.length;e++){var f=fb(b,c[e],d||a.handleEvent,!1,a.h||a);if(!f)break;a.g[f.key]=f;}}function Lb(a){xa$1(a.g,function(b,c){this.g.hasOwnProperty(c)&&ob(b);},a);a.g={};}E.prototype.M=function(){E.Z.M.call(this);Lb(this);};E.prototype.handleEvent=function(){throw Error("EventHandler.handleEvent not implemented");};function Mb(){this.g=!0;}Mb.prototype.Aa=function(){this.g=!1;};function Nb(a,b,c,d,e,f){a.info(function(){if(a.g)if(f){var h="";for(var n=f.split("&"),u=0;u<n.length;u++){var m=n[u].split("=");if(1<m.length){var r=m[0];m=m[1];var G=r.split("_");h=2<=G.length&&"type"==G[1]?h+(r+"="+m+"&"):h+(r+"=redacted&");}}}else h=null;else h=f;return "XMLHTTP REQ ("+d+") [attempt "+e+"]: "+b+"\n"+c+"\n"+h});}
+    function Ob(a,b,c,d,e,f,h){a.info(function(){return "XMLHTTP RESP ("+d+") [ attempt "+e+"]: "+b+"\n"+c+"\n"+f+" "+h});}function F$1(a,b,c,d){a.info(function(){return "XMLHTTP TEXT ("+b+"): "+Pb(a,c)+(d?" "+d:"")});}function Qb(a,b){a.info(function(){return "TIMEOUT: "+b});}Mb.prototype.info=function(){};
+    function Pb(a,b){if(!a.g)return b;if(!b)return null;try{var c=JSON.parse(b);if(c)for(a=0;a<c.length;a++)if(Array.isArray(c[a])){var d=c[a];if(!(2>d.length)){var e=d[1];if(Array.isArray(e)&&!(1>e.length)){var f=e[0];if("noop"!=f&&"stop"!=f&&"close"!=f)for(var h=1;h<e.length;h++)e[h]="";}}}return rb(c)}catch(n){return b}}var H={},Rb=null;function Sb(){return Rb=Rb||new C$1}H.Ma="serverreachability";function Tb(a){z$1.call(this,H.Ma,a);}t(Tb,z$1);function I(a){const b=Sb();D$1(b,new Tb(b,a));}H.STAT_EVENT="statevent";function Ub(a,b){z$1.call(this,H.STAT_EVENT,a);this.stat=b;}t(Ub,z$1);function J$1(a){const b=Sb();D$1(b,new Ub(b,a));}H.Na="timingevent";function Vb(a,b){z$1.call(this,H.Na,a);this.size=b;}t(Vb,z$1);
+    function K$1(a,b){if("function"!==typeof a)throw Error("Fn must not be null and must be a function");return l.setTimeout(function(){a();},b)}var Wb={NO_ERROR:0,lb:1,yb:2,xb:3,sb:4,wb:5,zb:6,Ja:7,TIMEOUT:8,Cb:9};var Xb={qb:"complete",Mb:"success",Ka:"error",Ja:"abort",Eb:"ready",Fb:"readystatechange",TIMEOUT:"timeout",Ab:"incrementaldata",Db:"progress",tb:"downloadprogress",Ub:"uploadprogress"};function Yb(){}Yb.prototype.h=null;function Zb(a){return a.h||(a.h=a.i())}function $b(){}var L$1={OPEN:"a",pb:"b",Ka:"c",Bb:"d"};function ac$1(){z$1.call(this,"d");}t(ac$1,z$1);function bc$1(){z$1.call(this,"c");}t(bc$1,z$1);var cc$1;function dc$1(){}t(dc$1,Yb);dc$1.prototype.g=function(){return new XMLHttpRequest};dc$1.prototype.i=function(){return {}};cc$1=new dc$1;function M$1(a,b,c,d){this.l=a;this.j=b;this.m=c;this.X=d||1;this.V=new E(this);this.P=ec$1;a=Ja?125:void 0;this.W=new Eb(a);this.H=null;this.i=!1;this.s=this.A=this.v=this.K=this.F=this.Y=this.B=null;this.D=[];this.g=null;this.C=0;this.o=this.u=null;this.N=-1;this.I=!1;this.O=0;this.L=null;this.aa=this.J=this.$=this.U=!1;this.h=new fc$1;}function fc$1(){this.i=null;this.g="";this.h=!1;}var ec$1=45E3,gc$1={},hc$1={};k$1=M$1.prototype;k$1.setTimeout=function(a){this.P=a;};
+    function ic$1(a,b,c){a.K=1;a.v=jc(N$1(b));a.s=c;a.U=!0;kc(a,null);}function kc(a,b){a.F=Date.now();lc$1(a);a.A=N$1(a.v);var c=a.A,d=a.X;Array.isArray(d)||(d=[String(d)]);mc$1(c.h,"t",d);a.C=0;c=a.l.H;a.h=new fc$1;a.g=nc$1(a.l,c?b:null,!a.s);0<a.O&&(a.L=new Ib(q(a.Ia,a,a.g),a.O));Kb(a.V,a.g,"readystatechange",a.gb);b=a.H?ya$1(a.H):{};a.s?(a.u||(a.u="POST"),b["Content-Type"]="application/x-www-form-urlencoded",a.g.ea(a.A,a.u,a.s,b)):(a.u="GET",a.g.ea(a.A,a.u,null,b));I(1);Nb(a.j,a.u,a.A,a.m,a.X,a.s);}
+    k$1.gb=function(a){a=a.target;const b=this.L;b&&3==O$1(a)?b.l():this.Ia(a);};
+    k$1.Ia=function(a){try{if(a==this.g)a:{const r=O$1(this.g);var b=this.g.Da();const G=this.g.ba();if(!(3>r)&&(3!=r||Ja||this.g&&(this.h.h||this.g.ga()||oc$1(this.g)))){this.I||4!=r||7==b||(8==b||0>=G?I(3):I(2));pc$1(this);var c=this.g.ba();this.N=c;b:if(qc(this)){var d=oc$1(this.g);a="";var e=d.length,f=4==O$1(this.g);if(!this.h.i){if("undefined"===typeof TextDecoder){P(this);rc$1(this);var h="";break b}this.h.i=new l.TextDecoder;}for(b=0;b<e;b++)this.h.h=!0,a+=this.h.i.decode(d[b],{stream:f&&b==e-1});d.splice(0,
+    e);this.h.g+=a;this.C=0;h=this.h.g;}else h=this.g.ga();this.i=200==c;Ob(this.j,this.u,this.A,this.m,this.X,r,c);if(this.i){if(this.$&&!this.J){b:{if(this.g){var n,u=this.g;if((n=u.g?u.g.getResponseHeader("X-HTTP-Initial-Response"):null)&&!sa(n)){var m=n;break b}}m=null;}if(c=m)F$1(this.j,this.m,c,"Initial handshake response via X-HTTP-Initial-Response"),this.J=!0,sc$1(this,c);else {this.i=!1;this.o=3;J$1(12);P(this);rc$1(this);break a}}this.U?(tc$1(this,r,h),Ja&&this.i&&3==r&&(Kb(this.V,this.W,"tick",this.fb),
+    this.W.start())):(F$1(this.j,this.m,h,null),sc$1(this,h));4==r&&P(this);this.i&&!this.I&&(4==r?uc$1(this.l,this):(this.i=!1,lc$1(this)));}else 400==c&&0<h.indexOf("Unknown SID")?(this.o=3,J$1(12)):(this.o=0,J$1(13)),P(this),rc$1(this);}}}catch(r){}finally{}};function qc(a){return a.g?"GET"==a.u&&2!=a.K&&a.l.Ba:!1}
+    function tc$1(a,b,c){let d=!0,e;for(;!a.I&&a.C<c.length;)if(e=vc(a,c),e==hc$1){4==b&&(a.o=4,J$1(14),d=!1);F$1(a.j,a.m,null,"[Incomplete Response]");break}else if(e==gc$1){a.o=4;J$1(15);F$1(a.j,a.m,c,"[Invalid Chunk]");d=!1;break}else F$1(a.j,a.m,e,null),sc$1(a,e);qc(a)&&e!=hc$1&&e!=gc$1&&(a.h.g="",a.C=0);4!=b||0!=c.length||a.h.h||(a.o=1,J$1(16),d=!1);a.i=a.i&&d;d?0<c.length&&!a.aa&&(a.aa=!0,b=a.l,b.g==a&&b.$&&!b.L&&(b.h.info("Great, no buffering proxy detected. Bytes received: "+c.length),wc$1(b),b.L=!0,J$1(11))):(F$1(a.j,a.m,
+    c,"[Invalid Chunked Response]"),P(a),rc$1(a));}k$1.fb=function(){if(this.g){var a=O$1(this.g),b=this.g.ga();this.C<b.length&&(pc$1(this),tc$1(this,a,b),this.i&&4!=a&&lc$1(this));}};function vc(a,b){var c=a.C,d=b.indexOf("\n",c);if(-1==d)return hc$1;c=Number(b.substring(c,d));if(isNaN(c))return gc$1;d+=1;if(d+c>b.length)return hc$1;b=b.substr(d,c);a.C=d+c;return b}k$1.cancel=function(){this.I=!0;P(this);};function lc$1(a){a.Y=Date.now()+a.P;xc(a,a.P);}
+    function xc(a,b){if(null!=a.B)throw Error("WatchDog timer not null");a.B=K$1(q(a.eb,a),b);}function pc$1(a){a.B&&(l.clearTimeout(a.B),a.B=null);}k$1.eb=function(){this.B=null;const a=Date.now();0<=a-this.Y?(Qb(this.j,this.A),2!=this.K&&(I(3),J$1(17)),P(this),this.o=2,rc$1(this)):xc(this,this.Y-a);};function rc$1(a){0==a.l.G||a.I||uc$1(a.l,a);}function P(a){pc$1(a);var b=a.L;b&&"function"==typeof b.na&&b.na();a.L=null;Fb(a.W);Lb(a.V);a.g&&(b=a.g,a.g=null,b.abort(),b.na());}
+    function sc$1(a,b){try{var c=a.l;if(0!=c.G&&(c.g==a||yc$1(c.i,a)))if(c.I=a.N,!a.J&&yc$1(c.i,a)&&3==c.G){try{var d=c.Ca.g.parse(b);}catch(m){d=null;}if(Array.isArray(d)&&3==d.length){var e=d;if(0==e[0])a:{if(!c.u){if(c.g)if(c.g.F+3E3<a.F)zc$1(c),Ac$1(c);else break a;Bc(c);J$1(18);}}else c.ta=e[1],0<c.ta-c.U&&37500>e[2]&&c.N&&0==c.A&&!c.v&&(c.v=K$1(q(c.ab,c),6E3));if(1>=Cc(c.i)&&c.ka){try{c.ka();}catch(m){}c.ka=void 0;}}else Q$1(c,11);}else if((a.J||c.g==a)&&zc$1(c),!sa(b))for(e=c.Ca.g.parse(b),b=0;b<e.length;b++){let m=e[b];
+    c.U=m[0];m=m[1];if(2==c.G)if("c"==m[0]){c.J=m[1];c.la=m[2];const r=m[3];null!=r&&(c.ma=r,c.h.info("VER="+c.ma));const G=m[4];null!=G&&(c.za=G,c.h.info("SVER="+c.za));const Da=m[5];null!=Da&&"number"===typeof Da&&0<Da&&(d=1.5*Da,c.K=d,c.h.info("backChannelRequestTimeoutMs_="+d));d=c;const ca=a.g;if(ca){const Ea=ca.g?ca.g.getResponseHeader("X-Client-Wire-Protocol"):null;if(Ea){var f=d.i;!f.g&&(w(Ea,"spdy")||w(Ea,"quic")||w(Ea,"h2"))&&(f.j=f.l,f.g=new Set,f.h&&(Dc(f,f.h),f.h=null));}if(d.D){const xb=
+    ca.g?ca.g.getResponseHeader("X-HTTP-Session-Id"):null;xb&&(d.sa=xb,R(d.F,d.D,xb));}}c.G=3;c.j&&c.j.xa();c.$&&(c.O=Date.now()-a.F,c.h.info("Handshake RTT: "+c.O+"ms"));d=c;var h=a;d.oa=Ec$1(d,d.H?d.la:null,d.W);if(h.J){Fc$1(d.i,h);var n=h,u=d.K;u&&n.setTimeout(u);n.B&&(pc$1(n),lc$1(n));d.g=h;}else Gc$1(d);0<c.l.length&&Hc$1(c);}else "stop"!=m[0]&&"close"!=m[0]||Q$1(c,7);else 3==c.G&&("stop"==m[0]||"close"==m[0]?"stop"==m[0]?Q$1(c,7):Ic$1(c):"noop"!=m[0]&&c.j&&c.j.wa(m),c.A=0);}I(4);}catch(m){}}function Jc$1(a){if(a.R&&"function"==typeof a.R)return a.R();if("string"===typeof a)return a.split("");if(ba(a)){for(var b=[],c=a.length,d=0;d<c;d++)b.push(a[d]);return b}b=[];c=0;for(d in a)b[c++]=a[d];return b}
+    function Kc$1(a,b){if(a.forEach&&"function"==typeof a.forEach)a.forEach(b,void 0);else if(ba(a)||"string"===typeof a)na$1(a,b,void 0);else {if(a.T&&"function"==typeof a.T)var c=a.T();else if(a.R&&"function"==typeof a.R)c=void 0;else if(ba(a)||"string"===typeof a){c=[];for(var d=a.length,e=0;e<d;e++)c.push(e);}else for(e in c=[],d=0,a)c[d++]=e;d=Jc$1(a);e=d.length;for(var f=0;f<e;f++)b.call(void 0,d[f],c&&c[f],a);}}function S(a,b){this.h={};this.g=[];this.i=0;var c=arguments.length;if(1<c){if(c%2)throw Error("Uneven number of arguments");for(var d=0;d<c;d+=2)this.set(arguments[d],arguments[d+1]);}else if(a)if(a instanceof S)for(c=a.T(),d=0;d<c.length;d++)this.set(c[d],a.get(c[d]));else for(d in a)this.set(d,a[d]);}k$1=S.prototype;k$1.R=function(){Lc(this);for(var a=[],b=0;b<this.g.length;b++)a.push(this.h[this.g[b]]);return a};k$1.T=function(){Lc(this);return this.g.concat()};
+    function Lc(a){if(a.i!=a.g.length){for(var b=0,c=0;b<a.g.length;){var d=a.g[b];T(a.h,d)&&(a.g[c++]=d);b++;}a.g.length=c;}if(a.i!=a.g.length){var e={};for(c=b=0;b<a.g.length;)d=a.g[b],T(e,d)||(a.g[c++]=d,e[d]=1),b++;a.g.length=c;}}k$1.get=function(a,b){return T(this.h,a)?this.h[a]:b};k$1.set=function(a,b){T(this.h,a)||(this.i++,this.g.push(a));this.h[a]=b;};k$1.forEach=function(a,b){for(var c=this.T(),d=0;d<c.length;d++){var e=c[d],f=this.get(e);a.call(b,f,e,this);}};
+    function T(a,b){return Object.prototype.hasOwnProperty.call(a,b)}var Mc=/^(?:([^:/?#.]+):)?(?:\/\/(?:([^\\/?#]*)@)?([^\\/?#]*?)(?::([0-9]+))?(?=[\\/?#]|$))?([^?#]+)?(?:\?([^#]*))?(?:#([\s\S]*))?$/;function Nc(a,b){if(a){a=a.split("&");for(var c=0;c<a.length;c++){var d=a[c].indexOf("="),e=null;if(0<=d){var f=a[c].substring(0,d);e=a[c].substring(d+1);}else f=a[c];b(f,e?decodeURIComponent(e.replace(/\+/g," ")):"");}}}function U$1(a,b){this.i=this.s=this.j="";this.m=null;this.o=this.l="";this.g=!1;if(a instanceof U$1){this.g=void 0!==b?b:a.g;Oc$1(this,a.j);this.s=a.s;Pc(this,a.i);Qc(this,a.m);this.l=a.l;b=a.h;var c=new Rc$1;c.i=b.i;b.g&&(c.g=new S(b.g),c.h=b.h);Sc(this,c);this.o=a.o;}else a&&(c=String(a).match(Mc))?(this.g=!!b,Oc$1(this,c[1]||"",!0),this.s=Tc$1(c[2]||""),Pc(this,c[3]||"",!0),Qc(this,c[4]),this.l=Tc$1(c[5]||"",!0),Sc(this,c[6]||"",!0),this.o=Tc$1(c[7]||"")):(this.g=!!b,this.h=new Rc$1(null,this.g));}
+    U$1.prototype.toString=function(){var a=[],b=this.j;b&&a.push(Uc$1(b,Vc,!0),":");var c=this.i;if(c||"file"==b)a.push("//"),(b=this.s)&&a.push(Uc$1(b,Vc,!0),"@"),a.push(encodeURIComponent(String(c)).replace(/%25([0-9a-fA-F]{2})/g,"%$1")),c=this.m,null!=c&&a.push(":",String(c));if(c=this.l)this.i&&"/"!=c.charAt(0)&&a.push("/"),a.push(Uc$1(c,"/"==c.charAt(0)?Wc:Xc,!0));(c=this.h.toString())&&a.push("?",c);(c=this.o)&&a.push("#",Uc$1(c,Yc$1));return a.join("")};function N$1(a){return new U$1(a)}
+    function Oc$1(a,b,c){a.j=c?Tc$1(b,!0):b;a.j&&(a.j=a.j.replace(/:$/,""));}function Pc(a,b,c){a.i=c?Tc$1(b,!0):b;}function Qc(a,b){if(b){b=Number(b);if(isNaN(b)||0>b)throw Error("Bad port number "+b);a.m=b;}else a.m=null;}function Sc(a,b,c){b instanceof Rc$1?(a.h=b,Zc(a.h,a.g)):(c||(b=Uc$1(b,$c$1)),a.h=new Rc$1(b,a.g));}function R(a,b,c){a.h.set(b,c);}function jc(a){R(a,"zx",Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^Date.now()).toString(36));return a}
+    function ad(a){return a instanceof U$1?N$1(a):new U$1(a,void 0)}function bd(a,b,c,d){var e=new U$1(null,void 0);a&&Oc$1(e,a);b&&Pc(e,b);c&&Qc(e,c);d&&(e.l=d);return e}function Tc$1(a,b){return a?b?decodeURI(a.replace(/%25/g,"%2525")):decodeURIComponent(a):""}function Uc$1(a,b,c){return "string"===typeof a?(a=encodeURI(a).replace(b,cd),c&&(a=a.replace(/%25([0-9a-fA-F]{2})/g,"%$1")),a):null}function cd(a){a=a.charCodeAt(0);return "%"+(a>>4&15).toString(16)+(a&15).toString(16)}
+    var Vc=/[#\/\?@]/g,Xc=/[#\?:]/g,Wc=/[#\?]/g,$c$1=/[#\?@]/g,Yc$1=/#/g;function Rc$1(a,b){this.h=this.g=null;this.i=a||null;this.j=!!b;}function V(a){a.g||(a.g=new S,a.h=0,a.i&&Nc(a.i,function(b,c){a.add(decodeURIComponent(b.replace(/\+/g," ")),c);}));}k$1=Rc$1.prototype;k$1.add=function(a,b){V(this);this.i=null;a=W$1(this,a);var c=this.g.get(a);c||this.g.set(a,c=[]);c.push(b);this.h+=1;return this};
+    function dd(a,b){V(a);b=W$1(a,b);T(a.g.h,b)&&(a.i=null,a.h-=a.g.get(b).length,a=a.g,T(a.h,b)&&(delete a.h[b],a.i--,a.g.length>2*a.i&&Lc(a)));}function ed(a,b){V(a);b=W$1(a,b);return T(a.g.h,b)}k$1.forEach=function(a,b){V(this);this.g.forEach(function(c,d){na$1(c,function(e){a.call(b,e,d,this);},this);},this);};k$1.T=function(){V(this);for(var a=this.g.R(),b=this.g.T(),c=[],d=0;d<b.length;d++)for(var e=a[d],f=0;f<e.length;f++)c.push(b[d]);return c};
+    k$1.R=function(a){V(this);var b=[];if("string"===typeof a)ed(this,a)&&(b=qa$1(b,this.g.get(W$1(this,a))));else {a=this.g.R();for(var c=0;c<a.length;c++)b=qa$1(b,a[c]);}return b};k$1.set=function(a,b){V(this);this.i=null;a=W$1(this,a);ed(this,a)&&(this.h-=this.g.get(a).length);this.g.set(a,[b]);this.h+=1;return this};k$1.get=function(a,b){if(!a)return b;a=this.R(a);return 0<a.length?String(a[0]):b};function mc$1(a,b,c){dd(a,b);0<c.length&&(a.i=null,a.g.set(W$1(a,b),ra(c)),a.h+=c.length);}
+    k$1.toString=function(){if(this.i)return this.i;if(!this.g)return "";for(var a=[],b=this.g.T(),c=0;c<b.length;c++){var d=b[c],e=encodeURIComponent(String(d));d=this.R(d);for(var f=0;f<d.length;f++){var h=e;""!==d[f]&&(h+="="+encodeURIComponent(String(d[f])));a.push(h);}}return this.i=a.join("&")};function W$1(a,b){b=String(b);a.j&&(b=b.toLowerCase());return b}function Zc(a,b){b&&!a.j&&(V(a),a.i=null,a.g.forEach(function(c,d){var e=d.toLowerCase();d!=e&&(dd(this,d),mc$1(this,e,c));},a));a.j=b;}var fd=class{constructor(a,b){this.h=a;this.g=b;}};function gd(a){this.l=a||hd;l.PerformanceNavigationTiming?(a=l.performance.getEntriesByType("navigation"),a=0<a.length&&("hq"==a[0].nextHopProtocol||"h2"==a[0].nextHopProtocol)):a=!!(l.g&&l.g.Ea&&l.g.Ea()&&l.g.Ea().Zb);this.j=a?this.l:1;this.g=null;1<this.j&&(this.g=new Set);this.h=null;this.i=[];}var hd=10;function id(a){return a.h?!0:a.g?a.g.size>=a.j:!1}function Cc(a){return a.h?1:a.g?a.g.size:0}function yc$1(a,b){return a.h?a.h==b:a.g?a.g.has(b):!1}function Dc(a,b){a.g?a.g.add(b):a.h=b;}
+    function Fc$1(a,b){a.h&&a.h==b?a.h=null:a.g&&a.g.has(b)&&a.g.delete(b);}gd.prototype.cancel=function(){this.i=jd(this);if(this.h)this.h.cancel(),this.h=null;else if(this.g&&0!==this.g.size){for(const a of this.g.values())a.cancel();this.g.clear();}};function jd(a){if(null!=a.h)return a.i.concat(a.h.D);if(null!=a.g&&0!==a.g.size){let b=a.i;for(const c of a.g.values())b=b.concat(c.D);return b}return ra(a.i)}function kd(){}kd.prototype.stringify=function(a){return l.JSON.stringify(a,void 0)};kd.prototype.parse=function(a){return l.JSON.parse(a,void 0)};function ld(){this.g=new kd;}function md(a,b,c){const d=c||"";try{Kc$1(a,function(e,f){let h=e;p(e)&&(h=rb(e));b.push(d+f+"="+encodeURIComponent(h));});}catch(e){throw b.push(d+"type="+encodeURIComponent("_badmap")),e;}}function nd(a,b){const c=new Mb;if(l.Image){const d=new Image;d.onload=ja(od,c,d,"TestLoadImage: loaded",!0,b);d.onerror=ja(od,c,d,"TestLoadImage: error",!1,b);d.onabort=ja(od,c,d,"TestLoadImage: abort",!1,b);d.ontimeout=ja(od,c,d,"TestLoadImage: timeout",!1,b);l.setTimeout(function(){if(d.ontimeout)d.ontimeout();},1E4);d.src=a;}else b(!1);}function od(a,b,c,d,e){try{b.onload=null,b.onerror=null,b.onabort=null,b.ontimeout=null,e(d);}catch(f){}}function pd(a){this.l=a.$b||null;this.j=a.ib||!1;}t(pd,Yb);pd.prototype.g=function(){return new qd(this.l,this.j)};pd.prototype.i=function(a){return function(){return a}}({});function qd(a,b){C$1.call(this);this.D=a;this.u=b;this.m=void 0;this.readyState=rd;this.status=0;this.responseType=this.responseText=this.response=this.statusText="";this.onreadystatechange=null;this.v=new Headers;this.h=null;this.C="GET";this.B="";this.g=!1;this.A=this.j=this.l=null;}t(qd,C$1);var rd=0;k$1=qd.prototype;
+    k$1.open=function(a,b){if(this.readyState!=rd)throw this.abort(),Error("Error reopening a connection");this.C=a;this.B=b;this.readyState=1;sd(this);};k$1.send=function(a){if(1!=this.readyState)throw this.abort(),Error("need to call open() first. ");this.g=!0;const b={headers:this.v,method:this.C,credentials:this.m,cache:void 0};a&&(b.body=a);(this.D||l).fetch(new Request(this.B,b)).then(this.Va.bind(this),this.ha.bind(this));};
+    k$1.abort=function(){this.response=this.responseText="";this.v=new Headers;this.status=0;this.j&&this.j.cancel("Request was aborted.");1<=this.readyState&&this.g&&4!=this.readyState&&(this.g=!1,td(this));this.readyState=rd;};
+    k$1.Va=function(a){if(this.g&&(this.l=a,this.h||(this.status=this.l.status,this.statusText=this.l.statusText,this.h=a.headers,this.readyState=2,sd(this)),this.g&&(this.readyState=3,sd(this),this.g)))if("arraybuffer"===this.responseType)a.arrayBuffer().then(this.Ta.bind(this),this.ha.bind(this));else if("undefined"!==typeof l.ReadableStream&&"body"in a){this.j=a.body.getReader();if(this.u){if(this.responseType)throw Error('responseType must be empty for "streamBinaryChunks" mode responses.');this.response=
+    [];}else this.response=this.responseText="",this.A=new TextDecoder;ud(this);}else a.text().then(this.Ua.bind(this),this.ha.bind(this));};function ud(a){a.j.read().then(a.Sa.bind(a)).catch(a.ha.bind(a));}k$1.Sa=function(a){if(this.g){if(this.u&&a.value)this.response.push(a.value);else if(!this.u){var b=a.value?a.value:new Uint8Array(0);if(b=this.A.decode(b,{stream:!a.done}))this.response=this.responseText+=b;}a.done?td(this):sd(this);3==this.readyState&&ud(this);}};
+    k$1.Ua=function(a){this.g&&(this.response=this.responseText=a,td(this));};k$1.Ta=function(a){this.g&&(this.response=a,td(this));};k$1.ha=function(){this.g&&td(this);};function td(a){a.readyState=4;a.l=null;a.j=null;a.A=null;sd(a);}k$1.setRequestHeader=function(a,b){this.v.append(a,b);};k$1.getResponseHeader=function(a){return this.h?this.h.get(a.toLowerCase())||"":""};
+    k$1.getAllResponseHeaders=function(){if(!this.h)return "";const a=[],b=this.h.entries();for(var c=b.next();!c.done;)c=c.value,a.push(c[0]+": "+c[1]),c=b.next();return a.join("\r\n")};function sd(a){a.onreadystatechange&&a.onreadystatechange.call(a);}Object.defineProperty(qd.prototype,"withCredentials",{get:function(){return "include"===this.m},set:function(a){this.m=a?"include":"same-origin";}});var vd=l.JSON.parse;function X$1(a){C$1.call(this);this.headers=new S;this.u=a||null;this.h=!1;this.C=this.g=null;this.H="";this.m=0;this.j="";this.l=this.F=this.v=this.D=!1;this.B=0;this.A=null;this.J=wd;this.K=this.L=!1;}t(X$1,C$1);var wd="",xd=/^https?$/i,yd=["POST","PUT"];k$1=X$1.prototype;
+    k$1.ea=function(a,b,c,d){if(this.g)throw Error("[goog.net.XhrIo] Object is active with another request="+this.H+"; newUri="+a);b=b?b.toUpperCase():"GET";this.H=a;this.j="";this.m=0;this.D=!1;this.h=!0;this.g=this.u?this.u.g():cc$1.g();this.C=this.u?Zb(this.u):Zb(cc$1);this.g.onreadystatechange=q(this.Fa,this);try{this.F=!0,this.g.open(b,String(a),!0),this.F=!1;}catch(f){zd(this,f);return}a=c||"";const e=new S(this.headers);d&&Kc$1(d,function(f,h){e.set(h,f);});d=oa(e.T());c=l.FormData&&a instanceof l.FormData;
+    !(0<=ma$1(yd,b))||d||c||e.set("Content-Type","application/x-www-form-urlencoded;charset=utf-8");e.forEach(function(f,h){this.g.setRequestHeader(h,f);},this);this.J&&(this.g.responseType=this.J);"withCredentials"in this.g&&this.g.withCredentials!==this.L&&(this.g.withCredentials=this.L);try{Ad(this),0<this.B&&((this.K=Bd(this.g))?(this.g.timeout=this.B,this.g.ontimeout=q(this.pa,this)):this.A=Gb(this.pa,this.B,this)),this.v=!0,this.g.send(a),this.v=!1;}catch(f){zd(this,f);}};
+    function Bd(a){return y&&Ra$1()&&"number"===typeof a.timeout&&void 0!==a.ontimeout}function pa$1(a){return "content-type"==a.toLowerCase()}k$1.pa=function(){"undefined"!=typeof goog&&this.g&&(this.j="Timed out after "+this.B+"ms, aborting",this.m=8,D$1(this,"timeout"),this.abort(8));};function zd(a,b){a.h=!1;a.g&&(a.l=!0,a.g.abort(),a.l=!1);a.j=b;a.m=5;Cd(a);Dd(a);}function Cd(a){a.D||(a.D=!0,D$1(a,"complete"),D$1(a,"error"));}
+    k$1.abort=function(a){this.g&&this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1,this.m=a||7,D$1(this,"complete"),D$1(this,"abort"),Dd(this));};k$1.M=function(){this.g&&(this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1),Dd(this,!0));X$1.Z.M.call(this);};k$1.Fa=function(){this.s||(this.F||this.v||this.l?Ed(this):this.cb());};k$1.cb=function(){Ed(this);};
+    function Ed(a){if(a.h&&"undefined"!=typeof goog&&(!a.C[1]||4!=O$1(a)||2!=a.ba()))if(a.v&&4==O$1(a))Gb(a.Fa,0,a);else if(D$1(a,"readystatechange"),4==O$1(a)){a.h=!1;try{const n=a.ba();a:switch(n){case 200:case 201:case 202:case 204:case 206:case 304:case 1223:var b=!0;break a;default:b=!1;}var c;if(!(c=b)){var d;if(d=0===n){var e=String(a.H).match(Mc)[1]||null;if(!e&&l.self&&l.self.location){var f=l.self.location.protocol;e=f.substr(0,f.length-1);}d=!xd.test(e?e.toLowerCase():"");}c=d;}if(c)D$1(a,"complete"),D$1(a,
+    "success");else {a.m=6;try{var h=2<O$1(a)?a.g.statusText:"";}catch(u){h="";}a.j=h+" ["+a.ba()+"]";Cd(a);}}finally{Dd(a);}}}function Dd(a,b){if(a.g){Ad(a);const c=a.g,d=a.C[0]?aa$1:null;a.g=null;a.C=null;b||D$1(a,"ready");try{c.onreadystatechange=d;}catch(e){}}}function Ad(a){a.g&&a.K&&(a.g.ontimeout=null);a.A&&(l.clearTimeout(a.A),a.A=null);}function O$1(a){return a.g?a.g.readyState:0}k$1.ba=function(){try{return 2<O$1(this)?this.g.status:-1}catch(a){return -1}};
+    k$1.ga=function(){try{return this.g?this.g.responseText:""}catch(a){return ""}};k$1.Qa=function(a){if(this.g){var b=this.g.responseText;a&&0==b.indexOf(a)&&(b=b.substring(a.length));return vd(b)}};function oc$1(a){try{if(!a.g)return null;if("response"in a.g)return a.g.response;switch(a.J){case wd:case "text":return a.g.responseText;case "arraybuffer":if("mozResponseArrayBuffer"in a.g)return a.g.mozResponseArrayBuffer}return null}catch(b){return null}}k$1.Da=function(){return this.m};
+    k$1.La=function(){return "string"===typeof this.j?this.j:String(this.j)};function Fd(a){let b="";xa$1(a,function(c,d){b+=d;b+=":";b+=c;b+="\r\n";});return b}function Gd(a,b,c){a:{for(d in c){var d=!1;break a}d=!0;}d||(c=Fd(c),"string"===typeof a?(null!=c&&encodeURIComponent(String(c))):R(a,b,c));}function Hd(a,b,c){return c&&c.internalChannelParams?c.internalChannelParams[a]||b:b}
+    function Id(a){this.za=0;this.l=[];this.h=new Mb;this.la=this.oa=this.F=this.W=this.g=this.sa=this.D=this.aa=this.o=this.P=this.s=null;this.Za=this.V=0;this.Xa=Hd("failFast",!1,a);this.N=this.v=this.u=this.m=this.j=null;this.X=!0;this.I=this.ta=this.U=-1;this.Y=this.A=this.C=0;this.Pa=Hd("baseRetryDelayMs",5E3,a);this.$a=Hd("retryDelaySeedMs",1E4,a);this.Ya=Hd("forwardChannelMaxRetries",2,a);this.ra=Hd("forwardChannelRequestTimeoutMs",2E4,a);this.qa=a&&a.xmlHttpFactory||void 0;this.Ba=a&&a.Yb||!1;
+    this.K=void 0;this.H=a&&a.supportsCrossDomainXhr||!1;this.J="";this.i=new gd(a&&a.concurrentRequestLimit);this.Ca=new ld;this.ja=a&&a.fastHandshake||!1;this.Ra=a&&a.Wb||!1;a&&a.Aa&&this.h.Aa();a&&a.forceLongPolling&&(this.X=!1);this.$=!this.ja&&this.X&&a&&a.detectBufferingProxy||!1;this.ka=void 0;this.O=0;this.L=!1;this.B=null;this.Wa=!a||!1!==a.Xb;}k$1=Id.prototype;k$1.ma=8;k$1.G=1;
+    function Ic$1(a){Jd(a);if(3==a.G){var b=a.V++,c=N$1(a.F);R(c,"SID",a.J);R(c,"RID",b);R(c,"TYPE","terminate");Kd(a,c);b=new M$1(a,a.h,b,void 0);b.K=2;b.v=jc(N$1(c));c=!1;l.navigator&&l.navigator.sendBeacon&&(c=l.navigator.sendBeacon(b.v.toString(),""));!c&&l.Image&&((new Image).src=b.v,c=!0);c||(b.g=nc$1(b.l,null),b.g.ea(b.v));b.F=Date.now();lc$1(b);}Ld(a);}k$1.hb=function(a){try{this.h.info("Origin Trials invoked: "+a);}catch(b){}};function Ac$1(a){a.g&&(wc$1(a),a.g.cancel(),a.g=null);}
+    function Jd(a){Ac$1(a);a.u&&(l.clearTimeout(a.u),a.u=null);zc$1(a);a.i.cancel();a.m&&("number"===typeof a.m&&l.clearTimeout(a.m),a.m=null);}function Md(a,b){a.l.push(new fd(a.Za++,b));3==a.G&&Hc$1(a);}function Hc$1(a){id(a.i)||a.m||(a.m=!0,zb(a.Ha,a),a.C=0);}function Nd(a,b){if(Cc(a.i)>=a.i.j-(a.m?1:0))return !1;if(a.m)return a.l=b.D.concat(a.l),!0;if(1==a.G||2==a.G||a.C>=(a.Xa?0:a.Ya))return !1;a.m=K$1(q(a.Ha,a,b),Od(a,a.C));a.C++;return !0}
+    k$1.Ha=function(a){if(this.m)if(this.m=null,1==this.G){if(!a){this.V=Math.floor(1E5*Math.random());a=this.V++;const e=new M$1(this,this.h,a,void 0);let f=this.s;this.P&&(f?(f=ya$1(f),Aa$1(f,this.P)):f=this.P);null===this.o&&(e.H=f);if(this.ja)a:{var b=0;for(var c=0;c<this.l.length;c++){b:{var d=this.l[c];if("__data__"in d.g&&(d=d.g.__data__,"string"===typeof d)){d=d.length;break b}d=void 0;}if(void 0===d)break;b+=d;if(4096<b){b=c;break a}if(4096===b||c===this.l.length-1){b=c+1;break a}}b=1E3;}else b=1E3;b=
+    Pd(this,e,b);c=N$1(this.F);R(c,"RID",a);R(c,"CVER",22);this.D&&R(c,"X-HTTP-Session-Id",this.D);Kd(this,c);this.o&&f&&Gd(c,this.o,f);Dc(this.i,e);this.Ra&&R(c,"TYPE","init");this.ja?(R(c,"$req",b),R(c,"SID","null"),e.$=!0,ic$1(e,c,null)):ic$1(e,c,b);this.G=2;}}else 3==this.G&&(a?Qd(this,a):0==this.l.length||id(this.i)||Qd(this));};
+    function Qd(a,b){var c;b?c=b.m:c=a.V++;const d=N$1(a.F);R(d,"SID",a.J);R(d,"RID",c);R(d,"AID",a.U);Kd(a,d);a.o&&a.s&&Gd(d,a.o,a.s);c=new M$1(a,a.h,c,a.C+1);null===a.o&&(c.H=a.s);b&&(a.l=b.D.concat(a.l));b=Pd(a,c,1E3);c.setTimeout(Math.round(.5*a.ra)+Math.round(.5*a.ra*Math.random()));Dc(a.i,c);ic$1(c,d,b);}function Kd(a,b){a.j&&Kc$1({},function(c,d){R(b,d,c);});}
+    function Pd(a,b,c){c=Math.min(a.l.length,c);var d=a.j?q(a.j.Oa,a.j,a):null;a:{var e=a.l;let f=-1;for(;;){const h=["count="+c];-1==f?0<c?(f=e[0].h,h.push("ofs="+f)):f=0:h.push("ofs="+f);let n=!0;for(let u=0;u<c;u++){let m=e[u].h;const r=e[u].g;m-=f;if(0>m)f=Math.max(0,e[u].h-100),n=!1;else try{md(r,h,"req"+m+"_");}catch(G){d&&d(r);}}if(n){d=h.join("&");break a}}}a=a.l.splice(0,c);b.D=a;return d}function Gc$1(a){a.g||a.u||(a.Y=1,zb(a.Ga,a),a.A=0);}
+    function Bc(a){if(a.g||a.u||3<=a.A)return !1;a.Y++;a.u=K$1(q(a.Ga,a),Od(a,a.A));a.A++;return !0}k$1.Ga=function(){this.u=null;Rd(this);if(this.$&&!(this.L||null==this.g||0>=this.O)){var a=2*this.O;this.h.info("BP detection timer enabled: "+a);this.B=K$1(q(this.bb,this),a);}};k$1.bb=function(){this.B&&(this.B=null,this.h.info("BP detection timeout reached."),this.h.info("Buffering proxy detected and switch to long-polling!"),this.N=!1,this.L=!0,J$1(10),Ac$1(this),Rd(this));};
+    function wc$1(a){null!=a.B&&(l.clearTimeout(a.B),a.B=null);}function Rd(a){a.g=new M$1(a,a.h,"rpc",a.Y);null===a.o&&(a.g.H=a.s);a.g.O=0;var b=N$1(a.oa);R(b,"RID","rpc");R(b,"SID",a.J);R(b,"CI",a.N?"0":"1");R(b,"AID",a.U);Kd(a,b);R(b,"TYPE","xmlhttp");a.o&&a.s&&Gd(b,a.o,a.s);a.K&&a.g.setTimeout(a.K);var c=a.g;a=a.la;c.K=1;c.v=jc(N$1(b));c.s=null;c.U=!0;kc(c,a);}k$1.ab=function(){null!=this.v&&(this.v=null,Ac$1(this),Bc(this),J$1(19));};function zc$1(a){null!=a.v&&(l.clearTimeout(a.v),a.v=null);}
+    function uc$1(a,b){var c=null;if(a.g==b){zc$1(a);wc$1(a);a.g=null;var d=2;}else if(yc$1(a.i,b))c=b.D,Fc$1(a.i,b),d=1;else return;a.I=b.N;if(0!=a.G)if(b.i)if(1==d){c=b.s?b.s.length:0;b=Date.now()-b.F;var e=a.C;d=Sb();D$1(d,new Vb(d,c,b,e));Hc$1(a);}else Gc$1(a);else if(e=b.o,3==e||0==e&&0<a.I||!(1==d&&Nd(a,b)||2==d&&Bc(a)))switch(c&&0<c.length&&(b=a.i,b.i=b.i.concat(c)),e){case 1:Q$1(a,5);break;case 4:Q$1(a,10);break;case 3:Q$1(a,6);break;default:Q$1(a,2);}}
+    function Od(a,b){let c=a.Pa+Math.floor(Math.random()*a.$a);a.j||(c*=2);return c*b}function Q$1(a,b){a.h.info("Error code "+b);if(2==b){var c=null;a.j&&(c=null);var d=q(a.jb,a);c||(c=new U$1("//www.google.com/images/cleardot.gif"),l.location&&"http"==l.location.protocol||Oc$1(c,"https"),jc(c));nd(c.toString(),d);}else J$1(2);a.G=0;a.j&&a.j.va(b);Ld(a);Jd(a);}k$1.jb=function(a){a?(this.h.info("Successfully pinged google.com"),J$1(2)):(this.h.info("Failed to ping google.com"),J$1(1));};
+    function Ld(a){a.G=0;a.I=-1;if(a.j){if(0!=jd(a.i).length||0!=a.l.length)a.i.i.length=0,ra(a.l),a.l.length=0;a.j.ua();}}function Ec$1(a,b,c){let d=ad(c);if(""!=d.i)b&&Pc(d,b+"."+d.i),Qc(d,d.m);else {const e=l.location;d=bd(e.protocol,b?b+"."+e.hostname:e.hostname,+e.port,c);}a.aa&&xa$1(a.aa,function(e,f){R(d,f,e);});b=a.D;c=a.sa;b&&c&&R(d,b,c);R(d,"VER",a.ma);Kd(a,d);return d}
+    function nc$1(a,b,c){if(b&&!a.H)throw Error("Can't create secondary domain capable XhrIo object.");b=c&&a.Ba&&!a.qa?new X$1(new pd({ib:!0})):new X$1(a.qa);b.L=a.H;return b}function Sd(){}k$1=Sd.prototype;k$1.xa=function(){};k$1.wa=function(){};k$1.va=function(){};k$1.ua=function(){};k$1.Oa=function(){};function Td(){if(y&&!(10<=Number(Ua$1)))throw Error("Environmental error: no available transport.");}Td.prototype.g=function(a,b){return new Y$1(a,b)};
+    function Y$1(a,b){C$1.call(this);this.g=new Id(b);this.l=a;this.h=b&&b.messageUrlParams||null;a=b&&b.messageHeaders||null;b&&b.clientProtocolHeaderRequired&&(a?a["X-Client-Protocol"]="webchannel":a={"X-Client-Protocol":"webchannel"});this.g.s=a;a=b&&b.initMessageHeaders||null;b&&b.messageContentType&&(a?a["X-WebChannel-Content-Type"]=b.messageContentType:a={"X-WebChannel-Content-Type":b.messageContentType});b&&b.ya&&(a?a["X-WebChannel-Client-Profile"]=b.ya:a={"X-WebChannel-Client-Profile":b.ya});this.g.P=
+    a;(a=b&&b.httpHeadersOverwriteParam)&&!sa(a)&&(this.g.o=a);this.A=b&&b.supportsCrossDomainXhr||!1;this.v=b&&b.sendRawJson||!1;(b=b&&b.httpSessionIdParam)&&!sa(b)&&(this.g.D=b,a=this.h,null!==a&&b in a&&(a=this.h,b in a&&delete a[b]));this.j=new Z$1(this);}t(Y$1,C$1);Y$1.prototype.m=function(){this.g.j=this.j;this.A&&(this.g.H=!0);var a=this.g,b=this.l,c=this.h||void 0;a.Wa&&(a.h.info("Origin Trials enabled."),zb(q(a.hb,a,b)));J$1(0);a.W=b;a.aa=c||{};a.N=a.X;a.F=Ec$1(a,null,a.W);Hc$1(a);};Y$1.prototype.close=function(){Ic$1(this.g);};
+    Y$1.prototype.u=function(a){if("string"===typeof a){var b={};b.__data__=a;Md(this.g,b);}else this.v?(b={},b.__data__=rb(a),Md(this.g,b)):Md(this.g,a);};Y$1.prototype.M=function(){this.g.j=null;delete this.j;Ic$1(this.g);delete this.g;Y$1.Z.M.call(this);};function Ud(a){ac$1.call(this);var b=a.__sm__;if(b){a:{for(const c in b){a=c;break a}a=void 0;}if(this.i=a)a=this.i,b=null!==b&&a in b?b[a]:void 0;this.data=b;}else this.data=a;}t(Ud,ac$1);function Vd(){bc$1.call(this);this.status=1;}t(Vd,bc$1);function Z$1(a){this.g=a;}
+    t(Z$1,Sd);Z$1.prototype.xa=function(){D$1(this.g,"a");};Z$1.prototype.wa=function(a){D$1(this.g,new Ud(a));};Z$1.prototype.va=function(a){D$1(this.g,new Vd(a));};Z$1.prototype.ua=function(){D$1(this.g,"b");};/*
+
+     Copyright 2017 Google LLC
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+    */
+    Td.prototype.createWebChannel=Td.prototype.g;Y$1.prototype.send=Y$1.prototype.u;Y$1.prototype.open=Y$1.prototype.m;Y$1.prototype.close=Y$1.prototype.close;Wb.NO_ERROR=0;Wb.TIMEOUT=8;Wb.HTTP_ERROR=6;Xb.COMPLETE="complete";$b.EventType=L$1;L$1.OPEN="a";L$1.CLOSE="b";L$1.ERROR="c";L$1.MESSAGE="d";C$1.prototype.listen=C$1.prototype.N;X$1.prototype.listenOnce=X$1.prototype.O;X$1.prototype.getLastError=X$1.prototype.La;X$1.prototype.getLastErrorCode=X$1.prototype.Da;X$1.prototype.getStatus=X$1.prototype.ba;X$1.prototype.getResponseJson=X$1.prototype.Qa;
+    X$1.prototype.getResponseText=X$1.prototype.ga;X$1.prototype.send=X$1.prototype.ea;var createWebChannelTransport = function(){return new Td};var getStatEventTarget = function(){return Sb()};var ErrorCode = Wb;var EventType = Xb;var Event = H;var Stat = {rb:0,ub:1,vb:2,Ob:3,Tb:4,Qb:5,Rb:6,Pb:7,Nb:8,Sb:9,PROXY:10,NOPROXY:11,Lb:12,Hb:13,Ib:14,Gb:15,Jb:16,Kb:17,nb:18,mb:19,ob:20};var FetchXmlHttpFactory = pd;var WebChannel = $b;
+    var XhrIo = X$1;
+
+    const D = "@firebase/firestore";
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -258,8 +1957,35 @@ bt("firebase","9.6.4","app");var It,St="undefined"!=typeof globalThis?globalThis
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-let Mi="9.6.3";
-/**
+    /**
+     * Simple wrapper around a nullable UID. Mostly exists to make code more
+     * readable.
+     */
+    class C {
+        constructor(t) {
+            this.uid = t;
+        }
+        isAuthenticated() {
+            return null != this.uid;
+        }
+        /**
+         * Returns a key representing this user, suitable for inclusion in a
+         * dictionary.
+         */    toKey() {
+            return this.isAuthenticated() ? "uid:" + this.uid : "anonymous-user";
+        }
+        isEqual(t) {
+            return t.uid === this.uid;
+        }
+    }
+
+    /** A user with a null UID. */ C.UNAUTHENTICATED = new C(null), 
+    // TODO(mikelehen): Look into getting a proper uid-equivalent for
+    // non-FirebaseAuth providers.
+    C.GOOGLE_CREDENTIALS = new C("google-credentials-uid"), C.FIRST_PARTY = new C("first-party-uid"), 
+    C.MOCK_USER = new C("mock-user");
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -274,8 +2000,66 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */const Pi=new ht("@firebase/firestore");function Vi(){return Pi.logLevel}function Fi(t,...e){if(Pi.logLevel<=st.DEBUG){const n=e.map(qi);Pi.debug(`Firestore (${Mi}): ${t}`,...n)}}function Ui(t,...e){if(Pi.logLevel<=st.ERROR){const n=e.map(qi);Pi.error(`Firestore (${Mi}): ${t}`,...n)}}function $i(t,...e){if(Pi.logLevel<=st.WARN){const n=e.map(qi);Pi.warn(`Firestore (${Mi}): ${t}`,...n)}}function qi(t){if("string"==typeof t)return t;try{return e=t,JSON.stringify(e)}catch(e){return t}
-/**
+     */
+    let N = "9.6.3";
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const k = new Logger("@firebase/firestore");
+
+    // Helper methods are needed because variables can't be exported as read/write
+    function x() {
+        return k.logLevel;
+    }
+
+    function O(t, ...e) {
+        if (k.logLevel <= LogLevel.DEBUG) {
+            const n = e.map(L);
+            k.debug(`Firestore (${N}): ${t}`, ...n);
+        }
+    }
+
+    function M(t, ...e) {
+        if (k.logLevel <= LogLevel.ERROR) {
+            const n = e.map(L);
+            k.error(`Firestore (${N}): ${t}`, ...n);
+        }
+    }
+
+    /**
+     * @internal
+     */ function F(t, ...e) {
+        if (k.logLevel <= LogLevel.WARN) {
+            const n = e.map(L);
+            k.warn(`Firestore (${N}): ${t}`, ...n);
+        }
+    }
+
+    /**
+     * Converts an additional log parameter to a string representation.
+     */ function L(t) {
+        if ("string" == typeof t) return t;
+        try {
+            return e = t, JSON.stringify(e);
+        } catch (e) {
+            // Converting to JSON failed, just log the object directly
+            return t;
+        }
+        /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -290,8 +2074,12 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */var e}
-/**
+     */
+        /** Formats an object as a JSON string, suitable for logging. */
+        var e;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -306,8 +2094,43 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function Bi(t="Unexpected state"){const e=`FIRESTORE (${Mi}) INTERNAL ASSERTION FAILED: `+t;throw Ui(e),new Error(e)}function ji(t,e){t||Bi()}function Hi(t,e){return t}
-/**
+     */
+    /**
+     * Unconditionally fails, throwing an Error with the given message.
+     * Messages are stripped in production builds.
+     *
+     * Returns `never` and can be used in expressions:
+     * @example
+     * let futureVar = fail('not implemented yet');
+     */ function B(t = "Unexpected state") {
+        // Log the failure in addition to throw an exception, just in case the
+        // exception is swallowed.
+        const e = `FIRESTORE (${N}) INTERNAL ASSERTION FAILED: ` + t;
+        // NOTE: We don't use FirestoreError here because these are internal failures
+        // that cannot be handled by the user. (Also it would create a circular
+        // dependency between the error and assert modules which doesn't work.)
+        throw M(e), new Error(e);
+    }
+
+    /**
+     * Fails if the given assertion condition is false, throwing an Error with the
+     * given message if it did.
+     *
+     * Messages are stripped in production builds.
+     */ function U(t, e) {
+        t || B();
+    }
+
+    /**
+     * Casts `obj` to `T`. In non-production builds, verifies that `obj` is an
+     * instance of `T` before casting.
+     */ function K(t, 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    e) {
+        return t;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -322,8 +2145,139 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */const zi={OK:"ok",CANCELLED:"cancelled",UNKNOWN:"unknown",INVALID_ARGUMENT:"invalid-argument",DEADLINE_EXCEEDED:"deadline-exceeded",NOT_FOUND:"not-found",ALREADY_EXISTS:"already-exists",PERMISSION_DENIED:"permission-denied",UNAUTHENTICATED:"unauthenticated",RESOURCE_EXHAUSTED:"resource-exhausted",FAILED_PRECONDITION:"failed-precondition",ABORTED:"aborted",OUT_OF_RANGE:"out-of-range",UNIMPLEMENTED:"unimplemented",INTERNAL:"internal",UNAVAILABLE:"unavailable",DATA_LOSS:"data-loss"};class Ki extends W{constructor(t,e){super(t,e),this.code=t,this.message=e,this.toString=()=>`${this.name}: [code=${this.code}]: ${this.message}`}}
-/**
+     */ const j = {
+        // Causes are copied from:
+        // https://github.com/grpc/grpc/blob/bceec94ea4fc5f0085d81235d8e1c06798dc341a/include/grpc%2B%2B/impl/codegen/status_code_enum.h
+        /** Not an error; returned on success. */
+        OK: "ok",
+        /** The operation was cancelled (typically by the caller). */
+        CANCELLED: "cancelled",
+        /** Unknown error or an error from a different error domain. */
+        UNKNOWN: "unknown",
+        /**
+         * Client specified an invalid argument. Note that this differs from
+         * FAILED_PRECONDITION. INVALID_ARGUMENT indicates arguments that are
+         * problematic regardless of the state of the system (e.g., a malformed file
+         * name).
+         */
+        INVALID_ARGUMENT: "invalid-argument",
+        /**
+         * Deadline expired before operation could complete. For operations that
+         * change the state of the system, this error may be returned even if the
+         * operation has completed successfully. For example, a successful response
+         * from a server could have been delayed long enough for the deadline to
+         * expire.
+         */
+        DEADLINE_EXCEEDED: "deadline-exceeded",
+        /** Some requested entity (e.g., file or directory) was not found. */
+        NOT_FOUND: "not-found",
+        /**
+         * Some entity that we attempted to create (e.g., file or directory) already
+         * exists.
+         */
+        ALREADY_EXISTS: "already-exists",
+        /**
+         * The caller does not have permission to execute the specified operation.
+         * PERMISSION_DENIED must not be used for rejections caused by exhausting
+         * some resource (use RESOURCE_EXHAUSTED instead for those errors).
+         * PERMISSION_DENIED must not be used if the caller can not be identified
+         * (use UNAUTHENTICATED instead for those errors).
+         */
+        PERMISSION_DENIED: "permission-denied",
+        /**
+         * The request does not have valid authentication credentials for the
+         * operation.
+         */
+        UNAUTHENTICATED: "unauthenticated",
+        /**
+         * Some resource has been exhausted, perhaps a per-user quota, or perhaps the
+         * entire file system is out of space.
+         */
+        RESOURCE_EXHAUSTED: "resource-exhausted",
+        /**
+         * Operation was rejected because the system is not in a state required for
+         * the operation's execution. For example, directory to be deleted may be
+         * non-empty, an rmdir operation is applied to a non-directory, etc.
+         *
+         * A litmus test that may help a service implementor in deciding
+         * between FAILED_PRECONDITION, ABORTED, and UNAVAILABLE:
+         *  (a) Use UNAVAILABLE if the client can retry just the failing call.
+         *  (b) Use ABORTED if the client should retry at a higher-level
+         *      (e.g., restarting a read-modify-write sequence).
+         *  (c) Use FAILED_PRECONDITION if the client should not retry until
+         *      the system state has been explicitly fixed. E.g., if an "rmdir"
+         *      fails because the directory is non-empty, FAILED_PRECONDITION
+         *      should be returned since the client should not retry unless
+         *      they have first fixed up the directory by deleting files from it.
+         *  (d) Use FAILED_PRECONDITION if the client performs conditional
+         *      REST Get/Update/Delete on a resource and the resource on the
+         *      server does not match the condition. E.g., conflicting
+         *      read-modify-write on the same resource.
+         */
+        FAILED_PRECONDITION: "failed-precondition",
+        /**
+         * The operation was aborted, typically due to a concurrency issue like
+         * sequencer check failures, transaction aborts, etc.
+         *
+         * See litmus test above for deciding between FAILED_PRECONDITION, ABORTED,
+         * and UNAVAILABLE.
+         */
+        ABORTED: "aborted",
+        /**
+         * Operation was attempted past the valid range. E.g., seeking or reading
+         * past end of file.
+         *
+         * Unlike INVALID_ARGUMENT, this error indicates a problem that may be fixed
+         * if the system state changes. For example, a 32-bit file system will
+         * generate INVALID_ARGUMENT if asked to read at an offset that is not in the
+         * range [0,2^32-1], but it will generate OUT_OF_RANGE if asked to read from
+         * an offset past the current file size.
+         *
+         * There is a fair bit of overlap between FAILED_PRECONDITION and
+         * OUT_OF_RANGE. We recommend using OUT_OF_RANGE (the more specific error)
+         * when it applies so that callers who are iterating through a space can
+         * easily look for an OUT_OF_RANGE error to detect when they are done.
+         */
+        OUT_OF_RANGE: "out-of-range",
+        /** Operation is not implemented or not supported/enabled in this service. */
+        UNIMPLEMENTED: "unimplemented",
+        /**
+         * Internal errors. Means some invariants expected by underlying System has
+         * been broken. If you see one of these errors, Something is very broken.
+         */
+        INTERNAL: "internal",
+        /**
+         * The service is currently unavailable. This is a most likely a transient
+         * condition and may be corrected by retrying with a backoff.
+         *
+         * See litmus test above for deciding between FAILED_PRECONDITION, ABORTED,
+         * and UNAVAILABLE.
+         */
+        UNAVAILABLE: "unavailable",
+        /** Unrecoverable data loss or corruption. */
+        DATA_LOSS: "data-loss"
+    };
+
+    /** An error returned by a Firestore operation. */ class Q extends FirebaseError {
+        /** @hideconstructor */
+        constructor(
+        /**
+         * The backend error code associated with this error.
+         */
+        t, 
+        /**
+         * A custom error description.
+         */
+        e) {
+            super(t, e), this.code = t, this.message = e, 
+            // HACK: We write a toString property directly because Error is not a real
+            // class and so inheritance does not work correctly. We could alternatively
+            // do the same "back-door inheritance" trick that FirebaseError does.
+            this.toString = () => `${this.name}: [code=${this.code}]: ${this.message}`;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -338,8 +2292,15 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Gi{constructor(){this.promise=new Promise(((t,e)=>{this.resolve=t,this.reject=e}))}}
-/**
+     */ class W {
+        constructor() {
+            this.promise = new Promise(((t, e) => {
+                this.resolve = t, this.reject = e;
+            }));
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -354,8 +2315,183 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Wi{constructor(t,e){this.user=e,this.type="OAuth",this.headers=new Map,this.headers.set("Authorization",`Bearer ${t}`)}}class Yi{getToken(){return Promise.resolve(null)}invalidateToken(){}start(t,e){t.enqueueRetryable((()=>e(Oi.UNAUTHENTICATED)))}shutdown(){}}class Qi{constructor(t){this.t=t,this.currentUser=Oi.UNAUTHENTICATED,this.i=0,this.forceRefresh=!1,this.auth=null}start(t,e){let n=this.i;const s=t=>this.i!==n?(n=this.i,e(t)):Promise.resolve();let i=new Gi;this.o=()=>{this.i++,this.currentUser=this.u(),i.resolve(),i=new Gi,t.enqueueRetryable((()=>s(this.currentUser)))};const r=()=>{const e=i;t.enqueueRetryable((async()=>{await e.promise,await s(this.currentUser)}))},o=t=>{Fi("FirebaseAuthCredentialsProvider","Auth detected"),this.auth=t,this.auth.addAuthTokenListener(this.o),r()};this.t.onInit((t=>o(t))),setTimeout((()=>{if(!this.auth){const t=this.t.getImmediate({optional:!0});t?o(t):(Fi("FirebaseAuthCredentialsProvider","Auth not yet detected"),i.resolve(),i=new Gi)}}),0),r()}getToken(){const t=this.i,e=this.forceRefresh;return this.forceRefresh=!1,this.auth?this.auth.getToken(e).then((e=>this.i!==t?(Fi("FirebaseAuthCredentialsProvider","getToken aborted due to token change."),this.getToken()):e?(ji("string"==typeof e.accessToken),new Wi(e.accessToken,this.currentUser)):null)):Promise.resolve(null)}invalidateToken(){this.forceRefresh=!0}shutdown(){this.auth&&this.auth.removeAuthTokenListener(this.o)}u(){const t=this.auth&&this.auth.getUid();return ji(null===t||"string"==typeof t),new Oi(t)}}class Xi{constructor(t,e,n){this.type="FirstParty",this.user=Oi.FIRST_PARTY,this.headers=new Map,this.headers.set("X-Goog-AuthUser",e);const s=t.auth.getAuthHeaderValueForFirstParty([]);s&&this.headers.set("Authorization",s),n&&this.headers.set("X-Goog-Iam-Authorization-Token",n)}}class Ji{constructor(t,e,n){this.h=t,this.l=e,this.m=n}getToken(){return Promise.resolve(new Xi(this.h,this.l,this.m))}start(t,e){t.enqueueRetryable((()=>e(Oi.FIRST_PARTY)))}shutdown(){}invalidateToken(){}}class Zi{constructor(t){this.value=t,this.type="AppCheck",this.headers=new Map,t&&t.length>0&&this.headers.set("x-firebase-appcheck",this.value)}}class tr{constructor(t){this.g=t,this.forceRefresh=!1,this.appCheck=null}start(t,e){this.o=n=>{t.enqueueRetryable((()=>(t=>(null!=t.error&&Fi("FirebaseAppCheckTokenProvider",`Error getting App Check token; using placeholder token instead. Error: ${t.error.message}`),e(t.token)))(n)))};const n=t=>{Fi("FirebaseAppCheckTokenProvider","AppCheck detected"),this.appCheck=t,this.appCheck.addTokenListener(this.o)};this.g.onInit((t=>n(t))),setTimeout((()=>{if(!this.appCheck){const t=this.g.getImmediate({optional:!0});t?n(t):Fi("FirebaseAppCheckTokenProvider","AppCheck not yet detected")}}),0)}getToken(){const t=this.forceRefresh;return this.forceRefresh=!1,this.appCheck?this.appCheck.getToken(t).then((t=>t?(ji("string"==typeof t.token),new Zi(t.token)):null)):Promise.resolve(null)}invalidateToken(){this.forceRefresh=!0}shutdown(){this.appCheck&&this.appCheck.removeTokenListener(this.o)}}
-/**
+     */ class G {
+        constructor(t, e) {
+            this.user = e, this.type = "OAuth", this.headers = new Map, this.headers.set("Authorization", `Bearer ${t}`);
+        }
+    }
+
+    /**
+     * A CredentialsProvider that always yields an empty token.
+     * @internal
+     */ class z {
+        getToken() {
+            return Promise.resolve(null);
+        }
+        invalidateToken() {}
+        start(t, e) {
+            // Fire with initial user.
+            t.enqueueRetryable((() => e(C.UNAUTHENTICATED)));
+        }
+        shutdown() {}
+    }
+
+    class J {
+        constructor(t) {
+            this.t = t, 
+            /** Tracks the current User. */
+            this.currentUser = C.UNAUTHENTICATED, 
+            /**
+             * Counter used to detect if the token changed while a getToken request was
+             * outstanding.
+             */
+            this.i = 0, this.forceRefresh = !1, this.auth = null;
+        }
+        start(t, e) {
+            let n = this.i;
+            // A change listener that prevents double-firing for the same token change.
+                    const s = t => this.i !== n ? (n = this.i, e(t)) : Promise.resolve();
+            // A promise that can be waited on to block on the next token change.
+            // This promise is re-created after each change.
+                    let i = new W;
+            this.o = () => {
+                this.i++, this.currentUser = this.u(), i.resolve(), i = new W, t.enqueueRetryable((() => s(this.currentUser)));
+            };
+            const r = () => {
+                const e = i;
+                t.enqueueRetryable((async () => {
+                    await e.promise, await s(this.currentUser);
+                }));
+            }, o = t => {
+                O("FirebaseAuthCredentialsProvider", "Auth detected"), this.auth = t, this.auth.addAuthTokenListener(this.o), 
+                r();
+            };
+            this.t.onInit((t => o(t))), 
+            // Our users can initialize Auth right after Firestore, so we give it
+            // a chance to register itself with the component framework before we
+            // determine whether to start up in unauthenticated mode.
+            setTimeout((() => {
+                if (!this.auth) {
+                    const t = this.t.getImmediate({
+                        optional: !0
+                    });
+                    t ? o(t) : (
+                    // If auth is still not available, proceed with `null` user
+                    O("FirebaseAuthCredentialsProvider", "Auth not yet detected"), i.resolve(), i = new W);
+                }
+            }), 0), r();
+        }
+        getToken() {
+            // Take note of the current value of the tokenCounter so that this method
+            // can fail (with an ABORTED error) if there is a token change while the
+            // request is outstanding.
+            const t = this.i, e = this.forceRefresh;
+            return this.forceRefresh = !1, this.auth ? this.auth.getToken(e).then((e => 
+            // Cancel the request since the token changed while the request was
+            // outstanding so the response is potentially for a previous user (which
+            // user, we can't be sure).
+            this.i !== t ? (O("FirebaseAuthCredentialsProvider", "getToken aborted due to token change."), 
+            this.getToken()) : e ? (U("string" == typeof e.accessToken), new G(e.accessToken, this.currentUser)) : null)) : Promise.resolve(null);
+        }
+        invalidateToken() {
+            this.forceRefresh = !0;
+        }
+        shutdown() {
+            this.auth && this.auth.removeAuthTokenListener(this.o);
+        }
+        // Auth.getUid() can return null even with a user logged in. It is because
+        // getUid() is synchronous, but the auth code populating Uid is asynchronous.
+        // This method should only be called in the AuthTokenListener callback
+        // to guarantee to get the actual user.
+        u() {
+            const t = this.auth && this.auth.getUid();
+            return U(null === t || "string" == typeof t), new C(t);
+        }
+    }
+
+    /*
+     * FirstPartyToken provides a fresh token each time its value
+     * is requested, because if the token is too old, requests will be rejected.
+     * Technically this may no longer be necessary since the SDK should gracefully
+     * recover from unauthenticated errors (see b/33147818 for context), but it's
+     * safer to keep the implementation as-is.
+     */ class Y {
+        constructor(t, e, n) {
+            this.type = "FirstParty", this.user = C.FIRST_PARTY, this.headers = new Map, this.headers.set("X-Goog-AuthUser", e);
+            const s = t.auth.getAuthHeaderValueForFirstParty([]);
+            s && this.headers.set("Authorization", s), n && this.headers.set("X-Goog-Iam-Authorization-Token", n);
+        }
+    }
+
+    /*
+     * Provides user credentials required for the Firestore JavaScript SDK
+     * to authenticate the user, using technique that is only available
+     * to applications hosted by Google.
+     */ class X {
+        constructor(t, e, n) {
+            this.h = t, this.l = e, this.m = n;
+        }
+        getToken() {
+            return Promise.resolve(new Y(this.h, this.l, this.m));
+        }
+        start(t, e) {
+            // Fire with initial uid.
+            t.enqueueRetryable((() => e(C.FIRST_PARTY)));
+        }
+        shutdown() {}
+        invalidateToken() {}
+    }
+
+    class Z {
+        constructor(t) {
+            this.value = t, this.type = "AppCheck", this.headers = new Map, t && t.length > 0 && this.headers.set("x-firebase-appcheck", this.value);
+        }
+    }
+
+    class tt {
+        constructor(t) {
+            this.g = t, this.forceRefresh = !1, this.appCheck = null;
+        }
+        start(t, e) {
+            this.o = n => {
+                t.enqueueRetryable((() => (t => (null != t.error && O("FirebaseAppCheckTokenProvider", `Error getting App Check token; using placeholder token instead. Error: ${t.error.message}`), 
+                e(t.token)))(n)));
+            };
+            const n = t => {
+                O("FirebaseAppCheckTokenProvider", "AppCheck detected"), this.appCheck = t, this.appCheck.addTokenListener(this.o);
+            };
+            this.g.onInit((t => n(t))), 
+            // Our users can initialize AppCheck after Firestore, so we give it
+            // a chance to register itself with the component framework.
+            setTimeout((() => {
+                if (!this.appCheck) {
+                    const t = this.g.getImmediate({
+                        optional: !0
+                    });
+                    t ? n(t) : 
+                    // If AppCheck is still not available, proceed without it.
+                    O("FirebaseAppCheckTokenProvider", "AppCheck not yet detected");
+                }
+            }), 0);
+        }
+        getToken() {
+            const t = this.forceRefresh;
+            return this.forceRefresh = !1, this.appCheck ? this.appCheck.getToken(t).then((t => t ? (U("string" == typeof t.token), 
+            new Z(t.token)) : null)) : Promise.resolve(null);
+        }
+        invalidateToken() {
+            this.forceRefresh = !0;
+        }
+        shutdown() {
+            this.appCheck && this.appCheck.removeTokenListener(this.o);
+        }
+    }
+
+    /**
+     * Builds a CredentialsProvider depending on the type of
+     * the credentials passed in.
+     */
+    /**
      * @license
      * Copyright 2018 Google LLC
      *
@@ -370,8 +2506,27 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class er{constructor(t,e){this.previousValue=t,e&&(e.sequenceNumberHandler=t=>this.p(t),this.T=t=>e.writeSequenceNumber(t))}p(t){return this.previousValue=Math.max(t,this.previousValue),this.previousValue}next(){const t=++this.previousValue;return this.T&&this.T(t),t}}
-/**
+     */
+    /**
+     * `ListenSequence` is a monotonic sequence. It is initialized with a minimum value to
+     * exceed. All subsequent calls to next will return increasing values. If provided with a
+     * `SequenceNumberSyncer`, it will additionally bump its next value when told of a new value, as
+     * well as write out sequence numbers that it produces via `next()`.
+     */
+    class nt {
+        constructor(t, e) {
+            this.previousValue = t, e && (e.sequenceNumberHandler = t => this.p(t), this.T = t => e.writeSequenceNumber(t));
+        }
+        p(t) {
+            return this.previousValue = Math.max(t, this.previousValue), this.previousValue;
+        }
+        next() {
+            const t = ++this.previousValue;
+            return this.T && this.T(t), t;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -386,8 +2541,24 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function nr(t){const e="undefined"!=typeof self&&(self.crypto||self.msCrypto),n=new Uint8Array(t);if(e&&"function"==typeof e.getRandomValues)e.getRandomValues(n);else for(let e=0;e<t;e++)n[e]=Math.floor(256*Math.random());return n}
-/**
+     */
+    /**
+     * Generates `nBytes` of random bytes.
+     *
+     * If `nBytes < 0` , an error will be thrown.
+     */
+    function st(t) {
+        // Polyfills for IE and WebWorker by using `self` and `msCrypto` when `crypto` is not available.
+        const e = 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        "undefined" != typeof self && (self.crypto || self.msCrypto), n = new Uint8Array(t);
+        if (e && "function" == typeof e.getRandomValues) e.getRandomValues(n); else 
+        // Falls back to Math.random
+        for (let e = 0; e < t; e++) n[e] = Math.floor(256 * Math.random());
+        return n;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -402,56 +2573,34 @@ let Mi="9.6.3";
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */er.I=-1;function sr(t,e){return t<e?-1:t>e?1:0}function ir(t,e,n){return t.length===e.length&&t.every(((t,s)=>n(t,e[s])))}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class rr{constructor(t,e){if(this.seconds=t,this.nanoseconds=e,e<0)throw new Ki(zi.INVALID_ARGUMENT,"Timestamp nanoseconds out of range: "+e);if(e>=1e9)throw new Ki(zi.INVALID_ARGUMENT,"Timestamp nanoseconds out of range: "+e);if(t<-62135596800)throw new Ki(zi.INVALID_ARGUMENT,"Timestamp seconds out of range: "+t);if(t>=253402300800)throw new Ki(zi.INVALID_ARGUMENT,"Timestamp seconds out of range: "+t)}static now(){return rr.fromMillis(Date.now())}static fromDate(t){return rr.fromMillis(t.getTime())}static fromMillis(t){const e=Math.floor(t/1e3),n=Math.floor(1e6*(t-1e3*e));return new rr(e,n)}toDate(){return new Date(this.toMillis())}toMillis(){return 1e3*this.seconds+this.nanoseconds/1e6}_compareTo(t){return this.seconds===t.seconds?sr(this.nanoseconds,t.nanoseconds):sr(this.seconds,t.seconds)}isEqual(t){return t.seconds===this.seconds&&t.nanoseconds===this.nanoseconds}toString(){return"Timestamp(seconds="+this.seconds+", nanoseconds="+this.nanoseconds+")"}toJSON(){return{seconds:this.seconds,nanoseconds:this.nanoseconds}}valueOf(){const t=this.seconds- -62135596800;return String(t).padStart(12,"0")+"."+String(this.nanoseconds).padStart(9,"0")}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class or{constructor(t){this.timestamp=t}static fromTimestamp(t){return new or(t)}static min(){return new or(new rr(0,0))}compareTo(t){return this.timestamp._compareTo(t.timestamp)}isEqual(t){return this.timestamp.isEqual(t.timestamp)}toMicroseconds(){return 1e6*this.timestamp.seconds+this.timestamp.nanoseconds/1e3}toString(){return"SnapshotVersion("+this.timestamp.toString()+")"}toTimestamp(){return this.timestamp}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */function ar(t){let e=0;for(const n in t)Object.prototype.hasOwnProperty.call(t,n)&&e++;return e}function hr(t,e){for(const n in t)Object.prototype.hasOwnProperty.call(t,n)&&e(n,t[n])}
-/**
+     */ nt.I = -1;
+
+    class it {
+        static A() {
+            // Alphanumeric characters
+            const t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", e = Math.floor(256 / t.length) * t.length;
+            // The largest byte value that is a multiple of `char.length`.
+                    let n = "";
+            for (;n.length < 20; ) {
+                const s = st(40);
+                for (let i = 0; i < s.length; ++i) 
+                // Only accept values that are [0, maxMultiple), this ensures they can
+                // be evenly mapped to indices of `chars` via a modulo operation.
+                n.length < 20 && s[i] < e && (n += t.charAt(s[i] % t.length));
+            }
+            return n;
+        }
+    }
+
+    function rt(t, e) {
+        return t < e ? -1 : t > e ? 1 : 0;
+    }
+
+    /** Helper to compare arrays using isEqual(). */ function ot(t, e, n) {
+        return t.length === e.length && t.every(((t, s) => n(t, e[s])));
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -467,56 +2616,133 @@ let Mi="9.6.3";
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.length-e:n>t.length-e&&Bi(),this.segments=t,this.offset=e,this.len=n}get length(){return this.len}isEqual(t){return 0===cr.comparator(this,t)}child(t){const e=this.segments.slice(this.offset,this.limit());return t instanceof cr?t.forEach((t=>{e.push(t)})):e.push(t),this.construct(e)}limit(){return this.offset+this.length}popFirst(t){return t=void 0===t?1:t,this.construct(this.segments,this.offset+t,this.length-t)}popLast(){return this.construct(this.segments,this.offset,this.length-1)}firstSegment(){return this.segments[this.offset]}lastSegment(){return this.get(this.length-1)}get(t){return this.segments[this.offset+t]}isEmpty(){return 0===this.length}isPrefixOf(t){if(t.length<this.length)return!1;for(let e=0;e<this.length;e++)if(this.get(e)!==t.get(e))return!1;return!0}isImmediateParentOf(t){if(this.length+1!==t.length)return!1;for(let e=0;e<this.length;e++)if(this.get(e)!==t.get(e))return!1;return!0}forEach(t){for(let e=this.offset,n=this.limit();e<n;e++)t(this.segments[e])}toArray(){return this.segments.slice(this.offset,this.limit())}static comparator(t,e){const n=Math.min(t.length,e.length);for(let s=0;s<n;s++){const n=t.get(s),i=e.get(s);if(n<i)return-1;if(n>i)return 1}return t.length<e.length?-1:t.length>e.length?1:0}}class ur extends cr{construct(t,e,n){return new ur(t,e,n)}canonicalString(){return this.toArray().join("/")}toString(){return this.canonicalString()}static fromString(...t){const e=[];for(const n of t){if(n.indexOf("//")>=0)throw new Ki(zi.INVALID_ARGUMENT,`Invalid segment (${n}). Paths must not contain // in them.`);e.push(...n.split("/").filter((t=>t.length>0)))}return new ur(e)}static emptyPath(){return new ur([])}}const lr=/^[_a-zA-Z][_a-zA-Z0-9]*$/;class dr extends cr{construct(t,e,n){return new dr(t,e,n)}static isValidIdentifier(t){return lr.test(t)}canonicalString(){return this.toArray().map((t=>(t=t.replace(/\\/g,"\\\\").replace(/`/g,"\\`"),dr.isValidIdentifier(t)||(t="`"+t+"`"),t))).join(".")}toString(){return this.canonicalString()}isKeyField(){return 1===this.length&&"__name__"===this.get(0)}static keyField(){return new dr(["__name__"])}static fromServerFormat(t){const e=[];let n="",s=0;const i=()=>{if(0===n.length)throw new Ki(zi.INVALID_ARGUMENT,`Invalid field path (${t}). Paths must not be empty, begin with '.', end with '.', or contain '..'`);e.push(n),n=""};let r=!1;for(;s<t.length;){const e=t[s];if("\\"===e){if(s+1===t.length)throw new Ki(zi.INVALID_ARGUMENT,"Path has trailing escape character: "+t);const e=t[s+1];if("\\"!==e&&"."!==e&&"`"!==e)throw new Ki(zi.INVALID_ARGUMENT,"Path has invalid escape sequence: "+t);n+=e,s+=2}else"`"===e?(r=!r,s++):"."!==e||r?(n+=e,s++):(i(),s++)}if(i(),r)throw new Ki(zi.INVALID_ARGUMENT,"Unterminated ` in path: "+t);return new dr(e)}static emptyPath(){return new dr([])}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
+    // The earliest date supported by Firestore timestamps (0001-01-01T00:00:00Z).
+    /**
+     * A `Timestamp` represents a point in time independent of any time zone or
+     * calendar, represented as seconds and fractions of seconds at nanosecond
+     * resolution in UTC Epoch time.
      *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
+     * It is encoded using the Proleptic Gregorian Calendar which extends the
+     * Gregorian calendar backwards to year one. It is encoded assuming all minutes
+     * are 60 seconds long, i.e. leap seconds are "smeared" so that no leap second
+     * table is needed for interpretation. Range is from 0001-01-01T00:00:00Z to
+     * 9999-12-31T23:59:59.999999999Z.
      *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class fr{constructor(t){this.binaryString=t}static fromBase64String(t){const e=atob(t);return new fr(e)}static fromUint8Array(t){const e=function(t){let e="";for(let n=0;n<t.length;++n)e+=String.fromCharCode(t[n]);return e}(t);return new fr(e)}[Symbol.iterator](){let t=0;return{next:()=>t<this.binaryString.length?{value:this.binaryString.charCodeAt(t++),done:!1}:{value:void 0,done:!0}}}toBase64(){return t=this.binaryString,btoa(t);var t}toUint8Array(){return function(t){const e=new Uint8Array(t.length);for(let n=0;n<t.length;n++)e[n]=t.charCodeAt(n);return e}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */(this.binaryString)}approximateByteSize(){return 2*this.binaryString.length}compareTo(t){return sr(this.binaryString,t.binaryString)}isEqual(t){return this.binaryString===t.binaryString}}fr.EMPTY_BYTE_STRING=new fr("");const pr=new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);function gr(t){if(ji(!!t),"string"==typeof t){let e=0;const n=pr.exec(t);if(ji(!!n),n[1]){let t=n[1];t=(t+"000000000").substr(0,9),e=Number(t)}const s=new Date(t);return{seconds:Math.floor(s.getTime()/1e3),nanos:e}}return{seconds:mr(t.seconds),nanos:mr(t.nanos)}}function mr(t){return"number"==typeof t?t:"string"==typeof t?Number(t):0}function yr(t){return"string"==typeof t?fr.fromBase64String(t):fr.fromUint8Array(t)}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */function vr(t){var e,n;return"server_timestamp"===(null===(n=((null===(e=null==t?void 0:t.mapValue)||void 0===e?void 0:e.fields)||{}).__type__)||void 0===n?void 0:n.stringValue)}function wr(t){const e=t.mapValue.fields.__previous_value__;return vr(e)?wr(e):e}function Er(t){const e=gr(t.mapValue.fields.__local_write_time__.timestampValue);return new rr(e.seconds,e.nanos)}
-/**
+     * For examples and further specifications, refer to the
+     * {@link https://github.com/google/protobuf/blob/master/src/google/protobuf/timestamp.proto | Timestamp definition}.
+     */
+    class at {
+        /**
+         * Creates a new timestamp.
+         *
+         * @param seconds - The number of seconds of UTC time since Unix epoch
+         *     1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
+         *     9999-12-31T23:59:59Z inclusive.
+         * @param nanoseconds - The non-negative fractions of a second at nanosecond
+         *     resolution. Negative second values with fractions must still have
+         *     non-negative nanoseconds values that count forward in time. Must be
+         *     from 0 to 999,999,999 inclusive.
+         */
+        constructor(
+        /**
+         * The number of seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
+         */
+        t, 
+        /**
+         * The fractions of a second at nanosecond resolution.*
+         */
+        e) {
+            if (this.seconds = t, this.nanoseconds = e, e < 0) throw new Q(j.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
+            if (e >= 1e9) throw new Q(j.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
+            if (t < -62135596800) throw new Q(j.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
+            // This will break in the year 10,000.
+                    if (t >= 253402300800) throw new Q(j.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
+        }
+        /**
+         * Creates a new timestamp with the current date, with millisecond precision.
+         *
+         * @returns a new timestamp representing the current date.
+         */    static now() {
+            return at.fromMillis(Date.now());
+        }
+        /**
+         * Creates a new timestamp from the given date.
+         *
+         * @param date - The date to initialize the `Timestamp` from.
+         * @returns A new `Timestamp` representing the same point in time as the given
+         *     date.
+         */    static fromDate(t) {
+            return at.fromMillis(t.getTime());
+        }
+        /**
+         * Creates a new timestamp from the given number of milliseconds.
+         *
+         * @param milliseconds - Number of milliseconds since Unix epoch
+         *     1970-01-01T00:00:00Z.
+         * @returns A new `Timestamp` representing the same point in time as the given
+         *     number of milliseconds.
+         */    static fromMillis(t) {
+            const e = Math.floor(t / 1e3), n = Math.floor(1e6 * (t - 1e3 * e));
+            return new at(e, n);
+        }
+        /**
+         * Converts a `Timestamp` to a JavaScript `Date` object. This conversion
+         * causes a loss of precision since `Date` objects only support millisecond
+         * precision.
+         *
+         * @returns JavaScript `Date` object representing the same point in time as
+         *     this `Timestamp`, with millisecond precision.
+         */    toDate() {
+            return new Date(this.toMillis());
+        }
+        /**
+         * Converts a `Timestamp` to a numeric timestamp (in milliseconds since
+         * epoch). This operation causes a loss of precision.
+         *
+         * @returns The point in time corresponding to this timestamp, represented as
+         *     the number of milliseconds since Unix epoch 1970-01-01T00:00:00Z.
+         */    toMillis() {
+            return 1e3 * this.seconds + this.nanoseconds / 1e6;
+        }
+        _compareTo(t) {
+            return this.seconds === t.seconds ? rt(this.nanoseconds, t.nanoseconds) : rt(this.seconds, t.seconds);
+        }
+        /**
+         * Returns true if this `Timestamp` is equal to the provided one.
+         *
+         * @param other - The `Timestamp` to compare against.
+         * @returns true if this `Timestamp` is equal to the provided one.
+         */    isEqual(t) {
+            return t.seconds === this.seconds && t.nanoseconds === this.nanoseconds;
+        }
+        /** Returns a textual representation of this `Timestamp`. */    toString() {
+            return "Timestamp(seconds=" + this.seconds + ", nanoseconds=" + this.nanoseconds + ")";
+        }
+        /** Returns a JSON-serializable representation of this `Timestamp`. */    toJSON() {
+            return {
+                seconds: this.seconds,
+                nanoseconds: this.nanoseconds
+            };
+        }
+        /**
+         * Converts this object to a primitive string, which allows `Timestamp` objects
+         * to be compared using the `>`, `<=`, `>=` and `>` operators.
+         */    valueOf() {
+            // This method returns a string of the form <seconds>.<nanoseconds> where
+            // <seconds> is translated to have a non-negative value and both <seconds>
+            // and <nanoseconds> are left-padded with zeroes to be a consistent length.
+            // Strings with this format then have a lexiographical ordering that matches
+            // the expected ordering. The <seconds> translation is done to avoid having
+            // a leading negative sign (i.e. a leading '-' character) in its string
+            // representation, which would affect its lexiographical ordering.
+            const t = this.seconds - -62135596800;
+            // Note: Up to 12 decimal digits are required to represent all valid
+            // 'seconds' values.
+                    return String(t).padStart(12, "0") + "." + String(this.nanoseconds).padStart(9, "0");
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -531,8 +2757,39 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function br(t){return null==t}function Tr(t){return 0===t&&1/t==-1/0}
-/**
+     */
+    /**
+     * A version of a document in Firestore. This corresponds to the version
+     * timestamp, such as update_time or read_time.
+     */ class ut {
+        constructor(t) {
+            this.timestamp = t;
+        }
+        static fromTimestamp(t) {
+            return new ut(t);
+        }
+        static min() {
+            return new ut(new at(0, 0));
+        }
+        compareTo(t) {
+            return this.timestamp._compareTo(t.timestamp);
+        }
+        isEqual(t) {
+            return this.timestamp.isEqual(t.timestamp);
+        }
+        /** Returns a number representation of the version for use in spec tests. */    toMicroseconds() {
+            // Convert to microseconds.
+            return 1e6 * this.timestamp.seconds + this.timestamp.nanoseconds / 1e3;
+        }
+        toString() {
+            return "SnapshotVersion(" + this.timestamp.toString() + ")";
+        }
+        toTimestamp() {
+            return this.timestamp;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -547,8 +2804,211 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Ir{constructor(t){this.path=t}static fromPath(t){return new Ir(ur.fromString(t))}static fromName(t){return new Ir(ur.fromString(t).popFirst(5))}hasCollectionId(t){return this.path.length>=2&&this.path.get(this.path.length-2)===t}isEqual(t){return null!==t&&0===ur.comparator(this.path,t.path)}toString(){return this.path.toString()}static comparator(t,e){return ur.comparator(t.path,e.path)}static isDocumentKey(t){return t.length%2==0}static fromSegments(t){return new Ir(new ur(t.slice()))}}
-/**
+     */ function ht(t) {
+        let e = 0;
+        for (const n in t) Object.prototype.hasOwnProperty.call(t, n) && e++;
+        return e;
+    }
+
+    function lt(t, e) {
+        for (const n in t) Object.prototype.hasOwnProperty.call(t, n) && e(n, t[n]);
+    }
+
+    function ft(t) {
+        for (const e in t) if (Object.prototype.hasOwnProperty.call(t, e)) return !1;
+        return !0;
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Path represents an ordered sequence of string segments.
+     */
+    class dt {
+        constructor(t, e, n) {
+            void 0 === e ? e = 0 : e > t.length && B(), void 0 === n ? n = t.length - e : n > t.length - e && B(), 
+            this.segments = t, this.offset = e, this.len = n;
+        }
+        get length() {
+            return this.len;
+        }
+        isEqual(t) {
+            return 0 === dt.comparator(this, t);
+        }
+        child(t) {
+            const e = this.segments.slice(this.offset, this.limit());
+            return t instanceof dt ? t.forEach((t => {
+                e.push(t);
+            })) : e.push(t), this.construct(e);
+        }
+        /** The index of one past the last segment of the path. */    limit() {
+            return this.offset + this.length;
+        }
+        popFirst(t) {
+            return t = void 0 === t ? 1 : t, this.construct(this.segments, this.offset + t, this.length - t);
+        }
+        popLast() {
+            return this.construct(this.segments, this.offset, this.length - 1);
+        }
+        firstSegment() {
+            return this.segments[this.offset];
+        }
+        lastSegment() {
+            return this.get(this.length - 1);
+        }
+        get(t) {
+            return this.segments[this.offset + t];
+        }
+        isEmpty() {
+            return 0 === this.length;
+        }
+        isPrefixOf(t) {
+            if (t.length < this.length) return !1;
+            for (let e = 0; e < this.length; e++) if (this.get(e) !== t.get(e)) return !1;
+            return !0;
+        }
+        isImmediateParentOf(t) {
+            if (this.length + 1 !== t.length) return !1;
+            for (let e = 0; e < this.length; e++) if (this.get(e) !== t.get(e)) return !1;
+            return !0;
+        }
+        forEach(t) {
+            for (let e = this.offset, n = this.limit(); e < n; e++) t(this.segments[e]);
+        }
+        toArray() {
+            return this.segments.slice(this.offset, this.limit());
+        }
+        static comparator(t, e) {
+            const n = Math.min(t.length, e.length);
+            for (let s = 0; s < n; s++) {
+                const n = t.get(s), i = e.get(s);
+                if (n < i) return -1;
+                if (n > i) return 1;
+            }
+            return t.length < e.length ? -1 : t.length > e.length ? 1 : 0;
+        }
+    }
+
+    /**
+     * A slash-separated path for navigating resources (documents and collections)
+     * within Firestore.
+     *
+     * @internal
+     */ class wt extends dt {
+        construct(t, e, n) {
+            return new wt(t, e, n);
+        }
+        canonicalString() {
+            // NOTE: The client is ignorant of any path segments containing escape
+            // sequences (e.g. __id123__) and just passes them through raw (they exist
+            // for legacy reasons and should not be used frequently).
+            return this.toArray().join("/");
+        }
+        toString() {
+            return this.canonicalString();
+        }
+        /**
+         * Creates a resource path from the given slash-delimited string. If multiple
+         * arguments are provided, all components are combined. Leading and trailing
+         * slashes from all components are ignored.
+         */    static fromString(...t) {
+            // NOTE: The client is ignorant of any path segments containing escape
+            // sequences (e.g. __id123__) and just passes them through raw (they exist
+            // for legacy reasons and should not be used frequently).
+            const e = [];
+            for (const n of t) {
+                if (n.indexOf("//") >= 0) throw new Q(j.INVALID_ARGUMENT, `Invalid segment (${n}). Paths must not contain // in them.`);
+                // Strip leading and traling slashed.
+                            e.push(...n.split("/").filter((t => t.length > 0)));
+            }
+            return new wt(e);
+        }
+        static emptyPath() {
+            return new wt([]);
+        }
+    }
+
+    const _t = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
+
+    /**
+     * A dot-separated path for navigating sub-objects within a document.
+     * @internal
+     */ class mt extends dt {
+        construct(t, e, n) {
+            return new mt(t, e, n);
+        }
+        /**
+         * Returns true if the string could be used as a segment in a field path
+         * without escaping.
+         */    static isValidIdentifier(t) {
+            return _t.test(t);
+        }
+        canonicalString() {
+            return this.toArray().map((t => (t = t.replace(/\\/g, "\\\\").replace(/`/g, "\\`"), 
+            mt.isValidIdentifier(t) || (t = "`" + t + "`"), t))).join(".");
+        }
+        toString() {
+            return this.canonicalString();
+        }
+        /**
+         * Returns true if this field references the key of a document.
+         */    isKeyField() {
+            return 1 === this.length && "__name__" === this.get(0);
+        }
+        /**
+         * The field designating the key of a document.
+         */    static keyField() {
+            return new mt([ "__name__" ]);
+        }
+        /**
+         * Parses a field string from the given server-formatted string.
+         *
+         * - Splitting the empty string is not allowed (for now at least).
+         * - Empty segments within the string (e.g. if there are two consecutive
+         *   separators) are not allowed.
+         *
+         * TODO(b/37244157): we should make this more strict. Right now, it allows
+         * non-identifier path components, even if they aren't escaped.
+         */    static fromServerFormat(t) {
+            const e = [];
+            let n = "", s = 0;
+            const i = () => {
+                if (0 === n.length) throw new Q(j.INVALID_ARGUMENT, `Invalid field path (${t}). Paths must not be empty, begin with '.', end with '.', or contain '..'`);
+                e.push(n), n = "";
+            };
+            let r = !1;
+            for (;s < t.length; ) {
+                const e = t[s];
+                if ("\\" === e) {
+                    if (s + 1 === t.length) throw new Q(j.INVALID_ARGUMENT, "Path has trailing escape character: " + t);
+                    const e = t[s + 1];
+                    if ("\\" !== e && "." !== e && "`" !== e) throw new Q(j.INVALID_ARGUMENT, "Path has invalid escape sequence: " + t);
+                    n += e, s += 2;
+                } else "`" === e ? (r = !r, s++) : "." !== e || r ? (n += e, s++) : (i(), s++);
+            }
+            if (i(), r) throw new Q(j.INVALID_ARGUMENT, "Unterminated ` in path: " + t);
+            return new mt(e);
+        }
+        static emptyPath() {
+            return new mt([]);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -563,8 +3023,244 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function Sr(t){return"nullValue"in t?0:"booleanValue"in t?1:"integerValue"in t||"doubleValue"in t?2:"timestampValue"in t?3:"stringValue"in t?5:"bytesValue"in t?6:"referenceValue"in t?7:"geoPointValue"in t?8:"arrayValue"in t?9:"mapValue"in t?vr(t)?4:10:Bi()}function Cr(t,e){if(t===e)return!0;const n=Sr(t);if(n!==Sr(e))return!1;switch(n){case 0:return!0;case 1:return t.booleanValue===e.booleanValue;case 4:return Er(t).isEqual(Er(e));case 3:return function(t,e){if("string"==typeof t.timestampValue&&"string"==typeof e.timestampValue&&t.timestampValue.length===e.timestampValue.length)return t.timestampValue===e.timestampValue;const n=gr(t.timestampValue),s=gr(e.timestampValue);return n.seconds===s.seconds&&n.nanos===s.nanos}(t,e);case 5:return t.stringValue===e.stringValue;case 6:return function(t,e){return yr(t.bytesValue).isEqual(yr(e.bytesValue))}(t,e);case 7:return t.referenceValue===e.referenceValue;case 8:return function(t,e){return mr(t.geoPointValue.latitude)===mr(e.geoPointValue.latitude)&&mr(t.geoPointValue.longitude)===mr(e.geoPointValue.longitude)}(t,e);case 2:return function(t,e){if("integerValue"in t&&"integerValue"in e)return mr(t.integerValue)===mr(e.integerValue);if("doubleValue"in t&&"doubleValue"in e){const n=mr(t.doubleValue),s=mr(e.doubleValue);return n===s?Tr(n)===Tr(s):isNaN(n)&&isNaN(s)}return!1}(t,e);case 9:return ir(t.arrayValue.values||[],e.arrayValue.values||[],Cr);case 10:return function(t,e){const n=t.mapValue.fields||{},s=e.mapValue.fields||{};if(ar(n)!==ar(s))return!1;for(const t in n)if(n.hasOwnProperty(t)&&(void 0===s[t]||!Cr(n[t],s[t])))return!1;return!0}(t,e);default:return Bi()}}function Ar(t,e){return void 0!==(t.values||[]).find((t=>Cr(t,e)))}function _r(t,e){if(t===e)return 0;const n=Sr(t),s=Sr(e);if(n!==s)return sr(n,s);switch(n){case 0:return 0;case 1:return sr(t.booleanValue,e.booleanValue);case 2:return function(t,e){const n=mr(t.integerValue||t.doubleValue),s=mr(e.integerValue||e.doubleValue);return n<s?-1:n>s?1:n===s?0:isNaN(n)?isNaN(s)?0:-1:1}(t,e);case 3:return Nr(t.timestampValue,e.timestampValue);case 4:return Nr(Er(t),Er(e));case 5:return sr(t.stringValue,e.stringValue);case 6:return function(t,e){const n=yr(t),s=yr(e);return n.compareTo(s)}(t.bytesValue,e.bytesValue);case 7:return function(t,e){const n=t.split("/"),s=e.split("/");for(let t=0;t<n.length&&t<s.length;t++){const e=sr(n[t],s[t]);if(0!==e)return e}return sr(n.length,s.length)}(t.referenceValue,e.referenceValue);case 8:return function(t,e){const n=sr(mr(t.latitude),mr(e.latitude));return 0!==n?n:sr(mr(t.longitude),mr(e.longitude))}(t.geoPointValue,e.geoPointValue);case 9:return function(t,e){const n=t.values||[],s=e.values||[];for(let t=0;t<n.length&&t<s.length;++t){const e=_r(n[t],s[t]);if(e)return e}return sr(n.length,s.length)}(t.arrayValue,e.arrayValue);case 10:return function(t,e){const n=t.fields||{},s=Object.keys(n),i=e.fields||{},r=Object.keys(i);s.sort(),r.sort();for(let t=0;t<s.length&&t<r.length;++t){const e=sr(s[t],r[t]);if(0!==e)return e;const o=_r(n[s[t]],i[r[t]]);if(0!==o)return o}return sr(s.length,r.length)}(t.mapValue,e.mapValue);default:throw Bi()}}function Nr(t,e){if("string"==typeof t&&"string"==typeof e&&t.length===e.length)return sr(t,e);const n=gr(t),s=gr(e),i=sr(n.seconds,s.seconds);return 0!==i?i:sr(n.nanos,s.nanos)}function Dr(t){return kr(t)}function kr(t){return"nullValue"in t?"null":"booleanValue"in t?""+t.booleanValue:"integerValue"in t?""+t.integerValue:"doubleValue"in t?""+t.doubleValue:"timestampValue"in t?function(t){const e=gr(t);return`time(${e.seconds},${e.nanos})`}(t.timestampValue):"stringValue"in t?t.stringValue:"bytesValue"in t?yr(t.bytesValue).toBase64():"referenceValue"in t?(n=t.referenceValue,Ir.fromName(n).toString()):"geoPointValue"in t?`geo(${(e=t.geoPointValue).latitude},${e.longitude})`:"arrayValue"in t?function(t){let e="[",n=!0;for(const s of t.values||[])n?n=!1:e+=",",e+=kr(s);return e+"]"}(t.arrayValue):"mapValue"in t?function(t){const e=Object.keys(t.fields||{}).sort();let n="{",s=!0;for(const i of e)s?s=!1:n+=",",n+=`${i}:${kr(t.fields[i])}`;return n+"}"}(t.mapValue):Bi();var e,n}function Rr(t){return!!t&&"integerValue"in t}function Lr(t){return!!t&&"arrayValue"in t}function xr(t){return!!t&&"nullValue"in t}function Or(t){return!!t&&"doubleValue"in t&&isNaN(Number(t.doubleValue))}function Mr(t){return!!t&&"mapValue"in t}function Pr(t){if(t.geoPointValue)return{geoPointValue:Object.assign({},t.geoPointValue)};if(t.timestampValue&&"object"==typeof t.timestampValue)return{timestampValue:Object.assign({},t.timestampValue)};if(t.mapValue){const e={mapValue:{fields:{}}};return hr(t.mapValue.fields,((t,n)=>e.mapValue.fields[t]=Pr(n))),e}if(t.arrayValue){const e={arrayValue:{values:[]}};for(let n=0;n<(t.arrayValue.values||[]).length;++n)e.arrayValue.values[n]=Pr(t.arrayValue.values[n]);return e}return Object.assign({},t)}
-/**
+     */
+    /**
+     * Provides a set of fields that can be used to partially patch a document.
+     * FieldMask is used in conjunction with ObjectValue.
+     * Examples:
+     *   foo - Overwrites foo entirely with the provided value. If foo is not
+     *         present in the companion ObjectValue, the field is deleted.
+     *   foo.bar - Overwrites only the field bar of the object foo.
+     *             If foo is not an object, foo is replaced with an object
+     *             containing foo
+     */ class gt {
+        constructor(t) {
+            this.fields = t, 
+            // TODO(dimond): validation of FieldMask
+            // Sort the field mask to support `FieldMask.isEqual()` and assert below.
+            t.sort(mt.comparator);
+        }
+        /**
+         * Verifies that `fieldPath` is included by at least one field in this field
+         * mask.
+         *
+         * This is an O(n) operation, where `n` is the size of the field mask.
+         */    covers(t) {
+            for (const e of this.fields) if (e.isPrefixOf(t)) return !0;
+            return !1;
+        }
+        isEqual(t) {
+            return ot(this.fields, t.fields, ((t, e) => t.isEqual(e)));
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Immutable class that represents a "proto" byte string.
+     *
+     * Proto byte strings can either be Base64-encoded strings or Uint8Arrays when
+     * sent on the wire. This class abstracts away this differentiation by holding
+     * the proto byte string in a common class that must be converted into a string
+     * before being sent as a proto.
+     * @internal
+     */ class pt {
+        constructor(t) {
+            this.binaryString = t;
+        }
+        static fromBase64String(t) {
+            const e = atob(t);
+            return new pt(e);
+        }
+        static fromUint8Array(t) {
+            const e = 
+            /**
+     * Helper function to convert an Uint8array to a binary string.
+     */
+            function(t) {
+                let e = "";
+                for (let n = 0; n < t.length; ++n) e += String.fromCharCode(t[n]);
+                return e;
+            }
+            /**
+     * Helper function to convert a binary string to an Uint8Array.
+     */ (t);
+            return new pt(e);
+        }
+        [Symbol.iterator]() {
+            let t = 0;
+            return {
+                next: () => t < this.binaryString.length ? {
+                    value: this.binaryString.charCodeAt(t++),
+                    done: !1
+                } : {
+                    value: void 0,
+                    done: !0
+                }
+            };
+        }
+        toBase64() {
+            return t = this.binaryString, btoa(t);
+            /** Converts a binary string to a Base64 encoded string. */
+            var t;
+        }
+        toUint8Array() {
+            return function(t) {
+                const e = new Uint8Array(t.length);
+                for (let n = 0; n < t.length; n++) e[n] = t.charCodeAt(n);
+                return e;
+            }
+            /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+            // A RegExp matching ISO 8601 UTC timestamps with optional fraction.
+            (this.binaryString);
+        }
+        approximateByteSize() {
+            return 2 * this.binaryString.length;
+        }
+        compareTo(t) {
+            return rt(this.binaryString, t.binaryString);
+        }
+        isEqual(t) {
+            return this.binaryString === t.binaryString;
+        }
+    }
+
+    pt.EMPTY_BYTE_STRING = new pt("");
+
+    const Tt = new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);
+
+    /**
+     * Converts the possible Proto values for a timestamp value into a "seconds and
+     * nanos" representation.
+     */ function Et(t) {
+        // The json interface (for the browser) will return an iso timestamp string,
+        // while the proto js library (for node) will return a
+        // google.protobuf.Timestamp instance.
+        if (U(!!t), "string" == typeof t) {
+            // The date string can have higher precision (nanos) than the Date class
+            // (millis), so we do some custom parsing here.
+            // Parse the nanos right out of the string.
+            let e = 0;
+            const n = Tt.exec(t);
+            if (U(!!n), n[1]) {
+                // Pad the fraction out to 9 digits (nanos).
+                let t = n[1];
+                t = (t + "000000000").substr(0, 9), e = Number(t);
+            }
+            // Parse the date to get the seconds.
+                    const s = new Date(t);
+            return {
+                seconds: Math.floor(s.getTime() / 1e3),
+                nanos: e
+            };
+        }
+        return {
+            seconds: It(t.seconds),
+            nanos: It(t.nanos)
+        };
+    }
+
+    /**
+     * Converts the possible Proto types for numbers into a JavaScript number.
+     * Returns 0 if the value is not numeric.
+     */ function It(t) {
+        // TODO(bjornick): Handle int64 greater than 53 bits.
+        return "number" == typeof t ? t : "string" == typeof t ? Number(t) : 0;
+    }
+
+    /** Converts the possible Proto types for Blobs into a ByteString. */ function At(t) {
+        return "string" == typeof t ? pt.fromBase64String(t) : pt.fromUint8Array(t);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Represents a locally-applied ServerTimestamp.
+     *
+     * Server Timestamps are backed by MapValues that contain an internal field
+     * `__type__` with a value of `server_timestamp`. The previous value and local
+     * write time are stored in its `__previous_value__` and `__local_write_time__`
+     * fields respectively.
+     *
+     * Notes:
+     * - ServerTimestampValue instances are created as the result of applying a
+     *   transform. They can only exist in the local view of a document. Therefore
+     *   they do not need to be parsed or serialized.
+     * - When evaluated locally (e.g. for snapshot.data()), they by default
+     *   evaluate to `null`. This behavior can be configured by passing custom
+     *   FieldValueOptions to value().
+     * - With respect to other ServerTimestampValues, they sort by their
+     *   localWriteTime.
+     */ function Rt(t) {
+        var e, n;
+        return "server_timestamp" === (null === (n = ((null === (e = null == t ? void 0 : t.mapValue) || void 0 === e ? void 0 : e.fields) || {}).__type__) || void 0 === n ? void 0 : n.stringValue);
+    }
+
+    /**
+     * Creates a new ServerTimestamp proto value (using the internal format).
+     */
+    /**
+     * Returns the value of the field before this ServerTimestamp was set.
+     *
+     * Preserving the previous values allows the user to display the last resoled
+     * value until the backend responds with the timestamp.
+     */
+    function bt(t) {
+        const e = t.mapValue.fields.__previous_value__;
+        return Rt(e) ? bt(e) : e;
+    }
+
+    /**
+     * Returns the local time at which this timestamp was first set.
+     */ function Pt(t) {
+        const e = Et(t.mapValue.fields.__local_write_time__.timestampValue);
+        return new at(e.seconds, e.nanos);
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -579,8 +3275,29 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Vr{constructor(t){this.value=t}static empty(){return new Vr({mapValue:{}})}field(t){if(t.isEmpty())return this.value;{let e=this.value;for(let n=0;n<t.length-1;++n)if(e=(e.mapValue.fields||{})[t.get(n)],!Mr(e))return null;return e=(e.mapValue.fields||{})[t.lastSegment()],e||null}}set(t,e){this.getFieldsMap(t.popLast())[t.lastSegment()]=Pr(e)}setAll(t){let e=dr.emptyPath(),n={},s=[];t.forEach(((t,i)=>{if(!e.isImmediateParentOf(i)){const t=this.getFieldsMap(e);this.applyChanges(t,n,s),n={},s=[],e=i.popLast()}t?n[i.lastSegment()]=Pr(t):s.push(i.lastSegment())}));const i=this.getFieldsMap(e);this.applyChanges(i,n,s)}delete(t){const e=this.field(t.popLast());Mr(e)&&e.mapValue.fields&&delete e.mapValue.fields[t.lastSegment()]}isEqual(t){return Cr(this.value,t.value)}getFieldsMap(t){let e=this.value;e.mapValue.fields||(e.mapValue={fields:{}});for(let n=0;n<t.length;++n){let s=e.mapValue.fields[t.get(n)];Mr(s)&&s.mapValue.fields||(s={mapValue:{fields:{}}},e.mapValue.fields[t.get(n)]=s),e=s}return e.mapValue.fields}applyChanges(t,e,n){hr(e,((e,n)=>t[e]=n));for(const e of n)delete t[e]}clone(){return new Vr(Pr(this.value))}}
-/**
+     */
+    /** Sentinel value that sorts before any Mutation Batch ID. */
+    /**
+     * Returns whether a variable is either undefined or null.
+     */
+    function vt(t) {
+        return null == t;
+    }
+
+    /** Returns whether the value represents -0. */ function Vt(t) {
+        // Detect if the value is -0.0. Based on polyfill from
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is
+        return 0 === t && 1 / t == -1 / 0;
+    }
+
+    /**
+     * Returns whether a value is an integer and in the safe integer range
+     * @param value - The value to test for being an integer and in the safe range
+     */ function St(t) {
+        return "number" == typeof t && Number.isInteger(t) && !Vt(t) && t <= Number.MAX_SAFE_INTEGER && t >= Number.MIN_SAFE_INTEGER;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -595,8 +3312,547 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Fr{constructor(t,e,n,s,i){this.key=t,this.documentType=e,this.version=n,this.data=s,this.documentState=i}static newInvalidDocument(t){return new Fr(t,0,or.min(),Vr.empty(),0)}static newFoundDocument(t,e,n){return new Fr(t,1,e,n,0)}static newNoDocument(t,e){return new Fr(t,2,e,Vr.empty(),0)}static newUnknownDocument(t,e){return new Fr(t,3,e,Vr.empty(),2)}convertToFoundDocument(t,e){return this.version=t,this.documentType=1,this.data=e,this.documentState=0,this}convertToNoDocument(t){return this.version=t,this.documentType=2,this.data=Vr.empty(),this.documentState=0,this}convertToUnknownDocument(t){return this.version=t,this.documentType=3,this.data=Vr.empty(),this.documentState=2,this}setHasCommittedMutations(){return this.documentState=2,this}setHasLocalMutations(){return this.documentState=1,this}get hasLocalMutations(){return 1===this.documentState}get hasCommittedMutations(){return 2===this.documentState}get hasPendingWrites(){return this.hasLocalMutations||this.hasCommittedMutations}isValidDocument(){return 0!==this.documentType}isFoundDocument(){return 1===this.documentType}isNoDocument(){return 2===this.documentType}isUnknownDocument(){return 3===this.documentType}isEqual(t){return t instanceof Fr&&this.key.isEqual(t.key)&&this.version.isEqual(t.version)&&this.documentType===t.documentType&&this.documentState===t.documentState&&this.data.isEqual(t.data)}mutableCopy(){return new Fr(this.key,this.documentType,this.version,this.data.clone(),this.documentState)}toString(){return`Document(${this.key}, ${this.version}, ${JSON.stringify(this.data.value)}, {documentType: ${this.documentType}}), {documentState: ${this.documentState}})`}}
-/**
+     */
+    /**
+     * @internal
+     */ class Dt {
+        constructor(t) {
+            this.path = t;
+        }
+        static fromPath(t) {
+            return new Dt(wt.fromString(t));
+        }
+        static fromName(t) {
+            return new Dt(wt.fromString(t).popFirst(5));
+        }
+        /** Returns true if the document is in the specified collectionId. */    hasCollectionId(t) {
+            return this.path.length >= 2 && this.path.get(this.path.length - 2) === t;
+        }
+        isEqual(t) {
+            return null !== t && 0 === wt.comparator(this.path, t.path);
+        }
+        toString() {
+            return this.path.toString();
+        }
+        static comparator(t, e) {
+            return wt.comparator(t.path, e.path);
+        }
+        static isDocumentKey(t) {
+            return t.length % 2 == 0;
+        }
+        /**
+         * Creates and returns a new document key with the given segments.
+         *
+         * @param segments - The segments of the path to the document
+         * @returns A new instance of DocumentKey
+         */    static fromSegments(t) {
+            return new Dt(new wt(t.slice()));
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /** Extracts the backend's type order for the provided value. */ function Ct(t) {
+        return "nullValue" in t ? 0 /* NullValue */ : "booleanValue" in t ? 1 /* BooleanValue */ : "integerValue" in t || "doubleValue" in t ? 2 /* NumberValue */ : "timestampValue" in t ? 3 /* TimestampValue */ : "stringValue" in t ? 5 /* StringValue */ : "bytesValue" in t ? 6 /* BlobValue */ : "referenceValue" in t ? 7 /* RefValue */ : "geoPointValue" in t ? 8 /* GeoPointValue */ : "arrayValue" in t ? 9 /* ArrayValue */ : "mapValue" in t ? Rt(t) ? 4 /* ServerTimestampValue */ : 10 /* ObjectValue */ : B();
+    }
+
+    /** Tests `left` and `right` for equality based on the backend semantics. */ function Nt(t, e) {
+        if (t === e) return !0;
+        const n = Ct(t);
+        if (n !== Ct(e)) return !1;
+        switch (n) {
+          case 0 /* NullValue */ :
+            return !0;
+
+          case 1 /* BooleanValue */ :
+            return t.booleanValue === e.booleanValue;
+
+          case 4 /* ServerTimestampValue */ :
+            return Pt(t).isEqual(Pt(e));
+
+          case 3 /* TimestampValue */ :
+            return function(t, e) {
+                if ("string" == typeof t.timestampValue && "string" == typeof e.timestampValue && t.timestampValue.length === e.timestampValue.length) 
+                // Use string equality for ISO 8601 timestamps
+                return t.timestampValue === e.timestampValue;
+                const n = Et(t.timestampValue), s = Et(e.timestampValue);
+                return n.seconds === s.seconds && n.nanos === s.nanos;
+            }(t, e);
+
+          case 5 /* StringValue */ :
+            return t.stringValue === e.stringValue;
+
+          case 6 /* BlobValue */ :
+            return function(t, e) {
+                return At(t.bytesValue).isEqual(At(e.bytesValue));
+            }(t, e);
+
+          case 7 /* RefValue */ :
+            return t.referenceValue === e.referenceValue;
+
+          case 8 /* GeoPointValue */ :
+            return function(t, e) {
+                return It(t.geoPointValue.latitude) === It(e.geoPointValue.latitude) && It(t.geoPointValue.longitude) === It(e.geoPointValue.longitude);
+            }(t, e);
+
+          case 2 /* NumberValue */ :
+            return function(t, e) {
+                if ("integerValue" in t && "integerValue" in e) return It(t.integerValue) === It(e.integerValue);
+                if ("doubleValue" in t && "doubleValue" in e) {
+                    const n = It(t.doubleValue), s = It(e.doubleValue);
+                    return n === s ? Vt(n) === Vt(s) : isNaN(n) && isNaN(s);
+                }
+                return !1;
+            }(t, e);
+
+          case 9 /* ArrayValue */ :
+            return ot(t.arrayValue.values || [], e.arrayValue.values || [], Nt);
+
+          case 10 /* ObjectValue */ :
+            return function(t, e) {
+                const n = t.mapValue.fields || {}, s = e.mapValue.fields || {};
+                if (ht(n) !== ht(s)) return !1;
+                for (const t in n) if (n.hasOwnProperty(t) && (void 0 === s[t] || !Nt(n[t], s[t]))) return !1;
+                return !0;
+            }
+            /** Returns true if the ArrayValue contains the specified element. */ (t, e);
+
+          default:
+            return B();
+        }
+    }
+
+    function kt(t, e) {
+        return void 0 !== (t.values || []).find((t => Nt(t, e)));
+    }
+
+    function xt(t, e) {
+        if (t === e) return 0;
+        const n = Ct(t), s = Ct(e);
+        if (n !== s) return rt(n, s);
+        switch (n) {
+          case 0 /* NullValue */ :
+            return 0;
+
+          case 1 /* BooleanValue */ :
+            return rt(t.booleanValue, e.booleanValue);
+
+          case 2 /* NumberValue */ :
+            return function(t, e) {
+                const n = It(t.integerValue || t.doubleValue), s = It(e.integerValue || e.doubleValue);
+                return n < s ? -1 : n > s ? 1 : n === s ? 0 : 
+                // one or both are NaN.
+                isNaN(n) ? isNaN(s) ? 0 : -1 : 1;
+            }(t, e);
+
+          case 3 /* TimestampValue */ :
+            return $t(t.timestampValue, e.timestampValue);
+
+          case 4 /* ServerTimestampValue */ :
+            return $t(Pt(t), Pt(e));
+
+          case 5 /* StringValue */ :
+            return rt(t.stringValue, e.stringValue);
+
+          case 6 /* BlobValue */ :
+            return function(t, e) {
+                const n = At(t), s = At(e);
+                return n.compareTo(s);
+            }(t.bytesValue, e.bytesValue);
+
+          case 7 /* RefValue */ :
+            return function(t, e) {
+                const n = t.split("/"), s = e.split("/");
+                for (let t = 0; t < n.length && t < s.length; t++) {
+                    const e = rt(n[t], s[t]);
+                    if (0 !== e) return e;
+                }
+                return rt(n.length, s.length);
+            }(t.referenceValue, e.referenceValue);
+
+          case 8 /* GeoPointValue */ :
+            return function(t, e) {
+                const n = rt(It(t.latitude), It(e.latitude));
+                if (0 !== n) return n;
+                return rt(It(t.longitude), It(e.longitude));
+            }(t.geoPointValue, e.geoPointValue);
+
+          case 9 /* ArrayValue */ :
+            return function(t, e) {
+                const n = t.values || [], s = e.values || [];
+                for (let t = 0; t < n.length && t < s.length; ++t) {
+                    const e = xt(n[t], s[t]);
+                    if (e) return e;
+                }
+                return rt(n.length, s.length);
+            }(t.arrayValue, e.arrayValue);
+
+          case 10 /* ObjectValue */ :
+            return function(t, e) {
+                const n = t.fields || {}, s = Object.keys(n), i = e.fields || {}, r = Object.keys(i);
+                // Even though MapValues are likely sorted correctly based on their insertion
+                // order (e.g. when received from the backend), local modifications can bring
+                // elements out of order. We need to re-sort the elements to ensure that
+                // canonical IDs are independent of insertion order.
+                s.sort(), r.sort();
+                for (let t = 0; t < s.length && t < r.length; ++t) {
+                    const e = rt(s[t], r[t]);
+                    if (0 !== e) return e;
+                    const o = xt(n[s[t]], i[r[t]]);
+                    if (0 !== o) return o;
+                }
+                return rt(s.length, r.length);
+            }
+            /**
+     * Generates the canonical ID for the provided field value (as used in Target
+     * serialization).
+     */ (t.mapValue, e.mapValue);
+
+          default:
+            throw B();
+        }
+    }
+
+    function $t(t, e) {
+        if ("string" == typeof t && "string" == typeof e && t.length === e.length) return rt(t, e);
+        const n = Et(t), s = Et(e), i = rt(n.seconds, s.seconds);
+        return 0 !== i ? i : rt(n.nanos, s.nanos);
+    }
+
+    function Ot(t) {
+        return Mt(t);
+    }
+
+    function Mt(t) {
+        return "nullValue" in t ? "null" : "booleanValue" in t ? "" + t.booleanValue : "integerValue" in t ? "" + t.integerValue : "doubleValue" in t ? "" + t.doubleValue : "timestampValue" in t ? function(t) {
+            const e = Et(t);
+            return `time(${e.seconds},${e.nanos})`;
+        }(t.timestampValue) : "stringValue" in t ? t.stringValue : "bytesValue" in t ? At(t.bytesValue).toBase64() : "referenceValue" in t ? (n = t.referenceValue, 
+        Dt.fromName(n).toString()) : "geoPointValue" in t ? `geo(${(e = t.geoPointValue).latitude},${e.longitude})` : "arrayValue" in t ? function(t) {
+            let e = "[", n = !0;
+            for (const s of t.values || []) n ? n = !1 : e += ",", e += Mt(s);
+            return e + "]";
+        }
+        /** Returns a reference value for the provided database and key. */ (t.arrayValue) : "mapValue" in t ? function(t) {
+            // Iteration order in JavaScript is not guaranteed. To ensure that we generate
+            // matching canonical IDs for identical maps, we need to sort the keys.
+            const e = Object.keys(t.fields || {}).sort();
+            let n = "{", s = !0;
+            for (const i of e) s ? s = !1 : n += ",", n += `${i}:${Mt(t.fields[i])}`;
+            return n + "}";
+        }(t.mapValue) : B();
+        var e, n;
+    }
+
+    /** Returns true if `value` is an IntegerValue . */ function Lt(t) {
+        return !!t && "integerValue" in t;
+    }
+
+    /** Returns true if `value` is a DoubleValue. */
+    /** Returns true if `value` is an ArrayValue. */
+    function Bt(t) {
+        return !!t && "arrayValue" in t;
+    }
+
+    /** Returns true if `value` is a NullValue. */ function Ut(t) {
+        return !!t && "nullValue" in t;
+    }
+
+    /** Returns true if `value` is NaN. */ function qt(t) {
+        return !!t && "doubleValue" in t && isNaN(Number(t.doubleValue));
+    }
+
+    /** Returns true if `value` is a MapValue. */ function Kt(t) {
+        return !!t && "mapValue" in t;
+    }
+
+    /** Creates a deep copy of `source`. */ function jt(t) {
+        if (t.geoPointValue) return {
+            geoPointValue: Object.assign({}, t.geoPointValue)
+        };
+        if (t.timestampValue && "object" == typeof t.timestampValue) return {
+            timestampValue: Object.assign({}, t.timestampValue)
+        };
+        if (t.mapValue) {
+            const e = {
+                mapValue: {
+                    fields: {}
+                }
+            };
+            return lt(t.mapValue.fields, ((t, n) => e.mapValue.fields[t] = jt(n))), e;
+        }
+        if (t.arrayValue) {
+            const e = {
+                arrayValue: {
+                    values: []
+                }
+            };
+            for (let n = 0; n < (t.arrayValue.values || []).length; ++n) e.arrayValue.values[n] = jt(t.arrayValue.values[n]);
+            return e;
+        }
+        return Object.assign({}, t);
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An ObjectValue represents a MapValue in the Firestore Proto and offers the
+     * ability to add and remove fields (via the ObjectValueBuilder).
+     */ class Qt {
+        constructor(t) {
+            this.value = t;
+        }
+        static empty() {
+            return new Qt({
+                mapValue: {}
+            });
+        }
+        /**
+         * Returns the value at the given path or null.
+         *
+         * @param path - the path to search
+         * @returns The value at the path or null if the path is not set.
+         */    field(t) {
+            if (t.isEmpty()) return this.value;
+            {
+                let e = this.value;
+                for (let n = 0; n < t.length - 1; ++n) if (e = (e.mapValue.fields || {})[t.get(n)], 
+                !Kt(e)) return null;
+                return e = (e.mapValue.fields || {})[t.lastSegment()], e || null;
+            }
+        }
+        /**
+         * Sets the field to the provided value.
+         *
+         * @param path - The field path to set.
+         * @param value - The value to set.
+         */    set(t, e) {
+            this.getFieldsMap(t.popLast())[t.lastSegment()] = jt(e);
+        }
+        /**
+         * Sets the provided fields to the provided values.
+         *
+         * @param data - A map of fields to values (or null for deletes).
+         */    setAll(t) {
+            let e = mt.emptyPath(), n = {}, s = [];
+            t.forEach(((t, i) => {
+                if (!e.isImmediateParentOf(i)) {
+                    // Insert the accumulated changes at this parent location
+                    const t = this.getFieldsMap(e);
+                    this.applyChanges(t, n, s), n = {}, s = [], e = i.popLast();
+                }
+                t ? n[i.lastSegment()] = jt(t) : s.push(i.lastSegment());
+            }));
+            const i = this.getFieldsMap(e);
+            this.applyChanges(i, n, s);
+        }
+        /**
+         * Removes the field at the specified path. If there is no field at the
+         * specified path, nothing is changed.
+         *
+         * @param path - The field path to remove.
+         */    delete(t) {
+            const e = this.field(t.popLast());
+            Kt(e) && e.mapValue.fields && delete e.mapValue.fields[t.lastSegment()];
+        }
+        isEqual(t) {
+            return Nt(this.value, t.value);
+        }
+        /**
+         * Returns the map that contains the leaf element of `path`. If the parent
+         * entry does not yet exist, or if it is not a map, a new map will be created.
+         */    getFieldsMap(t) {
+            let e = this.value;
+            e.mapValue.fields || (e.mapValue = {
+                fields: {}
+            });
+            for (let n = 0; n < t.length; ++n) {
+                let s = e.mapValue.fields[t.get(n)];
+                Kt(s) && s.mapValue.fields || (s = {
+                    mapValue: {
+                        fields: {}
+                    }
+                }, e.mapValue.fields[t.get(n)] = s), e = s;
+            }
+            return e.mapValue.fields;
+        }
+        /**
+         * Modifies `fieldsMap` by adding, replacing or deleting the specified
+         * entries.
+         */    applyChanges(t, e, n) {
+            lt(e, ((e, n) => t[e] = n));
+            for (const e of n) delete t[e];
+        }
+        clone() {
+            return new Qt(jt(this.value));
+        }
+    }
+
+    /**
+     * Returns a FieldMask built from all fields in a MapValue.
+     */ function Wt(t) {
+        const e = [];
+        return lt(t.fields, ((t, n) => {
+            const s = new mt([ t ]);
+            if (Kt(n)) {
+                const t = Wt(n.mapValue).fields;
+                if (0 === t.length) 
+                // Preserve the empty map by adding it to the FieldMask.
+                e.push(s); else 
+                // For nested and non-empty ObjectValues, add the FieldPath of the
+                // leaf nodes.
+                for (const n of t) e.push(s.child(n));
+            } else 
+            // For nested and non-empty ObjectValues, add the FieldPath of the leaf
+            // nodes.
+            e.push(s);
+        })), new gt(e);
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Represents a document in Firestore with a key, version, data and whether it
+     * has local mutations applied to it.
+     *
+     * Documents can transition between states via `convertToFoundDocument()`,
+     * `convertToNoDocument()` and `convertToUnknownDocument()`. If a document does
+     * not transition to one of these states even after all mutations have been
+     * applied, `isValidDocument()` returns false and the document should be removed
+     * from all views.
+     */ class Gt {
+        constructor(t, e, n, s, i) {
+            this.key = t, this.documentType = e, this.version = n, this.data = s, this.documentState = i;
+        }
+        /**
+         * Creates a document with no known version or data, but which can serve as
+         * base document for mutations.
+         */    static newInvalidDocument(t) {
+            return new Gt(t, 0 /* INVALID */ , ut.min(), Qt.empty(), 0 /* SYNCED */);
+        }
+        /**
+         * Creates a new document that is known to exist with the given data at the
+         * given version.
+         */    static newFoundDocument(t, e, n) {
+            return new Gt(t, 1 /* FOUND_DOCUMENT */ , e, n, 0 /* SYNCED */);
+        }
+        /** Creates a new document that is known to not exist at the given version. */    static newNoDocument(t, e) {
+            return new Gt(t, 2 /* NO_DOCUMENT */ , e, Qt.empty(), 0 /* SYNCED */);
+        }
+        /**
+         * Creates a new document that is known to exist at the given version but
+         * whose data is not known (e.g. a document that was updated without a known
+         * base document).
+         */    static newUnknownDocument(t, e) {
+            return new Gt(t, 3 /* UNKNOWN_DOCUMENT */ , e, Qt.empty(), 2 /* HAS_COMMITTED_MUTATIONS */);
+        }
+        /**
+         * Changes the document type to indicate that it exists and that its version
+         * and data are known.
+         */    convertToFoundDocument(t, e) {
+            return this.version = t, this.documentType = 1 /* FOUND_DOCUMENT */ , this.data = e, 
+            this.documentState = 0 /* SYNCED */ , this;
+        }
+        /**
+         * Changes the document type to indicate that it doesn't exist at the given
+         * version.
+         */    convertToNoDocument(t) {
+            return this.version = t, this.documentType = 2 /* NO_DOCUMENT */ , this.data = Qt.empty(), 
+            this.documentState = 0 /* SYNCED */ , this;
+        }
+        /**
+         * Changes the document type to indicate that it exists at a given version but
+         * that its data is not known (e.g. a document that was updated without a known
+         * base document).
+         */    convertToUnknownDocument(t) {
+            return this.version = t, this.documentType = 3 /* UNKNOWN_DOCUMENT */ , this.data = Qt.empty(), 
+            this.documentState = 2 /* HAS_COMMITTED_MUTATIONS */ , this;
+        }
+        setHasCommittedMutations() {
+            return this.documentState = 2 /* HAS_COMMITTED_MUTATIONS */ , this;
+        }
+        setHasLocalMutations() {
+            return this.documentState = 1 /* HAS_LOCAL_MUTATIONS */ , this;
+        }
+        get hasLocalMutations() {
+            return 1 /* HAS_LOCAL_MUTATIONS */ === this.documentState;
+        }
+        get hasCommittedMutations() {
+            return 2 /* HAS_COMMITTED_MUTATIONS */ === this.documentState;
+        }
+        get hasPendingWrites() {
+            return this.hasLocalMutations || this.hasCommittedMutations;
+        }
+        isValidDocument() {
+            return 0 /* INVALID */ !== this.documentType;
+        }
+        isFoundDocument() {
+            return 1 /* FOUND_DOCUMENT */ === this.documentType;
+        }
+        isNoDocument() {
+            return 2 /* NO_DOCUMENT */ === this.documentType;
+        }
+        isUnknownDocument() {
+            return 3 /* UNKNOWN_DOCUMENT */ === this.documentType;
+        }
+        isEqual(t) {
+            return t instanceof Gt && this.key.isEqual(t.key) && this.version.isEqual(t.version) && this.documentType === t.documentType && this.documentState === t.documentState && this.data.isEqual(t.data);
+        }
+        mutableCopy() {
+            return new Gt(this.key, this.documentType, this.version, this.data.clone(), this.documentState);
+        }
+        toString() {
+            return `Document(${this.key}, ${this.version}, ${JSON.stringify(this.data.value)}, {documentType: ${this.documentType}}), {documentState: ${this.documentState}})`;
+        }
+    }
+
+    /**
+     * Compares the value for field `field` in the provided documents. Throws if
+     * the field does not exist in both documents.
+     */
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -611,8 +3867,261 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Ur{constructor(t,e=null,n=[],s=[],i=null,r=null,o=null){this.path=t,this.collectionGroup=e,this.orderBy=n,this.filters=s,this.limit=i,this.startAt=r,this.endAt=o,this.R=null}}function $r(t,e=null,n=[],s=[],i=null,r=null,o=null){return new Ur(t,e,n,s,i,r,o)}function qr(t){const e=Hi(t);if(null===e.R){let t=e.path.canonicalString();null!==e.collectionGroup&&(t+="|cg:"+e.collectionGroup),t+="|f:",t+=e.filters.map((t=>function(t){return t.field.canonicalString()+t.op.toString()+Dr(t.value)}(t))).join(","),t+="|ob:",t+=e.orderBy.map((t=>function(t){return t.field.canonicalString()+t.dir}(t))).join(","),br(e.limit)||(t+="|l:",t+=e.limit),e.startAt&&(t+="|lb:",t+=to(e.startAt)),e.endAt&&(t+="|ub:",t+=to(e.endAt)),e.R=t}return e.R}function Br(t,e){if(t.limit!==e.limit)return!1;if(t.orderBy.length!==e.orderBy.length)return!1;for(let n=0;n<t.orderBy.length;n++)if(!no(t.orderBy[n],e.orderBy[n]))return!1;if(t.filters.length!==e.filters.length)return!1;for(let i=0;i<t.filters.length;i++)if(n=t.filters[i],s=e.filters[i],n.op!==s.op||!n.field.isEqual(s.field)||!Cr(n.value,s.value))return!1;var n,s;return t.collectionGroup===e.collectionGroup&&!!t.path.isEqual(e.path)&&!!io(t.startAt,e.startAt)&&io(t.endAt,e.endAt)}function jr(t){return Ir.isDocumentKey(t.path)&&null===t.collectionGroup&&0===t.filters.length}class Hr extends class{}{constructor(t,e,n){super(),this.field=t,this.op=e,this.value=n}static create(t,e,n){return t.isKeyField()?"in"===e||"not-in"===e?this.P(t,e,n):new zr(t,e,n):"array-contains"===e?new Yr(t,n):"in"===e?new Qr(t,n):"not-in"===e?new Xr(t,n):"array-contains-any"===e?new Jr(t,n):new Hr(t,e,n)}static P(t,e,n){return"in"===e?new Kr(t,n):new Gr(t,n)}matches(t){const e=t.data.field(this.field);return"!="===this.op?null!==e&&this.v(_r(e,this.value)):null!==e&&Sr(this.value)===Sr(e)&&this.v(_r(e,this.value))}v(t){switch(this.op){case"<":return t<0;case"<=":return t<=0;case"==":return 0===t;case"!=":return 0!==t;case">":return t>0;case">=":return t>=0;default:return Bi()}}V(){return["<","<=",">",">=","!=","not-in"].indexOf(this.op)>=0}}class zr extends Hr{constructor(t,e,n){super(t,e,n),this.key=Ir.fromName(n.referenceValue)}matches(t){const e=Ir.comparator(t.key,this.key);return this.v(e)}}class Kr extends Hr{constructor(t,e){super(t,"in",e),this.keys=Wr("in",e)}matches(t){return this.keys.some((e=>e.isEqual(t.key)))}}class Gr extends Hr{constructor(t,e){super(t,"not-in",e),this.keys=Wr("not-in",e)}matches(t){return!this.keys.some((e=>e.isEqual(t.key)))}}function Wr(t,e){var n;return((null===(n=e.arrayValue)||void 0===n?void 0:n.values)||[]).map((t=>Ir.fromName(t.referenceValue)))}class Yr extends Hr{constructor(t,e){super(t,"array-contains",e)}matches(t){const e=t.data.field(this.field);return Lr(e)&&Ar(e.arrayValue,this.value)}}class Qr extends Hr{constructor(t,e){super(t,"in",e)}matches(t){const e=t.data.field(this.field);return null!==e&&Ar(this.value.arrayValue,e)}}class Xr extends Hr{constructor(t,e){super(t,"not-in",e)}matches(t){if(Ar(this.value.arrayValue,{nullValue:"NULL_VALUE"}))return!1;const e=t.data.field(this.field);return null!==e&&!Ar(this.value.arrayValue,e)}}class Jr extends Hr{constructor(t,e){super(t,"array-contains-any",e)}matches(t){const e=t.data.field(this.field);return!(!Lr(e)||!e.arrayValue.values)&&e.arrayValue.values.some((t=>Ar(this.value.arrayValue,t)))}}class Zr{constructor(t,e){this.position=t,this.before=e}}function to(t){return`${t.before?"b":"a"}:${t.position.map((t=>Dr(t))).join(",")}`}class eo{constructor(t,e="asc"){this.field=t,this.dir=e}}function no(t,e){return t.dir===e.dir&&t.field.isEqual(e.field)}function so(t,e,n){let s=0;for(let i=0;i<t.position.length;i++){const r=e[i],o=t.position[i];if(s=r.field.isKeyField()?Ir.comparator(Ir.fromName(o.referenceValue),n.key):_r(o,n.data.field(r.field)),"desc"===r.dir&&(s*=-1),0!==s)break}return t.before?s<=0:s<0}function io(t,e){if(null===t)return null===e;if(null===e)return!1;if(t.before!==e.before||t.position.length!==e.position.length)return!1;for(let n=0;n<t.position.length;n++)if(!Cr(t.position[n],e.position[n]))return!1;return!0}
-/**
+     */
+    // Visible for testing
+    class zt {
+        constructor(t, e = null, n = [], s = [], i = null, r = null, o = null) {
+            this.path = t, this.collectionGroup = e, this.orderBy = n, this.filters = s, this.limit = i, 
+            this.startAt = r, this.endAt = o, this.R = null;
+        }
+    }
+
+    /**
+     * Initializes a Target with a path and optional additional query constraints.
+     * Path must currently be empty if this is a collection group query.
+     *
+     * NOTE: you should always construct `Target` from `Query.toTarget` instead of
+     * using this factory method, because `Query` provides an implicit `orderBy`
+     * property.
+     */ function Ht(t, e = null, n = [], s = [], i = null, r = null, o = null) {
+        return new zt(t, e, n, s, i, r, o);
+    }
+
+    function Jt(t) {
+        const e = K(t);
+        if (null === e.R) {
+            let t = e.path.canonicalString();
+            null !== e.collectionGroup && (t += "|cg:" + e.collectionGroup), t += "|f:", t += e.filters.map((t => ee(t))).join(","), 
+            t += "|ob:", t += e.orderBy.map((t => function(t) {
+                // TODO(b/29183165): Make this collision robust.
+                return t.field.canonicalString() + t.dir;
+            }(t))).join(","), vt(e.limit) || (t += "|l:", t += e.limit), e.startAt && (t += "|lb:", 
+            t += le(e.startAt)), e.endAt && (t += "|ub:", t += le(e.endAt)), e.R = t;
+        }
+        return e.R;
+    }
+
+    function Yt(t) {
+        let e = t.path.canonicalString();
+        return null !== t.collectionGroup && (e += " collectionGroup=" + t.collectionGroup), 
+        t.filters.length > 0 && (e += `, filters: [${t.filters.map((t => {
+        return `${(e = t).field.canonicalString()} ${e.op} ${Ot(e.value)}`;
+        /** Returns a debug description for `filter`. */
+        var e;
+        /** Filter that matches on key fields (i.e. '__name__'). */    })).join(", ")}]`), 
+        vt(t.limit) || (e += ", limit: " + t.limit), t.orderBy.length > 0 && (e += `, orderBy: [${t.orderBy.map((t => function(t) {
+        return `${t.field.canonicalString()} (${t.dir})`;
+    }(t))).join(", ")}]`), t.startAt && (e += ", startAt: " + le(t.startAt)), t.endAt && (e += ", endAt: " + le(t.endAt)), 
+        `Target(${e})`;
+    }
+
+    function Xt(t, e) {
+        if (t.limit !== e.limit) return !1;
+        if (t.orderBy.length !== e.orderBy.length) return !1;
+        for (let n = 0; n < t.orderBy.length; n++) if (!de(t.orderBy[n], e.orderBy[n])) return !1;
+        if (t.filters.length !== e.filters.length) return !1;
+        for (let i = 0; i < t.filters.length; i++) if (n = t.filters[i], s = e.filters[i], 
+        n.op !== s.op || !n.field.isEqual(s.field) || !Nt(n.value, s.value)) return !1;
+        var n, s;
+        return t.collectionGroup === e.collectionGroup && (!!t.path.isEqual(e.path) && (!!_e(t.startAt, e.startAt) && _e(t.endAt, e.endAt)));
+    }
+
+    function Zt(t) {
+        return Dt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
+    }
+
+    class te extends class {} {
+        constructor(t, e, n) {
+            super(), this.field = t, this.op = e, this.value = n;
+        }
+        /**
+         * Creates a filter based on the provided arguments.
+         */    static create(t, e, n) {
+            return t.isKeyField() ? "in" /* IN */ === e || "not-in" /* NOT_IN */ === e ? this.P(t, e, n) : new ne(t, e, n) : "array-contains" /* ARRAY_CONTAINS */ === e ? new oe(t, n) : "in" /* IN */ === e ? new ce(t, n) : "not-in" /* NOT_IN */ === e ? new ae(t, n) : "array-contains-any" /* ARRAY_CONTAINS_ANY */ === e ? new ue(t, n) : new te(t, e, n);
+        }
+        static P(t, e, n) {
+            return "in" /* IN */ === e ? new se(t, n) : new ie(t, n);
+        }
+        matches(t) {
+            const e = t.data.field(this.field);
+            // Types do not have to match in NOT_EQUAL filters.
+                    return "!=" /* NOT_EQUAL */ === this.op ? null !== e && this.v(xt(e, this.value)) : null !== e && Ct(this.value) === Ct(e) && this.v(xt(e, this.value));
+            // Only compare types with matching backend order (such as double and int).
+            }
+        v(t) {
+            switch (this.op) {
+              case "<" /* LESS_THAN */ :
+                return t < 0;
+
+              case "<=" /* LESS_THAN_OR_EQUAL */ :
+                return t <= 0;
+
+              case "==" /* EQUAL */ :
+                return 0 === t;
+
+              case "!=" /* NOT_EQUAL */ :
+                return 0 !== t;
+
+              case ">" /* GREATER_THAN */ :
+                return t > 0;
+
+              case ">=" /* GREATER_THAN_OR_EQUAL */ :
+                return t >= 0;
+
+              default:
+                return B();
+            }
+        }
+        V() {
+            return [ "<" /* LESS_THAN */ , "<=" /* LESS_THAN_OR_EQUAL */ , ">" /* GREATER_THAN */ , ">=" /* GREATER_THAN_OR_EQUAL */ , "!=" /* NOT_EQUAL */ , "not-in" /* NOT_IN */ ].indexOf(this.op) >= 0;
+        }
+    }
+
+    function ee(t) {
+        // TODO(b/29183165): Technically, this won't be unique if two values have
+        // the same description, such as the int 3 and the string "3". So we should
+        // add the types in here somehow, too.
+        return t.field.canonicalString() + t.op.toString() + Ot(t.value);
+    }
+
+    class ne extends te {
+        constructor(t, e, n) {
+            super(t, e, n), this.key = Dt.fromName(n.referenceValue);
+        }
+        matches(t) {
+            const e = Dt.comparator(t.key, this.key);
+            return this.v(e);
+        }
+    }
+
+    /** Filter that matches on key fields within an array. */ class se extends te {
+        constructor(t, e) {
+            super(t, "in" /* IN */ , e), this.keys = re("in" /* IN */ , e);
+        }
+        matches(t) {
+            return this.keys.some((e => e.isEqual(t.key)));
+        }
+    }
+
+    /** Filter that matches on key fields not present within an array. */ class ie extends te {
+        constructor(t, e) {
+            super(t, "not-in" /* NOT_IN */ , e), this.keys = re("not-in" /* NOT_IN */ , e);
+        }
+        matches(t) {
+            return !this.keys.some((e => e.isEqual(t.key)));
+        }
+    }
+
+    function re(t, e) {
+        var n;
+        return ((null === (n = e.arrayValue) || void 0 === n ? void 0 : n.values) || []).map((t => Dt.fromName(t.referenceValue)));
+    }
+
+    /** A Filter that implements the array-contains operator. */ class oe extends te {
+        constructor(t, e) {
+            super(t, "array-contains" /* ARRAY_CONTAINS */ , e);
+        }
+        matches(t) {
+            const e = t.data.field(this.field);
+            return Bt(e) && kt(e.arrayValue, this.value);
+        }
+    }
+
+    /** A Filter that implements the IN operator. */ class ce extends te {
+        constructor(t, e) {
+            super(t, "in" /* IN */ , e);
+        }
+        matches(t) {
+            const e = t.data.field(this.field);
+            return null !== e && kt(this.value.arrayValue, e);
+        }
+    }
+
+    /** A Filter that implements the not-in operator. */ class ae extends te {
+        constructor(t, e) {
+            super(t, "not-in" /* NOT_IN */ , e);
+        }
+        matches(t) {
+            if (kt(this.value.arrayValue, {
+                nullValue: "NULL_VALUE"
+            })) return !1;
+            const e = t.data.field(this.field);
+            return null !== e && !kt(this.value.arrayValue, e);
+        }
+    }
+
+    /** A Filter that implements the array-contains-any operator. */ class ue extends te {
+        constructor(t, e) {
+            super(t, "array-contains-any" /* ARRAY_CONTAINS_ANY */ , e);
+        }
+        matches(t) {
+            const e = t.data.field(this.field);
+            return !(!Bt(e) || !e.arrayValue.values) && e.arrayValue.values.some((t => kt(this.value.arrayValue, t)));
+        }
+    }
+
+    /**
+     * Represents a bound of a query.
+     *
+     * The bound is specified with the given components representing a position and
+     * whether it's just before or just after the position (relative to whatever the
+     * query order is).
+     *
+     * The position represents a logical index position for a query. It's a prefix
+     * of values for the (potentially implicit) order by clauses of a query.
+     *
+     * Bound provides a function to determine whether a document comes before or
+     * after a bound. This is influenced by whether the position is just before or
+     * just after the provided values.
+     */ class he {
+        constructor(t, e) {
+            this.position = t, this.before = e;
+        }
+    }
+
+    function le(t) {
+        // TODO(b/29183165): Make this collision robust.
+        return `${t.before ? "b" : "a"}:${t.position.map((t => Ot(t))).join(",")}`;
+    }
+
+    /**
+     * An ordering on a field, in some Direction. Direction defaults to ASCENDING.
+     */ class fe {
+        constructor(t, e = "asc" /* ASCENDING */) {
+            this.field = t, this.dir = e;
+        }
+    }
+
+    function de(t, e) {
+        return t.dir === e.dir && t.field.isEqual(e.field);
+    }
+
+    /**
+     * Returns true if a document sorts before a bound using the provided sort
+     * order.
+     */ function we(t, e, n) {
+        let s = 0;
+        for (let i = 0; i < t.position.length; i++) {
+            const r = e[i], o = t.position[i];
+            if (r.field.isKeyField()) s = Dt.comparator(Dt.fromName(o.referenceValue), n.key); else {
+                s = xt(o, n.data.field(r.field));
+            }
+            if ("desc" /* DESCENDING */ === r.dir && (s *= -1), 0 !== s) break;
+        }
+        return t.before ? s <= 0 : s < 0;
+    }
+
+    function _e(t, e) {
+        if (null === t) return null === e;
+        if (null === e) return !1;
+        if (t.before !== e.before || t.position.length !== e.position.length) return !1;
+        for (let n = 0; n < t.position.length; n++) {
+            if (!Nt(t.position[n], e.position[n])) return !1;
+        }
+        return !0;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -627,8 +4136,191 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class ro{constructor(t,e=null,n=[],s=[],i=null,r="F",o=null,a=null){this.path=t,this.collectionGroup=e,this.explicitOrderBy=n,this.filters=s,this.limit=i,this.limitType=r,this.startAt=o,this.endAt=a,this.S=null,this.D=null,this.startAt,this.endAt}}function oo(t){return new ro(t)}function ao(t){return!br(t.limit)&&"F"===t.limitType}function ho(t){return!br(t.limit)&&"L"===t.limitType}function co(t){const e=Hi(t);if(null===e.S){e.S=[];const t=function(t){for(const e of t.filters)if(e.V())return e.field;return null}(e),n=function(t){return t.explicitOrderBy.length>0?t.explicitOrderBy[0].field:null}(e);if(null!==t&&null===n)t.isKeyField()||e.S.push(new eo(t)),e.S.push(new eo(dr.keyField(),"asc"));else{let t=!1;for(const n of e.explicitOrderBy)e.S.push(n),n.field.isKeyField()&&(t=!0);if(!t){const t=e.explicitOrderBy.length>0?e.explicitOrderBy[e.explicitOrderBy.length-1].dir:"asc";e.S.push(new eo(dr.keyField(),t))}}}return e.S}function uo(t){const e=Hi(t);if(!e.D)if("F"===e.limitType)e.D=$r(e.path,e.collectionGroup,co(e),e.filters,e.limit,e.startAt,e.endAt);else{const t=[];for(const n of co(e)){const e="desc"===n.dir?"asc":"desc";t.push(new eo(n.field,e))}const n=e.endAt?new Zr(e.endAt.position,!e.endAt.before):null,s=e.startAt?new Zr(e.startAt.position,!e.startAt.before):null;e.D=$r(e.path,e.collectionGroup,t,e.filters,e.limit,n,s)}return e.D}function lo(t,e){return Br(uo(t),uo(e))&&t.limitType===e.limitType}function fo(t){return`${qr(uo(t))}|lt:${t.limitType}`}function po(t){return`Query(target=${function(t){let e=t.path.canonicalString();return null!==t.collectionGroup&&(e+=" collectionGroup="+t.collectionGroup),t.filters.length>0&&(e+=`, filters: [${t.filters.map((t=>{return`${(e=t).field.canonicalString()} ${e.op} ${Dr(e.value)}`;var e})).join(", ")}]`),br(t.limit)||(e+=", limit: "+t.limit),t.orderBy.length>0&&(e+=`, orderBy: [${t.orderBy.map((t=>function(t){return`${t.field.canonicalString()} (${t.dir})`}(t))).join(", ")}]`),t.startAt&&(e+=", startAt: "+to(t.startAt)),t.endAt&&(e+=", endAt: "+to(t.endAt)),`Target(${e})`}(uo(t))}; limitType=${t.limitType})`}function go(t,e){return e.isFoundDocument()&&function(t,e){const n=e.key.path;return null!==t.collectionGroup?e.key.hasCollectionId(t.collectionGroup)&&t.path.isPrefixOf(n):Ir.isDocumentKey(t.path)?t.path.isEqual(n):t.path.isImmediateParentOf(n)}(t,e)&&function(t,e){for(const n of t.explicitOrderBy)if(!n.field.isKeyField()&&null===e.data.field(n.field))return!1;return!0}(t,e)&&function(t,e){for(const n of t.filters)if(!n.matches(e))return!1;return!0}(t,e)&&function(t,e){return!(t.startAt&&!so(t.startAt,co(t),e))&&(!t.endAt||!so(t.endAt,co(t),e))}(t,e)}function mo(t){return(e,n)=>{let s=!1;for(const i of co(t)){const t=yo(i,e,n);if(0!==t)return t;s=s||i.field.isKeyField()}return 0}}function yo(t,e,n){const s=t.field.isKeyField()?Ir.comparator(e.key,n.key):function(t,e,n){const s=e.data.field(t),i=n.data.field(t);return null!==s&&null!==i?_r(s,i):Bi()}(t.field,e,n);switch(t.dir){case"asc":return s;case"desc":return-1*s;default:return Bi()}}
-/**
+     */
+    /**
+     * Query encapsulates all the query attributes we support in the SDK. It can
+     * be run against the LocalStore, as well as be converted to a `Target` to
+     * query the RemoteStore results.
+     *
+     * Visible for testing.
+     */ class me {
+        /**
+         * Initializes a Query with a path and optional additional query constraints.
+         * Path must currently be empty if this is a collection group query.
+         */
+        constructor(t, e = null, n = [], s = [], i = null, r = "F" /* First */ , o = null, c = null) {
+            this.path = t, this.collectionGroup = e, this.explicitOrderBy = n, this.filters = s, 
+            this.limit = i, this.limitType = r, this.startAt = o, this.endAt = c, this.S = null, 
+            // The corresponding `Target` of this `Query` instance.
+            this.D = null, this.startAt, this.endAt;
+        }
+    }
+
+    /** Creates a new Query instance with the options provided. */ function ge(t, e, n, s, i, r, o, c) {
+        return new me(t, e, n, s, i, r, o, c);
+    }
+
+    /** Creates a new Query for a query that matches all documents at `path` */ function ye(t) {
+        return new me(t);
+    }
+
+    /**
+     * Helper to convert a collection group query into a collection query at a
+     * specific path. This is used when executing collection group queries, since
+     * we have to split the query into a set of collection queries at multiple
+     * paths.
+     */ function pe(t) {
+        return !vt(t.limit) && "F" /* First */ === t.limitType;
+    }
+
+    function Te(t) {
+        return !vt(t.limit) && "L" /* Last */ === t.limitType;
+    }
+
+    function Ee(t) {
+        return t.explicitOrderBy.length > 0 ? t.explicitOrderBy[0].field : null;
+    }
+
+    function Ie(t) {
+        for (const e of t.filters) if (e.V()) return e.field;
+        return null;
+    }
+
+    /**
+     * Checks if any of the provided Operators are included in the query and
+     * returns the first one that is, or null if none are.
+     */
+    /**
+     * Returns whether the query matches a collection group rather than a specific
+     * collection.
+     */
+    function Ae(t) {
+        return null !== t.collectionGroup;
+    }
+
+    /**
+     * Returns the implicit order by constraint that is used to execute the Query,
+     * which can be different from the order by constraints the user provided (e.g.
+     * the SDK and backend always orders by `__name__`).
+     */ function Re(t) {
+        const e = K(t);
+        if (null === e.S) {
+            e.S = [];
+            const t = Ie(e), n = Ee(e);
+            if (null !== t && null === n) 
+            // In order to implicitly add key ordering, we must also add the
+            // inequality filter field for it to be a valid query.
+            // Note that the default inequality field and key ordering is ascending.
+            t.isKeyField() || e.S.push(new fe(t)), e.S.push(new fe(mt.keyField(), "asc" /* ASCENDING */)); else {
+                let t = !1;
+                for (const n of e.explicitOrderBy) e.S.push(n), n.field.isKeyField() && (t = !0);
+                if (!t) {
+                    // The order of the implicit key ordering always matches the last
+                    // explicit order by
+                    const t = e.explicitOrderBy.length > 0 ? e.explicitOrderBy[e.explicitOrderBy.length - 1].dir : "asc" /* ASCENDING */;
+                    e.S.push(new fe(mt.keyField(), t));
+                }
+            }
+        }
+        return e.S;
+    }
+
+    /**
+     * Converts this `Query` instance to it's corresponding `Target` representation.
+     */ function be(t) {
+        const e = K(t);
+        if (!e.D) if ("F" /* First */ === e.limitType) e.D = Ht(e.path, e.collectionGroup, Re(e), e.filters, e.limit, e.startAt, e.endAt); else {
+            // Flip the orderBy directions since we want the last results
+            const t = [];
+            for (const n of Re(e)) {
+                const e = "desc" /* DESCENDING */ === n.dir ? "asc" /* ASCENDING */ : "desc" /* DESCENDING */;
+                t.push(new fe(n.field, e));
+            }
+            // We need to swap the cursors to match the now-flipped query ordering.
+                    const n = e.endAt ? new he(e.endAt.position, !e.endAt.before) : null, s = e.startAt ? new he(e.startAt.position, !e.startAt.before) : null;
+            // Now return as a LimitType.First query.
+            e.D = Ht(e.path, e.collectionGroup, t, e.filters, e.limit, n, s);
+        }
+        return e.D;
+    }
+
+    function Pe(t, e, n) {
+        return new me(t.path, t.collectionGroup, t.explicitOrderBy.slice(), t.filters.slice(), e, n, t.startAt, t.endAt);
+    }
+
+    function ve(t, e) {
+        return Xt(be(t), be(e)) && t.limitType === e.limitType;
+    }
+
+    // TODO(b/29183165): This is used to get a unique string from a query to, for
+    // example, use as a dictionary key, but the implementation is subject to
+    // collisions. Make it collision-free.
+    function Ve(t) {
+        return `${Jt(be(t))}|lt:${t.limitType}`;
+    }
+
+    function Se(t) {
+        return `Query(target=${Yt(be(t))}; limitType=${t.limitType})`;
+    }
+
+    /** Returns whether `doc` matches the constraints of `query`. */ function De(t, e) {
+        return e.isFoundDocument() && function(t, e) {
+            const n = e.key.path;
+            return null !== t.collectionGroup ? e.key.hasCollectionId(t.collectionGroup) && t.path.isPrefixOf(n) : Dt.isDocumentKey(t.path) ? t.path.isEqual(n) : t.path.isImmediateParentOf(n);
+        }
+        /**
+     * A document must have a value for every ordering clause in order to show up
+     * in the results.
+     */ (t, e) && function(t, e) {
+            for (const n of t.explicitOrderBy) 
+            // order by key always matches
+            if (!n.field.isKeyField() && null === e.data.field(n.field)) return !1;
+            return !0;
+        }(t, e) && function(t, e) {
+            for (const n of t.filters) if (!n.matches(e)) return !1;
+            return !0;
+        }
+        /** Makes sure a document is within the bounds, if provided. */ (t, e) && function(t, e) {
+            if (t.startAt && !we(t.startAt, Re(t), e)) return !1;
+            if (t.endAt && we(t.endAt, Re(t), e)) return !1;
+            return !0;
+        }
+        /**
+     * Returns a new comparator function that can be used to compare two documents
+     * based on the Query's ordering constraint.
+     */ (t, e);
+    }
+
+    function Ce(t) {
+        return (e, n) => {
+            let s = !1;
+            for (const i of Re(t)) {
+                const t = Ne(i, e, n);
+                if (0 !== t) return t;
+                s = s || i.field.isKeyField();
+            }
+            return 0;
+        };
+    }
+
+    function Ne(t, e, n) {
+        const s = t.field.isKeyField() ? Dt.comparator(e.key, n.key) : function(t, e, n) {
+            const s = e.data.field(t), i = n.data.field(t);
+            return null !== s && null !== i ? xt(s, i) : B();
+        }(t.field, e, n);
+        switch (t.dir) {
+          case "asc" /* ASCENDING */ :
+            return s;
+
+          case "desc" /* DESCENDING */ :
+            return -1 * s;
+
+          default:
+            return B();
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -644,7 +4336,43 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-/**
+    /**
+     * Returns an DoubleValue for `value` that is encoded based the serializer's
+     * `useProto3Json` setting.
+     */ function ke(t, e) {
+        if (t.C) {
+            if (isNaN(e)) return {
+                doubleValue: "NaN"
+            };
+            if (e === 1 / 0) return {
+                doubleValue: "Infinity"
+            };
+            if (e === -1 / 0) return {
+                doubleValue: "-Infinity"
+            };
+        }
+        return {
+            doubleValue: Vt(e) ? "-0" : e
+        };
+    }
+
+    /**
+     * Returns an IntegerValue for `value`.
+     */ function xe(t) {
+        return {
+            integerValue: "" + t
+        };
+    }
+
+    /**
+     * Returns a value for a number that's appropriate to put into a proto.
+     * The return value is an IntegerValue if it can safely represent the value,
+     * otherwise a DoubleValue is returned.
+     */ function $e(t, e) {
+        return St(e) ? xe(e) : ke(t, e);
+    }
+
+    /**
      * @license
      * Copyright 2018 Google LLC
      *
@@ -659,8 +4387,447 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class vo{constructor(){this._=void 0}}function wo(t,e,n){return t instanceof bo?function(t,e){const n={fields:{__type__:{stringValue:"server_timestamp"},__local_write_time__:{timestampValue:{seconds:t.seconds,nanos:t.nanoseconds}}}};return e&&(n.fields.__previous_value__=e),{mapValue:n}}(n,e):t instanceof To?Io(t,e):t instanceof So?Co(t,e):function(t,e){const n=function(t,e){return t instanceof Ao?Rr(n=e)||function(t){return!!t&&"doubleValue"in t}(n)?e:{integerValue:0}:null;var n}(t,e),s=_o(n)+_o(t.N);return Rr(n)&&Rr(t.N)?function(t){return{integerValue:""+t}}(s):function(t,e){if(t.C){if(isNaN(e))return{doubleValue:"NaN"};if(e===1/0)return{doubleValue:"Infinity"};if(e===-1/0)return{doubleValue:"-Infinity"}}return{doubleValue:Tr(e)?"-0":e}}(t.k,s)}(t,e)}function Eo(t,e,n){return t instanceof To?Io(t,e):t instanceof So?Co(t,e):n}class bo extends vo{}class To extends vo{constructor(t){super(),this.elements=t}}function Io(t,e){const n=No(e);for(const e of t.elements)n.some((t=>Cr(t,e)))||n.push(e);return{arrayValue:{values:n}}}class So extends vo{constructor(t){super(),this.elements=t}}function Co(t,e){let n=No(e);for(const e of t.elements)n=n.filter((t=>!Cr(t,e)));return{arrayValue:{values:n}}}class Ao extends vo{constructor(t,e){super(),this.k=t,this.N=e}}function _o(t){return mr(t.integerValue||t.doubleValue)}function No(t){return Lr(t)&&t.arrayValue.values?t.arrayValue.values.slice():[]}function Do(t,e){return void 0!==t.updateTime?e.isFoundDocument()&&e.version.isEqual(t.updateTime):void 0===t.exists||t.exists===e.isFoundDocument()}class ko{}function Ro(t,e,n){t instanceof Mo?function(t,e,n){const s=t.value.clone(),i=Fo(t.fieldTransforms,e,n.transformResults);s.setAll(i),e.convertToFoundDocument(n.version,s).setHasCommittedMutations()}(t,e,n):t instanceof Po?function(t,e,n){if(!Do(t.precondition,e))return void e.convertToUnknownDocument(n.version);const s=Fo(t.fieldTransforms,e,n.transformResults),i=e.data;i.setAll(Vo(t)),i.setAll(s),e.convertToFoundDocument(n.version,i).setHasCommittedMutations()}(t,e,n):function(t,e,n){e.convertToNoDocument(n.version).setHasCommittedMutations()}(0,e,n)}function Lo(t,e,n){t instanceof Mo?function(t,e,n){if(!Do(t.precondition,e))return;const s=t.value.clone(),i=Uo(t.fieldTransforms,n,e);s.setAll(i),e.convertToFoundDocument(Oo(e),s).setHasLocalMutations()}(t,e,n):t instanceof Po?function(t,e,n){if(!Do(t.precondition,e))return;const s=Uo(t.fieldTransforms,n,e),i=e.data;i.setAll(Vo(t)),i.setAll(s),e.convertToFoundDocument(Oo(e),i).setHasLocalMutations()}(t,e,n):function(t,e){Do(t.precondition,e)&&e.convertToNoDocument(or.min())}(t,e)}function xo(t,e){return t.type===e.type&&!!t.key.isEqual(e.key)&&!!t.precondition.isEqual(e.precondition)&&!!function(t,e){return void 0===t&&void 0===e||!(!t||!e)&&ir(t,e,((t,e)=>function(t,e){return t.field.isEqual(e.field)&&function(t,e){return t instanceof To&&e instanceof To||t instanceof So&&e instanceof So?ir(t.elements,e.elements,Cr):t instanceof Ao&&e instanceof Ao?Cr(t.N,e.N):t instanceof bo&&e instanceof bo}(t.transform,e.transform)}(t,e)))}(t.fieldTransforms,e.fieldTransforms)&&(0===t.type?t.value.isEqual(e.value):1!==t.type||t.data.isEqual(e.data)&&t.fieldMask.isEqual(e.fieldMask))}function Oo(t){return t.isFoundDocument()?t.version:or.min()}class Mo extends ko{constructor(t,e,n,s=[]){super(),this.key=t,this.value=e,this.precondition=n,this.fieldTransforms=s,this.type=0}}class Po extends ko{constructor(t,e,n,s,i=[]){super(),this.key=t,this.data=e,this.fieldMask=n,this.precondition=s,this.fieldTransforms=i,this.type=1}}function Vo(t){const e=new Map;return t.fieldMask.fields.forEach((n=>{if(!n.isEmpty()){const s=t.data.field(n);e.set(n,s)}})),e}function Fo(t,e,n){const s=new Map;ji(t.length===n.length);for(let i=0;i<n.length;i++){const r=t[i],o=r.transform,a=e.data.field(r.field);s.set(r.field,Eo(o,a,n[i]))}return s}function Uo(t,e,n){const s=new Map;for(const i of t){const t=i.transform,r=n.data.field(i.field);s.set(i.field,wo(t,r,e))}return s}
-/**
+     */
+    /** Used to represent a field transform on a mutation. */ class Oe {
+        constructor() {
+            // Make sure that the structural type of `TransformOperation` is unique.
+            // See https://github.com/microsoft/TypeScript/issues/5451
+            this._ = void 0;
+        }
+    }
+
+    /**
+     * Computes the local transform result against the provided `previousValue`,
+     * optionally using the provided localWriteTime.
+     */ function Me(t, e, n) {
+        return t instanceof Be ? function(t, e) {
+            const n = {
+                fields: {
+                    __type__: {
+                        stringValue: "server_timestamp"
+                    },
+                    __local_write_time__: {
+                        timestampValue: {
+                            seconds: t.seconds,
+                            nanos: t.nanoseconds
+                        }
+                    }
+                }
+            };
+            return e && (n.fields.__previous_value__ = e), {
+                mapValue: n
+            };
+        }(n, e) : t instanceof Ue ? qe(t, e) : t instanceof Ke ? je(t, e) : function(t, e) {
+            // PORTING NOTE: Since JavaScript's integer arithmetic is limited to 53 bit
+            // precision and resolves overflows by reducing precision, we do not
+            // manually cap overflows at 2^63.
+            const n = Le(t, e), s = We(n) + We(t.N);
+            return Lt(n) && Lt(t.N) ? xe(s) : ke(t.k, s);
+        }(t, e);
+    }
+
+    /**
+     * Computes a final transform result after the transform has been acknowledged
+     * by the server, potentially using the server-provided transformResult.
+     */ function Fe(t, e, n) {
+        // The server just sends null as the transform result for array operations,
+        // so we have to calculate a result the same as we do for local
+        // applications.
+        return t instanceof Ue ? qe(t, e) : t instanceof Ke ? je(t, e) : n;
+    }
+
+    /**
+     * If this transform operation is not idempotent, returns the base value to
+     * persist for this transform. If a base value is returned, the transform
+     * operation is always applied to this base value, even if document has
+     * already been updated.
+     *
+     * Base values provide consistent behavior for non-idempotent transforms and
+     * allow us to return the same latency-compensated value even if the backend
+     * has already applied the transform operation. The base value is null for
+     * idempotent transforms, as they can be re-played even if the backend has
+     * already applied them.
+     *
+     * @returns a base value to store along with the mutation, or null for
+     * idempotent transforms.
+     */ function Le(t, e) {
+        return t instanceof Qe ? Lt(n = e) || function(t) {
+            return !!t && "doubleValue" in t;
+        }
+        /** Returns true if `value` is either an IntegerValue or a DoubleValue. */ (n) ? e : {
+            integerValue: 0
+        } : null;
+        var n;
+    }
+
+    /** Transforms a value into a server-generated timestamp. */
+    class Be extends Oe {}
+
+    /** Transforms an array value via a union operation. */ class Ue extends Oe {
+        constructor(t) {
+            super(), this.elements = t;
+        }
+    }
+
+    function qe(t, e) {
+        const n = Ge(e);
+        for (const e of t.elements) n.some((t => Nt(t, e))) || n.push(e);
+        return {
+            arrayValue: {
+                values: n
+            }
+        };
+    }
+
+    /** Transforms an array value via a remove operation. */ class Ke extends Oe {
+        constructor(t) {
+            super(), this.elements = t;
+        }
+    }
+
+    function je(t, e) {
+        let n = Ge(e);
+        for (const e of t.elements) n = n.filter((t => !Nt(t, e)));
+        return {
+            arrayValue: {
+                values: n
+            }
+        };
+    }
+
+    /**
+     * Implements the backend semantics for locally computed NUMERIC_ADD (increment)
+     * transforms. Converts all field values to integers or doubles, but unlike the
+     * backend does not cap integer values at 2^63. Instead, JavaScript number
+     * arithmetic is used and precision loss can occur for values greater than 2^53.
+     */ class Qe extends Oe {
+        constructor(t, e) {
+            super(), this.k = t, this.N = e;
+        }
+    }
+
+    function We(t) {
+        return It(t.integerValue || t.doubleValue);
+    }
+
+    function Ge(t) {
+        return Bt(t) && t.arrayValue.values ? t.arrayValue.values.slice() : [];
+    }
+
+    function He(t, e) {
+        return t.field.isEqual(e.field) && function(t, e) {
+            return t instanceof Ue && e instanceof Ue || t instanceof Ke && e instanceof Ke ? ot(t.elements, e.elements, Nt) : t instanceof Qe && e instanceof Qe ? Nt(t.N, e.N) : t instanceof Be && e instanceof Be;
+        }(t.transform, e.transform);
+    }
+
+    /** The result of successfully applying a mutation to the backend. */
+    class Je {
+        constructor(
+        /**
+         * The version at which the mutation was committed:
+         *
+         * - For most operations, this is the updateTime in the WriteResult.
+         * - For deletes, the commitTime of the WriteResponse (because deletes are
+         *   not stored and have no updateTime).
+         *
+         * Note that these versions can be different: No-op writes will not change
+         * the updateTime even though the commitTime advances.
+         */
+        t, 
+        /**
+         * The resulting fields returned from the backend after a mutation
+         * containing field transforms has been committed. Contains one FieldValue
+         * for each FieldTransform that was in the mutation.
+         *
+         * Will be empty if the mutation did not contain any field transforms.
+         */
+        e) {
+            this.version = t, this.transformResults = e;
+        }
+    }
+
+    /**
+     * Encodes a precondition for a mutation. This follows the model that the
+     * backend accepts with the special case of an explicit "empty" precondition
+     * (meaning no precondition).
+     */ class Ye {
+        constructor(t, e) {
+            this.updateTime = t, this.exists = e;
+        }
+        /** Creates a new empty Precondition. */    static none() {
+            return new Ye;
+        }
+        /** Creates a new Precondition with an exists flag. */    static exists(t) {
+            return new Ye(void 0, t);
+        }
+        /** Creates a new Precondition based on a version a document exists at. */    static updateTime(t) {
+            return new Ye(t);
+        }
+        /** Returns whether this Precondition is empty. */    get isNone() {
+            return void 0 === this.updateTime && void 0 === this.exists;
+        }
+        isEqual(t) {
+            return this.exists === t.exists && (this.updateTime ? !!t.updateTime && this.updateTime.isEqual(t.updateTime) : !t.updateTime);
+        }
+    }
+
+    /** Returns true if the preconditions is valid for the given document. */ function Xe(t, e) {
+        return void 0 !== t.updateTime ? e.isFoundDocument() && e.version.isEqual(t.updateTime) : void 0 === t.exists || t.exists === e.isFoundDocument();
+    }
+
+    /**
+     * A mutation describes a self-contained change to a document. Mutations can
+     * create, replace, delete, and update subsets of documents.
+     *
+     * Mutations not only act on the value of the document but also its version.
+     *
+     * For local mutations (mutations that haven't been committed yet), we preserve
+     * the existing version for Set and Patch mutations. For Delete mutations, we
+     * reset the version to 0.
+     *
+     * Here's the expected transition table.
+     *
+     * MUTATION           APPLIED TO            RESULTS IN
+     *
+     * SetMutation        Document(v3)          Document(v3)
+     * SetMutation        NoDocument(v3)        Document(v0)
+     * SetMutation        InvalidDocument(v0)   Document(v0)
+     * PatchMutation      Document(v3)          Document(v3)
+     * PatchMutation      NoDocument(v3)        NoDocument(v3)
+     * PatchMutation      InvalidDocument(v0)   UnknownDocument(v3)
+     * DeleteMutation     Document(v3)          NoDocument(v0)
+     * DeleteMutation     NoDocument(v3)        NoDocument(v0)
+     * DeleteMutation     InvalidDocument(v0)   NoDocument(v0)
+     *
+     * For acknowledged mutations, we use the updateTime of the WriteResponse as
+     * the resulting version for Set and Patch mutations. As deletes have no
+     * explicit update time, we use the commitTime of the WriteResponse for
+     * Delete mutations.
+     *
+     * If a mutation is acknowledged by the backend but fails the precondition check
+     * locally, we transition to an `UnknownDocument` and rely on Watch to send us
+     * the updated version.
+     *
+     * Field transforms are used only with Patch and Set Mutations. We use the
+     * `updateTransforms` message to store transforms, rather than the `transforms`s
+     * messages.
+     *
+     * ## Subclassing Notes
+     *
+     * Every type of mutation needs to implement its own applyToRemoteDocument() and
+     * applyToLocalView() to implement the actual behavior of applying the mutation
+     * to some source document (see `setMutationApplyToRemoteDocument()` for an
+     * example).
+     */ class Ze {}
+
+    /**
+     * Applies this mutation to the given document for the purposes of computing a
+     * new remote document. If the input document doesn't match the expected state
+     * (e.g. it is invalid or outdated), the document type may transition to
+     * unknown.
+     *
+     * @param mutation - The mutation to apply.
+     * @param document - The document to mutate. The input document can be an
+     *     invalid document if the client has no knowledge of the pre-mutation state
+     *     of the document.
+     * @param mutationResult - The result of applying the mutation from the backend.
+     */ function tn(t, e, n) {
+        t instanceof on ? function(t, e, n) {
+            // Unlike setMutationApplyToLocalView, if we're applying a mutation to a
+            // remote document the server has accepted the mutation so the precondition
+            // must have held.
+            const s = t.value.clone(), i = un(t.fieldTransforms, e, n.transformResults);
+            s.setAll(i), e.convertToFoundDocument(n.version, s).setHasCommittedMutations();
+        }(t, e, n) : t instanceof cn ? function(t, e, n) {
+            if (!Xe(t.precondition, e)) 
+            // Since the mutation was not rejected, we know that the precondition
+            // matched on the backend. We therefore must not have the expected version
+            // of the document in our cache and convert to an UnknownDocument with a
+            // known updateTime.
+            return void e.convertToUnknownDocument(n.version);
+            const s = un(t.fieldTransforms, e, n.transformResults), i = e.data;
+            i.setAll(an(t)), i.setAll(s), e.convertToFoundDocument(n.version, i).setHasCommittedMutations();
+        }(t, e, n) : function(t, e, n) {
+            // Unlike applyToLocalView, if we're applying a mutation to a remote
+            // document the server has accepted the mutation so the precondition must
+            // have held.
+            e.convertToNoDocument(n.version).setHasCommittedMutations();
+        }(0, e, n);
+    }
+
+    /**
+     * Applies this mutation to the given document for the purposes of computing
+     * the new local view of a document. If the input document doesn't match the
+     * expected state, the document is not modified.
+     *
+     * @param mutation - The mutation to apply.
+     * @param document - The document to mutate. The input document can be an
+     *     invalid document if the client has no knowledge of the pre-mutation state
+     *     of the document.
+     * @param localWriteTime - A timestamp indicating the local write time of the
+     *     batch this mutation is a part of.
+     */ function en(t, e, n) {
+        t instanceof on ? function(t, e, n) {
+            if (!Xe(t.precondition, e)) 
+            // The mutation failed to apply (e.g. a document ID created with add()
+            // caused a name collision).
+            return;
+            const s = t.value.clone(), i = hn(t.fieldTransforms, n, e);
+            s.setAll(i), e.convertToFoundDocument(rn(e), s).setHasLocalMutations();
+        }
+        /**
+     * A mutation that modifies fields of the document at the given key with the
+     * given values. The values are applied through a field mask:
+     *
+     *  * When a field is in both the mask and the values, the corresponding field
+     *    is updated.
+     *  * When a field is in neither the mask nor the values, the corresponding
+     *    field is unmodified.
+     *  * When a field is in the mask but not in the values, the corresponding field
+     *    is deleted.
+     *  * When a field is not in the mask but is in the values, the values map is
+     *    ignored.
+     */ (t, e, n) : t instanceof cn ? function(t, e, n) {
+            if (!Xe(t.precondition, e)) return;
+            const s = hn(t.fieldTransforms, n, e), i = e.data;
+            i.setAll(an(t)), i.setAll(s), e.convertToFoundDocument(rn(e), i).setHasLocalMutations();
+        }
+        /**
+     * Returns a FieldPath/Value map with the content of the PatchMutation.
+     */ (t, e, n) : function(t, e) {
+            Xe(t.precondition, e) && 
+            // We don't call `setHasLocalMutations()` since we want to be backwards
+            // compatible with the existing SDK behavior.
+            e.convertToNoDocument(ut.min());
+        }
+        /**
+     * A mutation that verifies the existence of the document at the given key with
+     * the provided precondition.
+     *
+     * The `verify` operation is only used in Transactions, and this class serves
+     * primarily to facilitate serialization into protos.
+     */ (t, e);
+    }
+
+    /**
+     * If this mutation is not idempotent, returns the base value to persist with
+     * this mutation. If a base value is returned, the mutation is always applied
+     * to this base value, even if document has already been updated.
+     *
+     * The base value is a sparse object that consists of only the document
+     * fields for which this mutation contains a non-idempotent transformation
+     * (e.g. a numeric increment). The provided value guarantees consistent
+     * behavior for non-idempotent transforms and allow us to return the same
+     * latency-compensated value even if the backend has already applied the
+     * mutation. The base value is null for idempotent mutations, as they can be
+     * re-played even if the backend has already applied them.
+     *
+     * @returns a base value to store along with the mutation, or null for
+     * idempotent mutations.
+     */ function nn(t, e) {
+        let n = null;
+        for (const s of t.fieldTransforms) {
+            const t = e.data.field(s.field), i = Le(s.transform, t || null);
+            null != i && (null == n && (n = Qt.empty()), n.set(s.field, i));
+        }
+        return n || null;
+    }
+
+    function sn(t, e) {
+        return t.type === e.type && (!!t.key.isEqual(e.key) && (!!t.precondition.isEqual(e.precondition) && (!!function(t, e) {
+            return void 0 === t && void 0 === e || !(!t || !e) && ot(t, e, ((t, e) => He(t, e)));
+        }(t.fieldTransforms, e.fieldTransforms) && (0 /* Set */ === t.type ? t.value.isEqual(e.value) : 1 /* Patch */ !== t.type || t.data.isEqual(e.data) && t.fieldMask.isEqual(e.fieldMask)))));
+    }
+
+    /**
+     * Returns the version from the given document for use as the result of a
+     * mutation. Mutations are defined to return the version of the base document
+     * only if it is an existing document. Deleted and unknown documents have a
+     * post-mutation version of SnapshotVersion.min().
+     */ function rn(t) {
+        return t.isFoundDocument() ? t.version : ut.min();
+    }
+
+    /**
+     * A mutation that creates or replaces the document at the given key with the
+     * object value contents.
+     */ class on extends Ze {
+        constructor(t, e, n, s = []) {
+            super(), this.key = t, this.value = e, this.precondition = n, this.fieldTransforms = s, 
+            this.type = 0 /* Set */;
+        }
+    }
+
+    class cn extends Ze {
+        constructor(t, e, n, s, i = []) {
+            super(), this.key = t, this.data = e, this.fieldMask = n, this.precondition = s, 
+            this.fieldTransforms = i, this.type = 1 /* Patch */;
+        }
+    }
+
+    function an(t) {
+        const e = new Map;
+        return t.fieldMask.fields.forEach((n => {
+            if (!n.isEmpty()) {
+                const s = t.data.field(n);
+                e.set(n, s);
+            }
+        })), e;
+    }
+
+    /**
+     * Creates a list of "transform results" (a transform result is a field value
+     * representing the result of applying a transform) for use after a mutation
+     * containing transforms has been acknowledged by the server.
+     *
+     * @param fieldTransforms - The field transforms to apply the result to.
+     * @param mutableDocument - The current state of the document after applying all
+     * previous mutations.
+     * @param serverTransformResults - The transform results received by the server.
+     * @returns The transform results list.
+     */ function un(t, e, n) {
+        const s = new Map;
+        U(t.length === n.length);
+        for (let i = 0; i < n.length; i++) {
+            const r = t[i], o = r.transform, c = e.data.field(r.field);
+            s.set(r.field, Fe(o, c, n[i]));
+        }
+        return s;
+    }
+
+    /**
+     * Creates a list of "transform results" (a transform result is a field value
+     * representing the result of applying a transform) for use when applying a
+     * transform locally.
+     *
+     * @param fieldTransforms - The field transforms to apply the result to.
+     * @param localWriteTime - The local time of the mutation (used to
+     *     generate ServerTimestampValues).
+     * @param mutableDocument - The current state of the document after applying all
+     *     previous mutations.
+     * @returns The transform results list.
+     */ function hn(t, e, n) {
+        const s = new Map;
+        for (const i of t) {
+            const t = i.transform, r = n.data.field(i.field);
+            s.set(i.field, Me(t, r, e));
+        }
+        return s;
+    }
+
+    /** A mutation that deletes the document at the given key. */ class ln extends Ze {
+        constructor(t, e) {
+            super(), this.key = t, this.precondition = e, this.type = 2 /* Delete */ , this.fieldTransforms = [];
+        }
+    }
+
+    class fn extends Ze {
+        constructor(t, e) {
+            super(), this.key = t, this.precondition = e, this.type = 3 /* Verify */ , this.fieldTransforms = [];
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -675,24 +4842,14 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class $o{constructor(t){this.count=t}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */var qo,Bo;function jo(t){if(void 0===t)return Ui("GRPC error has no .code"),zi.UNKNOWN;switch(t){case qo.OK:return zi.OK;case qo.CANCELLED:return zi.CANCELLED;case qo.UNKNOWN:return zi.UNKNOWN;case qo.DEADLINE_EXCEEDED:return zi.DEADLINE_EXCEEDED;case qo.RESOURCE_EXHAUSTED:return zi.RESOURCE_EXHAUSTED;case qo.INTERNAL:return zi.INTERNAL;case qo.UNAVAILABLE:return zi.UNAVAILABLE;case qo.UNAUTHENTICATED:return zi.UNAUTHENTICATED;case qo.INVALID_ARGUMENT:return zi.INVALID_ARGUMENT;case qo.NOT_FOUND:return zi.NOT_FOUND;case qo.ALREADY_EXISTS:return zi.ALREADY_EXISTS;case qo.PERMISSION_DENIED:return zi.PERMISSION_DENIED;case qo.FAILED_PRECONDITION:return zi.FAILED_PRECONDITION;case qo.ABORTED:return zi.ABORTED;case qo.OUT_OF_RANGE:return zi.OUT_OF_RANGE;case qo.UNIMPLEMENTED:return zi.UNIMPLEMENTED;case qo.DATA_LOSS:return zi.DATA_LOSS;default:return Bi()}}(Bo=qo||(qo={}))[Bo.OK=0]="OK",Bo[Bo.CANCELLED=1]="CANCELLED",Bo[Bo.UNKNOWN=2]="UNKNOWN",Bo[Bo.INVALID_ARGUMENT=3]="INVALID_ARGUMENT",Bo[Bo.DEADLINE_EXCEEDED=4]="DEADLINE_EXCEEDED",Bo[Bo.NOT_FOUND=5]="NOT_FOUND",Bo[Bo.ALREADY_EXISTS=6]="ALREADY_EXISTS",Bo[Bo.PERMISSION_DENIED=7]="PERMISSION_DENIED",Bo[Bo.UNAUTHENTICATED=16]="UNAUTHENTICATED",Bo[Bo.RESOURCE_EXHAUSTED=8]="RESOURCE_EXHAUSTED",Bo[Bo.FAILED_PRECONDITION=9]="FAILED_PRECONDITION",Bo[Bo.ABORTED=10]="ABORTED",Bo[Bo.OUT_OF_RANGE=11]="OUT_OF_RANGE",Bo[Bo.UNIMPLEMENTED=12]="UNIMPLEMENTED",Bo[Bo.INTERNAL=13]="INTERNAL",Bo[Bo.UNAVAILABLE=14]="UNAVAILABLE",Bo[Bo.DATA_LOSS=15]="DATA_LOSS";
-/**
+     */ class dn {
+        // TODO(b/33078163): just use simplest form of existence filter for now
+        constructor(t) {
+            this.count = t;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -708,8 +4865,153 @@ class cr{constructor(t,e,n){void 0===e?e=0:e>t.length&&Bi(),void 0===n?n=t.lengt
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class Ho{constructor(t,e){this.comparator=t,this.root=e||Ko.EMPTY}insert(t,e){return new Ho(this.comparator,this.root.insert(t,e,this.comparator).copy(null,null,Ko.BLACK,null,null))}remove(t){return new Ho(this.comparator,this.root.remove(t,this.comparator).copy(null,null,Ko.BLACK,null,null))}get(t){let e=this.root;for(;!e.isEmpty();){const n=this.comparator(t,e.key);if(0===n)return e.value;n<0?e=e.left:n>0&&(e=e.right)}return null}indexOf(t){let e=0,n=this.root;for(;!n.isEmpty();){const s=this.comparator(t,n.key);if(0===s)return e+n.left.size;s<0?n=n.left:(e+=n.left.size+1,n=n.right)}return-1}isEmpty(){return this.root.isEmpty()}get size(){return this.root.size}minKey(){return this.root.minKey()}maxKey(){return this.root.maxKey()}inorderTraversal(t){return this.root.inorderTraversal(t)}forEach(t){this.inorderTraversal(((e,n)=>(t(e,n),!1)))}toString(){const t=[];return this.inorderTraversal(((e,n)=>(t.push(`${e}:${n}`),!1))),`{${t.join(", ")}}`}reverseTraversal(t){return this.root.reverseTraversal(t)}getIterator(){return new zo(this.root,null,this.comparator,!1)}getIteratorFrom(t){return new zo(this.root,t,this.comparator,!1)}getReverseIterator(){return new zo(this.root,null,this.comparator,!0)}getReverseIteratorFrom(t){return new zo(this.root,t,this.comparator,!0)}}class zo{constructor(t,e,n,s){this.isReverse=s,this.nodeStack=[];let i=1;for(;!t.isEmpty();)if(i=e?n(t.key,e):1,s&&(i*=-1),i<0)t=this.isReverse?t.left:t.right;else{if(0===i){this.nodeStack.push(t);break}this.nodeStack.push(t),t=this.isReverse?t.right:t.left}}getNext(){let t=this.nodeStack.pop();const e={key:t.key,value:t.value};if(this.isReverse)for(t=t.left;!t.isEmpty();)this.nodeStack.push(t),t=t.right;else for(t=t.right;!t.isEmpty();)this.nodeStack.push(t),t=t.left;return e}hasNext(){return this.nodeStack.length>0}peek(){if(0===this.nodeStack.length)return null;const t=this.nodeStack[this.nodeStack.length-1];return{key:t.key,value:t.value}}}class Ko{constructor(t,e,n,s,i){this.key=t,this.value=e,this.color=null!=n?n:Ko.RED,this.left=null!=s?s:Ko.EMPTY,this.right=null!=i?i:Ko.EMPTY,this.size=this.left.size+1+this.right.size}copy(t,e,n,s,i){return new Ko(null!=t?t:this.key,null!=e?e:this.value,null!=n?n:this.color,null!=s?s:this.left,null!=i?i:this.right)}isEmpty(){return!1}inorderTraversal(t){return this.left.inorderTraversal(t)||t(this.key,this.value)||this.right.inorderTraversal(t)}reverseTraversal(t){return this.right.reverseTraversal(t)||t(this.key,this.value)||this.left.reverseTraversal(t)}min(){return this.left.isEmpty()?this:this.left.min()}minKey(){return this.min().key}maxKey(){return this.right.isEmpty()?this.key:this.right.maxKey()}insert(t,e,n){let s=this;const i=n(t,s.key);return s=i<0?s.copy(null,null,null,s.left.insert(t,e,n),null):0===i?s.copy(null,e,null,null,null):s.copy(null,null,null,null,s.right.insert(t,e,n)),s.fixUp()}removeMin(){if(this.left.isEmpty())return Ko.EMPTY;let t=this;return t.left.isRed()||t.left.left.isRed()||(t=t.moveRedLeft()),t=t.copy(null,null,null,t.left.removeMin(),null),t.fixUp()}remove(t,e){let n,s=this;if(e(t,s.key)<0)s.left.isEmpty()||s.left.isRed()||s.left.left.isRed()||(s=s.moveRedLeft()),s=s.copy(null,null,null,s.left.remove(t,e),null);else{if(s.left.isRed()&&(s=s.rotateRight()),s.right.isEmpty()||s.right.isRed()||s.right.left.isRed()||(s=s.moveRedRight()),0===e(t,s.key)){if(s.right.isEmpty())return Ko.EMPTY;n=s.right.min(),s=s.copy(n.key,n.value,null,null,s.right.removeMin())}s=s.copy(null,null,null,null,s.right.remove(t,e))}return s.fixUp()}isRed(){return this.color}fixUp(){let t=this;return t.right.isRed()&&!t.left.isRed()&&(t=t.rotateLeft()),t.left.isRed()&&t.left.left.isRed()&&(t=t.rotateRight()),t.left.isRed()&&t.right.isRed()&&(t=t.colorFlip()),t}moveRedLeft(){let t=this.colorFlip();return t.right.left.isRed()&&(t=t.copy(null,null,null,null,t.right.rotateRight()),t=t.rotateLeft(),t=t.colorFlip()),t}moveRedRight(){let t=this.colorFlip();return t.left.left.isRed()&&(t=t.rotateRight(),t=t.colorFlip()),t}rotateLeft(){const t=this.copy(null,null,Ko.RED,null,this.right.left);return this.right.copy(null,null,this.color,t,null)}rotateRight(){const t=this.copy(null,null,Ko.RED,this.left.right,null);return this.left.copy(null,null,this.color,null,t)}colorFlip(){const t=this.left.copy(null,null,!this.left.color,null,null),e=this.right.copy(null,null,!this.right.color,null,null);return this.copy(null,null,!this.color,t,e)}checkMaxDepth(){const t=this.check();return Math.pow(2,t)<=this.size+1}check(){if(this.isRed()&&this.left.isRed())throw Bi();if(this.right.isRed())throw Bi();const t=this.left.check();if(t!==this.right.check())throw Bi();return t+(this.isRed()?0:1)}}Ko.EMPTY=null,Ko.RED=!0,Ko.BLACK=!1,Ko.EMPTY=new class{constructor(){this.size=0}get key(){throw Bi()}get value(){throw Bi()}get color(){throw Bi()}get left(){throw Bi()}get right(){throw Bi()}copy(t,e,n,s,i){return this}insert(t,e,n){return new Ko(t,e)}remove(t,e){return this}isEmpty(){return!0}inorderTraversal(t){return!1}reverseTraversal(t){return!1}minKey(){return null}maxKey(){return null}isRed(){return!1}checkMaxDepth(){return!0}check(){return 0}};
-/**
+    /**
+     * Error Codes describing the different ways GRPC can fail. These are copied
+     * directly from GRPC's sources here:
+     *
+     * https://github.com/grpc/grpc/blob/bceec94ea4fc5f0085d81235d8e1c06798dc341a/include/grpc%2B%2B/impl/codegen/status_code_enum.h
+     *
+     * Important! The names of these identifiers matter because the string forms
+     * are used for reverse lookups from the webchannel stream. Do NOT change the
+     * names of these identifiers or change this into a const enum.
+     */ var wn, _n;
+
+    /**
+     * Determines whether an error code represents a permanent error when received
+     * in response to a non-write operation.
+     *
+     * See isPermanentWriteError for classifying write errors.
+     */
+    function mn(t) {
+        switch (t) {
+          default:
+            return B();
+
+          case j.CANCELLED:
+          case j.UNKNOWN:
+          case j.DEADLINE_EXCEEDED:
+          case j.RESOURCE_EXHAUSTED:
+          case j.INTERNAL:
+          case j.UNAVAILABLE:
+     // Unauthenticated means something went wrong with our token and we need
+            // to retry with new credentials which will happen automatically.
+                  case j.UNAUTHENTICATED:
+            return !1;
+
+          case j.INVALID_ARGUMENT:
+          case j.NOT_FOUND:
+          case j.ALREADY_EXISTS:
+          case j.PERMISSION_DENIED:
+          case j.FAILED_PRECONDITION:
+     // Aborted might be retried in some scenarios, but that is dependant on
+            // the context and should handled individually by the calling code.
+            // See https://cloud.google.com/apis/design/errors.
+                  case j.ABORTED:
+          case j.OUT_OF_RANGE:
+          case j.UNIMPLEMENTED:
+          case j.DATA_LOSS:
+            return !0;
+        }
+    }
+
+    /**
+     * Determines whether an error code represents a permanent error when received
+     * in response to a write operation.
+     *
+     * Write operations must be handled specially because as of b/119437764, ABORTED
+     * errors on the write stream should be retried too (even though ABORTED errors
+     * are not generally retryable).
+     *
+     * Note that during the initial handshake on the write stream an ABORTED error
+     * signals that we should discard our stream token (i.e. it is permanent). This
+     * means a handshake error should be classified with isPermanentError, above.
+     */
+    /**
+     * Maps an error Code from GRPC status code number, like 0, 1, or 14. These
+     * are not the same as HTTP status codes.
+     *
+     * @returns The Code equivalent to the given GRPC status code. Fails if there
+     *     is no match.
+     */
+    function gn(t) {
+        if (void 0 === t) 
+        // This shouldn't normally happen, but in certain error cases (like trying
+        // to send invalid proto messages) we may get an error with no GRPC code.
+        return M("GRPC error has no .code"), j.UNKNOWN;
+        switch (t) {
+          case wn.OK:
+            return j.OK;
+
+          case wn.CANCELLED:
+            return j.CANCELLED;
+
+          case wn.UNKNOWN:
+            return j.UNKNOWN;
+
+          case wn.DEADLINE_EXCEEDED:
+            return j.DEADLINE_EXCEEDED;
+
+          case wn.RESOURCE_EXHAUSTED:
+            return j.RESOURCE_EXHAUSTED;
+
+          case wn.INTERNAL:
+            return j.INTERNAL;
+
+          case wn.UNAVAILABLE:
+            return j.UNAVAILABLE;
+
+          case wn.UNAUTHENTICATED:
+            return j.UNAUTHENTICATED;
+
+          case wn.INVALID_ARGUMENT:
+            return j.INVALID_ARGUMENT;
+
+          case wn.NOT_FOUND:
+            return j.NOT_FOUND;
+
+          case wn.ALREADY_EXISTS:
+            return j.ALREADY_EXISTS;
+
+          case wn.PERMISSION_DENIED:
+            return j.PERMISSION_DENIED;
+
+          case wn.FAILED_PRECONDITION:
+            return j.FAILED_PRECONDITION;
+
+          case wn.ABORTED:
+            return j.ABORTED;
+
+          case wn.OUT_OF_RANGE:
+            return j.OUT_OF_RANGE;
+
+          case wn.UNIMPLEMENTED:
+            return j.UNIMPLEMENTED;
+
+          case wn.DATA_LOSS:
+            return j.DATA_LOSS;
+
+          default:
+            return B();
+        }
+    }
+
+    /**
+     * Converts an HTTP response's error status to the equivalent error code.
+     *
+     * @param status - An HTTP error response status ("FAILED_PRECONDITION",
+     * "UNKNOWN", etc.)
+     * @returns The equivalent Code. Non-matching responses are mapped to
+     *     Code.UNKNOWN.
+     */ (_n = wn || (wn = {}))[_n.OK = 0] = "OK", _n[_n.CANCELLED = 1] = "CANCELLED", 
+    _n[_n.UNKNOWN = 2] = "UNKNOWN", _n[_n.INVALID_ARGUMENT = 3] = "INVALID_ARGUMENT", 
+    _n[_n.DEADLINE_EXCEEDED = 4] = "DEADLINE_EXCEEDED", _n[_n.NOT_FOUND = 5] = "NOT_FOUND", 
+    _n[_n.ALREADY_EXISTS = 6] = "ALREADY_EXISTS", _n[_n.PERMISSION_DENIED = 7] = "PERMISSION_DENIED", 
+    _n[_n.UNAUTHENTICATED = 16] = "UNAUTHENTICATED", _n[_n.RESOURCE_EXHAUSTED = 8] = "RESOURCE_EXHAUSTED", 
+    _n[_n.FAILED_PRECONDITION = 9] = "FAILED_PRECONDITION", _n[_n.ABORTED = 10] = "ABORTED", 
+    _n[_n.OUT_OF_RANGE = 11] = "OUT_OF_RANGE", _n[_n.UNIMPLEMENTED = 12] = "UNIMPLEMENTED", 
+    _n[_n.INTERNAL = 13] = "INTERNAL", _n[_n.UNAVAILABLE = 14] = "UNAVAILABLE", _n[_n.DATA_LOSS = 15] = "DATA_LOSS";
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -725,72 +5027,322 @@ class Ho{constructor(t,e){this.comparator=t,this.root=e||Ko.EMPTY}insert(t,e){re
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class Go{constructor(t){this.comparator=t,this.data=new Ho(this.comparator)}has(t){return null!==this.data.get(t)}first(){return this.data.minKey()}last(){return this.data.maxKey()}get size(){return this.data.size}indexOf(t){return this.data.indexOf(t)}forEach(t){this.data.inorderTraversal(((e,n)=>(t(e),!1)))}forEachInRange(t,e){const n=this.data.getIteratorFrom(t[0]);for(;n.hasNext();){const s=n.getNext();if(this.comparator(s.key,t[1])>=0)return;e(s.key)}}forEachWhile(t,e){let n;for(n=void 0!==e?this.data.getIteratorFrom(e):this.data.getIterator();n.hasNext();)if(!t(n.getNext().key))return}firstAfterOrEqual(t){const e=this.data.getIteratorFrom(t);return e.hasNext()?e.getNext().key:null}getIterator(){return new Wo(this.data.getIterator())}getIteratorFrom(t){return new Wo(this.data.getIteratorFrom(t))}add(t){return this.copy(this.data.remove(t).insert(t,!0))}delete(t){return this.has(t)?this.copy(this.data.remove(t)):this}isEmpty(){return this.data.isEmpty()}unionWith(t){let e=this;return e.size<t.size&&(e=t,t=this),t.forEach((t=>{e=e.add(t)})),e}isEqual(t){if(!(t instanceof Go))return!1;if(this.size!==t.size)return!1;const e=this.data.getIterator(),n=t.data.getIterator();for(;e.hasNext();){const t=e.getNext().key,s=n.getNext().key;if(0!==this.comparator(t,s))return!1}return!0}toArray(){const t=[];return this.forEach((e=>{t.push(e)})),t}toString(){const t=[];return this.forEach((e=>t.push(e))),"SortedSet("+t.toString()+")"}copy(t){const e=new Go(this.comparator);return e.data=t,e}}class Wo{constructor(t){this.iter=t}getNext(){return this.iter.getNext().key}hasNext(){return this.iter.hasNext()}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */const Yo=new Ho(Ir.comparator);function Qo(){return Yo}const Xo=new Ho(Ir.comparator);function Jo(){return Xo}new Ho(Ir.comparator);const Zo=new Go(Ir.comparator);function ta(...t){let e=Zo;for(const n of t)e=e.add(n);return e}const ea=new Go(sr);function na(){return ea}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class sa{constructor(t,e,n,s,i){this.snapshotVersion=t,this.targetChanges=e,this.targetMismatches=n,this.documentUpdates=s,this.resolvedLimboDocuments=i}static createSynthesizedRemoteEventForCurrentChange(t,e){const n=new Map;return n.set(t,ia.createSynthesizedTargetChangeForCurrentChange(t,e)),new sa(or.min(),n,na(),Qo(),ta())}}class ia{constructor(t,e,n,s,i){this.resumeToken=t,this.current=e,this.addedDocuments=n,this.modifiedDocuments=s,this.removedDocuments=i}static createSynthesizedTargetChangeForCurrentChange(t,e){return new ia(fr.EMPTY_BYTE_STRING,e,ta(),ta(),ta())}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class ra{constructor(t,e,n,s){this.$=t,this.removedTargetIds=e,this.key=n,this.O=s}}class oa{constructor(t,e){this.targetId=t,this.M=e}}class aa{constructor(t,e,n=fr.EMPTY_BYTE_STRING,s=null){this.state=t,this.targetIds=e,this.resumeToken=n,this.cause=s}}class ha{constructor(){this.F=0,this.L=la(),this.B=fr.EMPTY_BYTE_STRING,this.U=!1,this.q=!0}get current(){return this.U}get resumeToken(){return this.B}get K(){return 0!==this.F}get j(){return this.q}W(t){t.approximateByteSize()>0&&(this.q=!0,this.B=t)}G(){let t=ta(),e=ta(),n=ta();return this.L.forEach(((s,i)=>{switch(i){case 0:t=t.add(s);break;case 2:e=e.add(s);break;case 1:n=n.add(s);break;default:Bi()}})),new ia(this.B,this.U,t,e,n)}H(){this.q=!1,this.L=la()}J(t,e){this.q=!0,this.L=this.L.insert(t,e)}Y(t){this.q=!0,this.L=this.L.remove(t)}X(){this.F+=1}Z(){this.F-=1}tt(){this.q=!0,this.U=!0}}class ca{constructor(t){this.et=t,this.nt=new Map,this.st=Qo(),this.it=ua(),this.rt=new Go(sr)}ot(t){for(const e of t.$)t.O&&t.O.isFoundDocument()?this.ct(e,t.O):this.at(e,t.key,t.O);for(const e of t.removedTargetIds)this.at(e,t.key,t.O)}ut(t){this.forEachTarget(t,(e=>{const n=this.ht(e);switch(t.state){case 0:this.lt(e)&&n.W(t.resumeToken);break;case 1:n.Z(),n.K||n.H(),n.W(t.resumeToken);break;case 2:n.Z(),n.K||this.removeTarget(e);break;case 3:this.lt(e)&&(n.tt(),n.W(t.resumeToken));break;case 4:this.lt(e)&&(this.ft(e),n.W(t.resumeToken));break;default:Bi()}}))}forEachTarget(t,e){t.targetIds.length>0?t.targetIds.forEach(e):this.nt.forEach(((t,n)=>{this.lt(n)&&e(n)}))}dt(t){const e=t.targetId,n=t.M.count,s=this.wt(e);if(s){const t=s.target;if(jr(t))if(0===n){const n=new Ir(t.path);this.at(e,n,Fr.newNoDocument(n,or.min()))}else ji(1===n);else this._t(e)!==n&&(this.ft(e),this.rt=this.rt.add(e))}}gt(t){const e=new Map;this.nt.forEach(((n,s)=>{const i=this.wt(s);if(i){if(n.current&&jr(i.target)){const e=new Ir(i.target.path);null!==this.st.get(e)||this.yt(s,e)||this.at(s,e,Fr.newNoDocument(e,t))}n.j&&(e.set(s,n.G()),n.H())}}));let n=ta();this.it.forEach(((t,e)=>{let s=!0;e.forEachWhile((t=>{const e=this.wt(t);return!e||2===e.purpose||(s=!1,!1)})),s&&(n=n.add(t))}));const s=new sa(t,e,this.rt,this.st,n);return this.st=Qo(),this.it=ua(),this.rt=new Go(sr),s}ct(t,e){if(!this.lt(t))return;const n=this.yt(t,e.key)?2:0;this.ht(t).J(e.key,n),this.st=this.st.insert(e.key,e),this.it=this.it.insert(e.key,this.Tt(e.key).add(t))}at(t,e,n){if(!this.lt(t))return;const s=this.ht(t);this.yt(t,e)?s.J(e,1):s.Y(e),this.it=this.it.insert(e,this.Tt(e).delete(t)),n&&(this.st=this.st.insert(e,n))}removeTarget(t){this.nt.delete(t)}_t(t){const e=this.ht(t).G();return this.et.getRemoteKeysForTarget(t).size+e.addedDocuments.size-e.removedDocuments.size}X(t){this.ht(t).X()}ht(t){let e=this.nt.get(t);return e||(e=new ha,this.nt.set(t,e)),e}Tt(t){let e=this.it.get(t);return e||(e=new Go(sr),this.it=this.it.insert(t,e)),e}lt(t){const e=null!==this.wt(t);return e||Fi("WatchChangeAggregator","Detected inactive target",t),e}wt(t){const e=this.nt.get(t);return e&&e.K?null:this.et.Et(t)}ft(t){this.nt.set(t,new ha),this.et.getRemoteKeysForTarget(t).forEach((e=>{this.at(t,e,null)}))}yt(t,e){return this.et.getRemoteKeysForTarget(t).has(e)}}function ua(){return new Ho(Ir.comparator)}function la(){return new Ho(Ir.comparator)}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */const da={asc:"ASCENDING",desc:"DESCENDING"},fa={"<":"LESS_THAN","<=":"LESS_THAN_OR_EQUAL",">":"GREATER_THAN",">=":"GREATER_THAN_OR_EQUAL","==":"EQUAL","!=":"NOT_EQUAL","array-contains":"ARRAY_CONTAINS",in:"IN","not-in":"NOT_IN","array-contains-any":"ARRAY_CONTAINS_ANY"};class pa{constructor(t,e){this.databaseId=t,this.C=e}}function ga(t){return ji(!!t),or.fromTimestamp(function(t){const e=gr(t);return new rr(e.seconds,e.nanos)}(t))}function ma(t){const e=ur.fromString(t);return ji(xa(e)),e}function ya(t,e){const n=ma(e);if(n.get(1)!==t.databaseId.projectId)throw new Ki(zi.INVALID_ARGUMENT,"Tried to deserialize key from different project: "+n.get(1)+" vs "+t.databaseId.projectId);if(n.get(3)!==t.databaseId.database)throw new Ki(zi.INVALID_ARGUMENT,"Tried to deserialize key from different database: "+n.get(3)+" vs "+t.databaseId.database);return new Ir(Ea(n))}function va(t,e){return function(t,e){return function(t){return new ur(["projects",t.projectId,"databases",t.database])}(t).child("documents").child(e).canonicalString()}(t.databaseId,e)}function wa(t){return new ur(["projects",t.databaseId.projectId,"databases",t.databaseId.database]).canonicalString()}function Ea(t){return ji(t.length>4&&"documents"===t.get(4)),t.popFirst(5)}function ba(t,e){return{documents:[va(t,e.path)]}}function Ta(t,e){const n={structuredQuery:{}},s=e.path;null!==e.collectionGroup?(n.parent=va(t,s),n.structuredQuery.from=[{collectionId:e.collectionGroup,allDescendants:!0}]):(n.parent=va(t,s.popLast()),n.structuredQuery.from=[{collectionId:s.lastSegment()}]);const i=function(t){if(0===t.length)return;const e=t.map((t=>function(t){if("=="===t.op){if(Or(t.value))return{unaryFilter:{field:Da(t.field),op:"IS_NAN"}};if(xr(t.value))return{unaryFilter:{field:Da(t.field),op:"IS_NULL"}}}else if("!="===t.op){if(Or(t.value))return{unaryFilter:{field:Da(t.field),op:"IS_NOT_NAN"}};if(xr(t.value))return{unaryFilter:{field:Da(t.field),op:"IS_NOT_NULL"}}}return{fieldFilter:{field:Da(t.field),op:Na(t.op),value:t.value}}}(t)));return 1===e.length?e[0]:{compositeFilter:{op:"AND",filters:e}}}(e.filters);i&&(n.structuredQuery.where=i);const r=function(t){if(0!==t.length)return t.map((t=>function(t){return{field:Da(t.field),direction:_a(t.dir)}}(t)))}(e.orderBy);r&&(n.structuredQuery.orderBy=r);const o=function(t,e){return t.C||br(e)?e:{value:e}}(t,e.limit);return null!==o&&(n.structuredQuery.limit=o),e.startAt&&(n.structuredQuery.startAt=Ca(e.startAt)),e.endAt&&(n.structuredQuery.endAt=Ca(e.endAt)),n}function Ia(t){let e=function(t){const e=ma(t);return 4===e.length?ur.emptyPath():Ea(e)}(t.parent);const n=t.structuredQuery,s=n.from?n.from.length:0;let i=null;if(s>0){ji(1===s);const t=n.from[0];t.allDescendants?i=t.collectionId:e=e.child(t.collectionId)}let r=[];n.where&&(r=Sa(n.where));let o=[];n.orderBy&&(o=n.orderBy.map((t=>function(t){return new eo(ka(t.field),function(t){switch(t){case"ASCENDING":return"asc";case"DESCENDING":return"desc";default:return}}(t.direction))}(t))));let a=null;n.limit&&(a=function(t){let e;return e="object"==typeof t?t.value:t,br(e)?null:e}(n.limit));let h=null;n.startAt&&(h=Aa(n.startAt));let c=null;return n.endAt&&(c=Aa(n.endAt)),function(t,e,n,s,i,r,o,a){return new ro(t,e,n,s,i,r,o,a)}(e,i,o,r,a,"F",h,c)}function Sa(t){return t?void 0!==t.unaryFilter?[La(t)]:void 0!==t.fieldFilter?[Ra(t)]:void 0!==t.compositeFilter?t.compositeFilter.filters.map((t=>Sa(t))).reduce(((t,e)=>t.concat(e))):Bi():[]}function Ca(t){return{before:t.before,values:t.position}}function Aa(t){const e=!!t.before,n=t.values||[];return new Zr(n,e)}function _a(t){return da[t]}function Na(t){return fa[t]}function Da(t){return{fieldPath:t.canonicalString()}}function ka(t){return dr.fromServerFormat(t.fieldPath)}function Ra(t){return Hr.create(ka(t.fieldFilter.field),function(t){switch(t){case"EQUAL":return"==";case"NOT_EQUAL":return"!=";case"GREATER_THAN":return">";case"GREATER_THAN_OR_EQUAL":return">=";case"LESS_THAN":return"<";case"LESS_THAN_OR_EQUAL":return"<=";case"ARRAY_CONTAINS":return"array-contains";case"IN":return"in";case"NOT_IN":return"not-in";case"ARRAY_CONTAINS_ANY":return"array-contains-any";default:return Bi()}}(t.fieldFilter.op),t.fieldFilter.value)}function La(t){switch(t.unaryFilter.op){case"IS_NAN":const e=ka(t.unaryFilter.field);return Hr.create(e,"==",{doubleValue:NaN});case"IS_NULL":const n=ka(t.unaryFilter.field);return Hr.create(n,"==",{nullValue:"NULL_VALUE"});case"IS_NOT_NAN":const s=ka(t.unaryFilter.field);return Hr.create(s,"!=",{doubleValue:NaN});case"IS_NOT_NULL":const i=ka(t.unaryFilter.field);return Hr.create(i,"!=",{nullValue:"NULL_VALUE"});default:return Bi()}}function xa(t){return t.length>=4&&"projects"===t.get(0)&&"databases"===t.get(2)}
-/**
+    // An immutable sorted map implementation, based on a Left-leaning Red-Black
+    // tree.
+    class yn {
+        constructor(t, e) {
+            this.comparator = t, this.root = e || Tn.EMPTY;
+        }
+        // Returns a copy of the map, with the specified key/value added or replaced.
+        insert(t, e) {
+            return new yn(this.comparator, this.root.insert(t, e, this.comparator).copy(null, null, Tn.BLACK, null, null));
+        }
+        // Returns a copy of the map, with the specified key removed.
+        remove(t) {
+            return new yn(this.comparator, this.root.remove(t, this.comparator).copy(null, null, Tn.BLACK, null, null));
+        }
+        // Returns the value of the node with the given key, or null.
+        get(t) {
+            let e = this.root;
+            for (;!e.isEmpty(); ) {
+                const n = this.comparator(t, e.key);
+                if (0 === n) return e.value;
+                n < 0 ? e = e.left : n > 0 && (e = e.right);
+            }
+            return null;
+        }
+        // Returns the index of the element in this sorted map, or -1 if it doesn't
+        // exist.
+        indexOf(t) {
+            // Number of nodes that were pruned when descending right
+            let e = 0, n = this.root;
+            for (;!n.isEmpty(); ) {
+                const s = this.comparator(t, n.key);
+                if (0 === s) return e + n.left.size;
+                s < 0 ? n = n.left : (
+                // Count all nodes left of the node plus the node itself
+                e += n.left.size + 1, n = n.right);
+            }
+            // Node not found
+                    return -1;
+        }
+        isEmpty() {
+            return this.root.isEmpty();
+        }
+        // Returns the total number of nodes in the map.
+        get size() {
+            return this.root.size;
+        }
+        // Returns the minimum key in the map.
+        minKey() {
+            return this.root.minKey();
+        }
+        // Returns the maximum key in the map.
+        maxKey() {
+            return this.root.maxKey();
+        }
+        // Traverses the map in key order and calls the specified action function
+        // for each key/value pair. If action returns true, traversal is aborted.
+        // Returns the first truthy value returned by action, or the last falsey
+        // value returned by action.
+        inorderTraversal(t) {
+            return this.root.inorderTraversal(t);
+        }
+        forEach(t) {
+            this.inorderTraversal(((e, n) => (t(e, n), !1)));
+        }
+        toString() {
+            const t = [];
+            return this.inorderTraversal(((e, n) => (t.push(`${e}:${n}`), !1))), `{${t.join(", ")}}`;
+        }
+        // Traverses the map in reverse key order and calls the specified action
+        // function for each key/value pair. If action returns true, traversal is
+        // aborted.
+        // Returns the first truthy value returned by action, or the last falsey
+        // value returned by action.
+        reverseTraversal(t) {
+            return this.root.reverseTraversal(t);
+        }
+        // Returns an iterator over the SortedMap.
+        getIterator() {
+            return new pn(this.root, null, this.comparator, !1);
+        }
+        getIteratorFrom(t) {
+            return new pn(this.root, t, this.comparator, !1);
+        }
+        getReverseIterator() {
+            return new pn(this.root, null, this.comparator, !0);
+        }
+        getReverseIteratorFrom(t) {
+            return new pn(this.root, t, this.comparator, !0);
+        }
+    }
+
+     // end SortedMap
+    // An iterator over an LLRBNode.
+    class pn {
+        constructor(t, e, n, s) {
+            this.isReverse = s, this.nodeStack = [];
+            let i = 1;
+            for (;!t.isEmpty(); ) if (i = e ? n(t.key, e) : 1, 
+            // flip the comparison if we're going in reverse
+            s && (i *= -1), i < 0) 
+            // This node is less than our start key. ignore it
+            t = this.isReverse ? t.left : t.right; else {
+                if (0 === i) {
+                    // This node is exactly equal to our start key. Push it on the stack,
+                    // but stop iterating;
+                    this.nodeStack.push(t);
+                    break;
+                }
+                // This node is greater than our start key, add it to the stack and move
+                // to the next one
+                this.nodeStack.push(t), t = this.isReverse ? t.right : t.left;
+            }
+        }
+        getNext() {
+            let t = this.nodeStack.pop();
+            const e = {
+                key: t.key,
+                value: t.value
+            };
+            if (this.isReverse) for (t = t.left; !t.isEmpty(); ) this.nodeStack.push(t), t = t.right; else for (t = t.right; !t.isEmpty(); ) this.nodeStack.push(t), 
+            t = t.left;
+            return e;
+        }
+        hasNext() {
+            return this.nodeStack.length > 0;
+        }
+        peek() {
+            if (0 === this.nodeStack.length) return null;
+            const t = this.nodeStack[this.nodeStack.length - 1];
+            return {
+                key: t.key,
+                value: t.value
+            };
+        }
+    }
+
+     // end SortedMapIterator
+    // Represents a node in a Left-leaning Red-Black tree.
+    class Tn {
+        constructor(t, e, n, s, i) {
+            this.key = t, this.value = e, this.color = null != n ? n : Tn.RED, this.left = null != s ? s : Tn.EMPTY, 
+            this.right = null != i ? i : Tn.EMPTY, this.size = this.left.size + 1 + this.right.size;
+        }
+        // Returns a copy of the current node, optionally replacing pieces of it.
+        copy(t, e, n, s, i) {
+            return new Tn(null != t ? t : this.key, null != e ? e : this.value, null != n ? n : this.color, null != s ? s : this.left, null != i ? i : this.right);
+        }
+        isEmpty() {
+            return !1;
+        }
+        // Traverses the tree in key order and calls the specified action function
+        // for each node. If action returns true, traversal is aborted.
+        // Returns the first truthy value returned by action, or the last falsey
+        // value returned by action.
+        inorderTraversal(t) {
+            return this.left.inorderTraversal(t) || t(this.key, this.value) || this.right.inorderTraversal(t);
+        }
+        // Traverses the tree in reverse key order and calls the specified action
+        // function for each node. If action returns true, traversal is aborted.
+        // Returns the first truthy value returned by action, or the last falsey
+        // value returned by action.
+        reverseTraversal(t) {
+            return this.right.reverseTraversal(t) || t(this.key, this.value) || this.left.reverseTraversal(t);
+        }
+        // Returns the minimum node in the tree.
+        min() {
+            return this.left.isEmpty() ? this : this.left.min();
+        }
+        // Returns the maximum key in the tree.
+        minKey() {
+            return this.min().key;
+        }
+        // Returns the maximum key in the tree.
+        maxKey() {
+            return this.right.isEmpty() ? this.key : this.right.maxKey();
+        }
+        // Returns new tree, with the key/value added.
+        insert(t, e, n) {
+            let s = this;
+            const i = n(t, s.key);
+            return s = i < 0 ? s.copy(null, null, null, s.left.insert(t, e, n), null) : 0 === i ? s.copy(null, e, null, null, null) : s.copy(null, null, null, null, s.right.insert(t, e, n)), 
+            s.fixUp();
+        }
+        removeMin() {
+            if (this.left.isEmpty()) return Tn.EMPTY;
+            let t = this;
+            return t.left.isRed() || t.left.left.isRed() || (t = t.moveRedLeft()), t = t.copy(null, null, null, t.left.removeMin(), null), 
+            t.fixUp();
+        }
+        // Returns new tree, with the specified item removed.
+        remove(t, e) {
+            let n, s = this;
+            if (e(t, s.key) < 0) s.left.isEmpty() || s.left.isRed() || s.left.left.isRed() || (s = s.moveRedLeft()), 
+            s = s.copy(null, null, null, s.left.remove(t, e), null); else {
+                if (s.left.isRed() && (s = s.rotateRight()), s.right.isEmpty() || s.right.isRed() || s.right.left.isRed() || (s = s.moveRedRight()), 
+                0 === e(t, s.key)) {
+                    if (s.right.isEmpty()) return Tn.EMPTY;
+                    n = s.right.min(), s = s.copy(n.key, n.value, null, null, s.right.removeMin());
+                }
+                s = s.copy(null, null, null, null, s.right.remove(t, e));
+            }
+            return s.fixUp();
+        }
+        isRed() {
+            return this.color;
+        }
+        // Returns new tree after performing any needed rotations.
+        fixUp() {
+            let t = this;
+            return t.right.isRed() && !t.left.isRed() && (t = t.rotateLeft()), t.left.isRed() && t.left.left.isRed() && (t = t.rotateRight()), 
+            t.left.isRed() && t.right.isRed() && (t = t.colorFlip()), t;
+        }
+        moveRedLeft() {
+            let t = this.colorFlip();
+            return t.right.left.isRed() && (t = t.copy(null, null, null, null, t.right.rotateRight()), 
+            t = t.rotateLeft(), t = t.colorFlip()), t;
+        }
+        moveRedRight() {
+            let t = this.colorFlip();
+            return t.left.left.isRed() && (t = t.rotateRight(), t = t.colorFlip()), t;
+        }
+        rotateLeft() {
+            const t = this.copy(null, null, Tn.RED, null, this.right.left);
+            return this.right.copy(null, null, this.color, t, null);
+        }
+        rotateRight() {
+            const t = this.copy(null, null, Tn.RED, this.left.right, null);
+            return this.left.copy(null, null, this.color, null, t);
+        }
+        colorFlip() {
+            const t = this.left.copy(null, null, !this.left.color, null, null), e = this.right.copy(null, null, !this.right.color, null, null);
+            return this.copy(null, null, !this.color, t, e);
+        }
+        // For testing.
+        checkMaxDepth() {
+            const t = this.check();
+            return Math.pow(2, t) <= this.size + 1;
+        }
+        // In a balanced RB tree, the black-depth (number of black nodes) from root to
+        // leaves is equal on both sides.  This function verifies that or asserts.
+        check() {
+            if (this.isRed() && this.left.isRed()) throw B();
+            if (this.right.isRed()) throw B();
+            const t = this.left.check();
+            if (t !== this.right.check()) throw B();
+            return t + (this.isRed() ? 0 : 1);
+        }
+    }
+
+     // end LLRBNode
+    // Empty node is shared between all LLRB trees.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Tn.EMPTY = null, Tn.RED = !0, Tn.BLACK = !1;
+
+    // end LLRBEmptyNode
+    Tn.EMPTY = new 
+    // Represents an empty node (a leaf node in the Red-Black Tree).
+    class {
+        constructor() {
+            this.size = 0;
+        }
+        get key() {
+            throw B();
+        }
+        get value() {
+            throw B();
+        }
+        get color() {
+            throw B();
+        }
+        get left() {
+            throw B();
+        }
+        get right() {
+            throw B();
+        }
+        // Returns a copy of the current node.
+        copy(t, e, n, s, i) {
+            return this;
+        }
+        // Returns a copy of the tree, with the specified key/value added.
+        insert(t, e, n) {
+            return new Tn(t, e);
+        }
+        // Returns a copy of the tree, with the specified key removed.
+        remove(t, e) {
+            return this;
+        }
+        isEmpty() {
+            return !0;
+        }
+        inorderTraversal(t) {
+            return !1;
+        }
+        reverseTraversal(t) {
+            return !1;
+        }
+        minKey() {
+            return null;
+        }
+        maxKey() {
+            return null;
+        }
+        isRed() {
+            return !1;
+        }
+        // For testing.
+        checkMaxDepth() {
+            return !0;
+        }
+        check() {
+            return 0;
+        }
+    };
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -806,8 +5358,116 @@ class Go{constructor(t){this.comparator=t,this.data=new Ho(this.comparator)}has(
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.result=void 0,this.error=void 0,this.isDone=!1,this.callbackAttached=!1,t((t=>{this.isDone=!0,this.result=t,this.nextCallback&&this.nextCallback(t)}),(t=>{this.isDone=!0,this.error=t,this.catchCallback&&this.catchCallback(t)}))}catch(t){return this.next(void 0,t)}next(t,e){return this.callbackAttached&&Bi(),this.callbackAttached=!0,this.isDone?this.error?this.wrapFailure(e,this.error):this.wrapSuccess(t,this.result):new Oa(((n,s)=>{this.nextCallback=e=>{this.wrapSuccess(t,e).next(n,s)},this.catchCallback=t=>{this.wrapFailure(e,t).next(n,s)}}))}toPromise(){return new Promise(((t,e)=>{this.next(t,e)}))}wrapUserFunction(t){try{const e=t();return e instanceof Oa?e:Oa.resolve(e)}catch(t){return Oa.reject(t)}}wrapSuccess(t,e){return t?this.wrapUserFunction((()=>t(e))):Oa.resolve(e)}wrapFailure(t,e){return t?this.wrapUserFunction((()=>t(e))):Oa.reject(e)}static resolve(t){return new Oa(((e,n)=>{e(t)}))}static reject(t){return new Oa(((e,n)=>{n(t)}))}static waitFor(t){return new Oa(((e,n)=>{let s=0,i=0,r=!1;t.forEach((t=>{++s,t.next((()=>{++i,r&&i===s&&e()}),(t=>n(t)))})),r=!0,i===s&&e()}))}static or(t){let e=Oa.resolve(!1);for(const n of t)e=e.next((t=>t?Oa.resolve(t):n()));return e}static forEach(t,e){const n=[];return t.forEach(((t,s)=>{n.push(e.call(this,t,s))})),this.waitFor(n)}}function Ma(t){return"IndexedDbTransactionError"===t.name}
-/**
+    /**
+     * SortedSet is an immutable (copy-on-write) collection that holds elements
+     * in order specified by the provided comparator.
+     *
+     * NOTE: if provided comparator returns 0 for two elements, we consider them to
+     * be equal!
+     */
+    class En {
+        constructor(t) {
+            this.comparator = t, this.data = new yn(this.comparator);
+        }
+        has(t) {
+            return null !== this.data.get(t);
+        }
+        first() {
+            return this.data.minKey();
+        }
+        last() {
+            return this.data.maxKey();
+        }
+        get size() {
+            return this.data.size;
+        }
+        indexOf(t) {
+            return this.data.indexOf(t);
+        }
+        /** Iterates elements in order defined by "comparator" */    forEach(t) {
+            this.data.inorderTraversal(((e, n) => (t(e), !1)));
+        }
+        /** Iterates over `elem`s such that: range[0] &lt;= elem &lt; range[1]. */    forEachInRange(t, e) {
+            const n = this.data.getIteratorFrom(t[0]);
+            for (;n.hasNext(); ) {
+                const s = n.getNext();
+                if (this.comparator(s.key, t[1]) >= 0) return;
+                e(s.key);
+            }
+        }
+        /**
+         * Iterates over `elem`s such that: start &lt;= elem until false is returned.
+         */    forEachWhile(t, e) {
+            let n;
+            for (n = void 0 !== e ? this.data.getIteratorFrom(e) : this.data.getIterator(); n.hasNext(); ) {
+                if (!t(n.getNext().key)) return;
+            }
+        }
+        /** Finds the least element greater than or equal to `elem`. */    firstAfterOrEqual(t) {
+            const e = this.data.getIteratorFrom(t);
+            return e.hasNext() ? e.getNext().key : null;
+        }
+        getIterator() {
+            return new In(this.data.getIterator());
+        }
+        getIteratorFrom(t) {
+            return new In(this.data.getIteratorFrom(t));
+        }
+        /** Inserts or updates an element */    add(t) {
+            return this.copy(this.data.remove(t).insert(t, !0));
+        }
+        /** Deletes an element */    delete(t) {
+            return this.has(t) ? this.copy(this.data.remove(t)) : this;
+        }
+        isEmpty() {
+            return this.data.isEmpty();
+        }
+        unionWith(t) {
+            let e = this;
+            // Make sure `result` always refers to the larger one of the two sets.
+                    return e.size < t.size && (e = t, t = this), t.forEach((t => {
+                e = e.add(t);
+            })), e;
+        }
+        isEqual(t) {
+            if (!(t instanceof En)) return !1;
+            if (this.size !== t.size) return !1;
+            const e = this.data.getIterator(), n = t.data.getIterator();
+            for (;e.hasNext(); ) {
+                const t = e.getNext().key, s = n.getNext().key;
+                if (0 !== this.comparator(t, s)) return !1;
+            }
+            return !0;
+        }
+        toArray() {
+            const t = [];
+            return this.forEach((e => {
+                t.push(e);
+            })), t;
+        }
+        toString() {
+            const t = [];
+            return this.forEach((e => t.push(e))), "SortedSet(" + t.toString() + ")";
+        }
+        copy(t) {
+            const e = new En(this.comparator);
+            return e.data = t, e;
+        }
+    }
+
+    class In {
+        constructor(t) {
+            this.iter = t;
+        }
+        getNext() {
+            return this.iter.getNext().key;
+        }
+        hasNext() {
+            return this.iter.hasNext();
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -822,8 +5482,39 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Pa{constructor(t,e,n,s){this.batchId=t,this.localWriteTime=e,this.baseMutations=n,this.mutations=s}applyToRemoteDocument(t,e){const n=e.mutationResults;for(let e=0;e<this.mutations.length;e++){const s=this.mutations[e];s.key.isEqual(t.key)&&Ro(s,t,n[e])}}applyToLocalView(t){for(const e of this.baseMutations)e.key.isEqual(t.key)&&Lo(e,t,this.localWriteTime);for(const e of this.mutations)e.key.isEqual(t.key)&&Lo(e,t,this.localWriteTime)}applyToLocalDocumentSet(t){this.mutations.forEach((e=>{const n=t.get(e.key),s=n;this.applyToLocalView(s),n.isValidDocument()||s.convertToNoDocument(or.min())}))}keys(){return this.mutations.reduce(((t,e)=>t.add(e.key)),ta())}isEqual(t){return this.batchId===t.batchId&&ir(this.mutations,t.mutations,((t,e)=>xo(t,e)))&&ir(this.baseMutations,t.baseMutations,((t,e)=>xo(t,e)))}}
-/**
+     */ const An = new yn(Dt.comparator);
+
+    function Rn() {
+        return An;
+    }
+
+    const bn = new yn(Dt.comparator);
+
+    function Pn() {
+        return bn;
+    }
+
+    const vn = new yn(Dt.comparator);
+
+    function Vn() {
+        return vn;
+    }
+
+    const Sn = new En(Dt.comparator);
+
+    function Dn(...t) {
+        let e = Sn;
+        for (const n of t) e = e.add(n);
+        return e;
+    }
+
+    const Cn = new En(rt);
+
+    function Nn() {
+        return Cn;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -838,8 +5529,101 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Va{constructor(t,e,n,s,i=or.min(),r=or.min(),o=fr.EMPTY_BYTE_STRING){this.target=t,this.targetId=e,this.purpose=n,this.sequenceNumber=s,this.snapshotVersion=i,this.lastLimboFreeSnapshotVersion=r,this.resumeToken=o}withSequenceNumber(t){return new Va(this.target,this.targetId,this.purpose,t,this.snapshotVersion,this.lastLimboFreeSnapshotVersion,this.resumeToken)}withResumeToken(t,e){return new Va(this.target,this.targetId,this.purpose,this.sequenceNumber,e,this.lastLimboFreeSnapshotVersion,t)}withLastLimboFreeSnapshotVersion(t){return new Va(this.target,this.targetId,this.purpose,this.sequenceNumber,this.snapshotVersion,t,this.resumeToken)}}
-/**
+     */
+    /**
+     * An event from the RemoteStore. It is split into targetChanges (changes to the
+     * state or the set of documents in our watched targets) and documentUpdates
+     * (changes to the actual documents).
+     */ class kn {
+        constructor(
+        /**
+         * The snapshot version this event brings us up to, or MIN if not set.
+         */
+        t, 
+        /**
+         * A map from target to changes to the target. See TargetChange.
+         */
+        e, 
+        /**
+         * A set of targets that is known to be inconsistent. Listens for these
+         * targets should be re-established without resume tokens.
+         */
+        n, 
+        /**
+         * A set of which documents have changed or been deleted, along with the
+         * doc's new values (if not deleted).
+         */
+        s, 
+        /**
+         * A set of which document updates are due only to limbo resolution targets.
+         */
+        i) {
+            this.snapshotVersion = t, this.targetChanges = e, this.targetMismatches = n, this.documentUpdates = s, 
+            this.resolvedLimboDocuments = i;
+        }
+        /**
+         * HACK: Views require RemoteEvents in order to determine whether the view is
+         * CURRENT, but secondary tabs don't receive remote events. So this method is
+         * used to create a synthesized RemoteEvent that can be used to apply a
+         * CURRENT status change to a View, for queries executed in a different tab.
+         */
+        // PORTING NOTE: Multi-tab only
+        static createSynthesizedRemoteEventForCurrentChange(t, e) {
+            const n = new Map;
+            return n.set(t, xn.createSynthesizedTargetChangeForCurrentChange(t, e)), new kn(ut.min(), n, Nn(), Rn(), Dn());
+        }
+    }
+
+    /**
+     * A TargetChange specifies the set of changes for a specific target as part of
+     * a RemoteEvent. These changes track which documents are added, modified or
+     * removed, as well as the target's resume token and whether the target is
+     * marked CURRENT.
+     * The actual changes *to* documents are not part of the TargetChange since
+     * documents may be part of multiple targets.
+     */ class xn {
+        constructor(
+        /**
+         * An opaque, server-assigned token that allows watching a query to be resumed
+         * after disconnecting without retransmitting all the data that matches the
+         * query. The resume token essentially identifies a point in time from which
+         * the server should resume sending results.
+         */
+        t, 
+        /**
+         * The "current" (synced) status of this target. Note that "current"
+         * has special meaning in the RPC protocol that implies that a target is
+         * both up-to-date and consistent with the rest of the watch stream.
+         */
+        e, 
+        /**
+         * The set of documents that were newly assigned to this target as part of
+         * this remote event.
+         */
+        n, 
+        /**
+         * The set of documents that were already assigned to this target but received
+         * an update during this remote event.
+         */
+        s, 
+        /**
+         * The set of documents that were removed from this target as part of this
+         * remote event.
+         */
+        i) {
+            this.resumeToken = t, this.current = e, this.addedDocuments = n, this.modifiedDocuments = s, 
+            this.removedDocuments = i;
+        }
+        /**
+         * This method is used to create a synthesized TargetChanges that can be used to
+         * apply a CURRENT status change to a View (for queries executed in a different
+         * tab) or for new queries (to raise snapshots with correct CURRENT status).
+         */    static createSynthesizedTargetChangeForCurrentChange(t, e) {
+            return new xn(pt.EMPTY_BYTE_STRING, e, Dn(), Dn(), Dn());
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -854,8 +5638,1273 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Fa{constructor(t){this.Gt=t}}function Ua(t){const e=Ia({parent:t.parent,structuredQuery:t.structuredQuery});return"LAST"===t.limitType?function(t,e,n){return new ro(t.path,t.collectionGroup,t.explicitOrderBy.slice(),t.filters.slice(),e,n,t.startAt,t.endAt)}(e,e.limit,"L"):e}
-/**
+     */
+    /**
+     * Represents a changed document and a list of target ids to which this change
+     * applies.
+     *
+     * If document has been deleted NoDocument will be provided.
+     */ class $n {
+        constructor(
+        /** The new document applies to all of these targets. */
+        t, 
+        /** The new document is removed from all of these targets. */
+        e, 
+        /** The key of the document for this change. */
+        n, 
+        /**
+         * The new document or NoDocument if it was deleted. Is null if the
+         * document went out of view without the server sending a new document.
+         */
+        s) {
+            this.$ = t, this.removedTargetIds = e, this.key = n, this.O = s;
+        }
+    }
+
+    class On {
+        constructor(t, e) {
+            this.targetId = t, this.M = e;
+        }
+    }
+
+    class Mn {
+        constructor(
+        /** What kind of change occurred to the watch target. */
+        t, 
+        /** The target IDs that were added/removed/set. */
+        e, 
+        /**
+         * An opaque, server-assigned token that allows watching a target to be
+         * resumed after disconnecting without retransmitting all the data that
+         * matches the target. The resume token essentially identifies a point in
+         * time from which the server should resume sending results.
+         */
+        n = pt.EMPTY_BYTE_STRING
+        /** An RPC error indicating why the watch failed. */ , s = null) {
+            this.state = t, this.targetIds = e, this.resumeToken = n, this.cause = s;
+        }
+    }
+
+    /** Tracks the internal state of a Watch target. */ class Fn {
+        constructor() {
+            /**
+             * The number of pending responses (adds or removes) that we are waiting on.
+             * We only consider targets active that have no pending responses.
+             */
+            this.F = 0, 
+            /**
+             * Keeps track of the document changes since the last raised snapshot.
+             *
+             * These changes are continuously updated as we receive document updates and
+             * always reflect the current set of changes against the last issued snapshot.
+             */
+            this.L = Un(), 
+            /** See public getters for explanations of these fields. */
+            this.B = pt.EMPTY_BYTE_STRING, this.U = !1, 
+            /**
+             * Whether this target state should be included in the next snapshot. We
+             * initialize to true so that newly-added targets are included in the next
+             * RemoteEvent.
+             */
+            this.q = !0;
+        }
+        /**
+         * Whether this target has been marked 'current'.
+         *
+         * 'Current' has special meaning in the RPC protocol: It implies that the
+         * Watch backend has sent us all changes up to the point at which the target
+         * was added and that the target is consistent with the rest of the watch
+         * stream.
+         */    get current() {
+            return this.U;
+        }
+        /** The last resume token sent to us for this target. */    get resumeToken() {
+            return this.B;
+        }
+        /** Whether this target has pending target adds or target removes. */    get K() {
+            return 0 !== this.F;
+        }
+        /** Whether we have modified any state that should trigger a snapshot. */    get j() {
+            return this.q;
+        }
+        /**
+         * Applies the resume token to the TargetChange, but only when it has a new
+         * value. Empty resumeTokens are discarded.
+         */    W(t) {
+            t.approximateByteSize() > 0 && (this.q = !0, this.B = t);
+        }
+        /**
+         * Creates a target change from the current set of changes.
+         *
+         * To reset the document changes after raising this snapshot, call
+         * `clearPendingChanges()`.
+         */    G() {
+            let t = Dn(), e = Dn(), n = Dn();
+            return this.L.forEach(((s, i) => {
+                switch (i) {
+                  case 0 /* Added */ :
+                    t = t.add(s);
+                    break;
+
+                  case 2 /* Modified */ :
+                    e = e.add(s);
+                    break;
+
+                  case 1 /* Removed */ :
+                    n = n.add(s);
+                    break;
+
+                  default:
+                    B();
+                }
+            })), new xn(this.B, this.U, t, e, n);
+        }
+        /**
+         * Resets the document changes and sets `hasPendingChanges` to false.
+         */    H() {
+            this.q = !1, this.L = Un();
+        }
+        J(t, e) {
+            this.q = !0, this.L = this.L.insert(t, e);
+        }
+        Y(t) {
+            this.q = !0, this.L = this.L.remove(t);
+        }
+        X() {
+            this.F += 1;
+        }
+        Z() {
+            this.F -= 1;
+        }
+        tt() {
+            this.q = !0, this.U = !0;
+        }
+    }
+
+    /**
+     * A helper class to accumulate watch changes into a RemoteEvent.
+     */
+    class Ln {
+        constructor(t) {
+            this.et = t, 
+            /** The internal state of all tracked targets. */
+            this.nt = new Map, 
+            /** Keeps track of the documents to update since the last raised snapshot. */
+            this.st = Rn(), 
+            /** A mapping of document keys to their set of target IDs. */
+            this.it = Bn(), 
+            /**
+             * A list of targets with existence filter mismatches. These targets are
+             * known to be inconsistent and their listens needs to be re-established by
+             * RemoteStore.
+             */
+            this.rt = new En(rt);
+        }
+        /**
+         * Processes and adds the DocumentWatchChange to the current set of changes.
+         */    ot(t) {
+            for (const e of t.$) t.O && t.O.isFoundDocument() ? this.ct(e, t.O) : this.at(e, t.key, t.O);
+            for (const e of t.removedTargetIds) this.at(e, t.key, t.O);
+        }
+        /** Processes and adds the WatchTargetChange to the current set of changes. */    ut(t) {
+            this.forEachTarget(t, (e => {
+                const n = this.ht(e);
+                switch (t.state) {
+                  case 0 /* NoChange */ :
+                    this.lt(e) && n.W(t.resumeToken);
+                    break;
+
+                  case 1 /* Added */ :
+                    // We need to decrement the number of pending acks needed from watch
+                    // for this targetId.
+                    n.Z(), n.K || 
+                    // We have a freshly added target, so we need to reset any state
+                    // that we had previously. This can happen e.g. when remove and add
+                    // back a target for existence filter mismatches.
+                    n.H(), n.W(t.resumeToken);
+                    break;
+
+                  case 2 /* Removed */ :
+                    // We need to keep track of removed targets to we can post-filter and
+                    // remove any target changes.
+                    // We need to decrement the number of pending acks needed from watch
+                    // for this targetId.
+                    n.Z(), n.K || this.removeTarget(e);
+                    break;
+
+                  case 3 /* Current */ :
+                    this.lt(e) && (n.tt(), n.W(t.resumeToken));
+                    break;
+
+                  case 4 /* Reset */ :
+                    this.lt(e) && (
+                    // Reset the target and synthesizes removes for all existing
+                    // documents. The backend will re-add any documents that still
+                    // match the target before it sends the next global snapshot.
+                    this.ft(e), n.W(t.resumeToken));
+                    break;
+
+                  default:
+                    B();
+                }
+            }));
+        }
+        /**
+         * Iterates over all targetIds that the watch change applies to: either the
+         * targetIds explicitly listed in the change or the targetIds of all currently
+         * active targets.
+         */    forEachTarget(t, e) {
+            t.targetIds.length > 0 ? t.targetIds.forEach(e) : this.nt.forEach(((t, n) => {
+                this.lt(n) && e(n);
+            }));
+        }
+        /**
+         * Handles existence filters and synthesizes deletes for filter mismatches.
+         * Targets that are invalidated by filter mismatches are added to
+         * `pendingTargetResets`.
+         */    dt(t) {
+            const e = t.targetId, n = t.M.count, s = this.wt(e);
+            if (s) {
+                const t = s.target;
+                if (Zt(t)) if (0 === n) {
+                    // The existence filter told us the document does not exist. We deduce
+                    // that this document does not exist and apply a deleted document to
+                    // our updates. Without applying this deleted document there might be
+                    // another query that will raise this document as part of a snapshot
+                    // until it is resolved, essentially exposing inconsistency between
+                    // queries.
+                    const n = new Dt(t.path);
+                    this.at(e, n, Gt.newNoDocument(n, ut.min()));
+                } else U(1 === n); else {
+                    this._t(e) !== n && (
+                    // Existence filter mismatch: We reset the mapping and raise a new
+                    // snapshot with `isFromCache:true`.
+                    this.ft(e), this.rt = this.rt.add(e));
+                }
+            }
+        }
+        /**
+         * Converts the currently accumulated state into a remote event at the
+         * provided snapshot version. Resets the accumulated changes before returning.
+         */    gt(t) {
+            const e = new Map;
+            this.nt.forEach(((n, s) => {
+                const i = this.wt(s);
+                if (i) {
+                    if (n.current && Zt(i.target)) {
+                        // Document queries for document that don't exist can produce an empty
+                        // result set. To update our local cache, we synthesize a document
+                        // delete if we have not previously received the document. This
+                        // resolves the limbo state of the document, removing it from
+                        // limboDocumentRefs.
+                        // TODO(dimond): Ideally we would have an explicit lookup target
+                        // instead resulting in an explicit delete message and we could
+                        // remove this special logic.
+                        const e = new Dt(i.target.path);
+                        null !== this.st.get(e) || this.yt(s, e) || this.at(s, e, Gt.newNoDocument(e, t));
+                    }
+                    n.j && (e.set(s, n.G()), n.H());
+                }
+            }));
+            let n = Dn();
+            // We extract the set of limbo-only document updates as the GC logic
+            // special-cases documents that do not appear in the target cache.
+            
+            // TODO(gsoltis): Expand on this comment once GC is available in the JS
+            // client.
+                    this.it.forEach(((t, e) => {
+                let s = !0;
+                e.forEachWhile((t => {
+                    const e = this.wt(t);
+                    return !e || 2 /* LimboResolution */ === e.purpose || (s = !1, !1);
+                })), s && (n = n.add(t));
+            }));
+            const s = new kn(t, e, this.rt, this.st, n);
+            return this.st = Rn(), this.it = Bn(), this.rt = new En(rt), s;
+        }
+        /**
+         * Adds the provided document to the internal list of document updates and
+         * its document key to the given target's mapping.
+         */
+        // Visible for testing.
+        ct(t, e) {
+            if (!this.lt(t)) return;
+            const n = this.yt(t, e.key) ? 2 /* Modified */ : 0 /* Added */;
+            this.ht(t).J(e.key, n), this.st = this.st.insert(e.key, e), this.it = this.it.insert(e.key, this.Tt(e.key).add(t));
+        }
+        /**
+         * Removes the provided document from the target mapping. If the
+         * document no longer matches the target, but the document's state is still
+         * known (e.g. we know that the document was deleted or we received the change
+         * that caused the filter mismatch), the new document can be provided
+         * to update the remote document cache.
+         */
+        // Visible for testing.
+        at(t, e, n) {
+            if (!this.lt(t)) return;
+            const s = this.ht(t);
+            this.yt(t, e) ? s.J(e, 1 /* Removed */) : 
+            // The document may have entered and left the target before we raised a
+            // snapshot, so we can just ignore the change.
+            s.Y(e), this.it = this.it.insert(e, this.Tt(e).delete(t)), n && (this.st = this.st.insert(e, n));
+        }
+        removeTarget(t) {
+            this.nt.delete(t);
+        }
+        /**
+         * Returns the current count of documents in the target. This includes both
+         * the number of documents that the LocalStore considers to be part of the
+         * target as well as any accumulated changes.
+         */    _t(t) {
+            const e = this.ht(t).G();
+            return this.et.getRemoteKeysForTarget(t).size + e.addedDocuments.size - e.removedDocuments.size;
+        }
+        /**
+         * Increment the number of acks needed from watch before we can consider the
+         * server to be 'in-sync' with the client's active targets.
+         */    X(t) {
+            this.ht(t).X();
+        }
+        ht(t) {
+            let e = this.nt.get(t);
+            return e || (e = new Fn, this.nt.set(t, e)), e;
+        }
+        Tt(t) {
+            let e = this.it.get(t);
+            return e || (e = new En(rt), this.it = this.it.insert(t, e)), e;
+        }
+        /**
+         * Verifies that the user is still interested in this target (by calling
+         * `getTargetDataForTarget()`) and that we are not waiting for pending ADDs
+         * from watch.
+         */    lt(t) {
+            const e = null !== this.wt(t);
+            return e || O("WatchChangeAggregator", "Detected inactive target", t), e;
+        }
+        /**
+         * Returns the TargetData for an active target (i.e. a target that the user
+         * is still interested in that has no outstanding target change requests).
+         */    wt(t) {
+            const e = this.nt.get(t);
+            return e && e.K ? null : this.et.Et(t);
+        }
+        /**
+         * Resets the state of a Watch target to its initial state (e.g. sets
+         * 'current' to false, clears the resume token and removes its target mapping
+         * from all documents).
+         */    ft(t) {
+            this.nt.set(t, new Fn);
+            this.et.getRemoteKeysForTarget(t).forEach((e => {
+                this.at(t, e, /*updatedDocument=*/ null);
+            }));
+        }
+        /**
+         * Returns whether the LocalStore considers the document to be part of the
+         * specified target.
+         */    yt(t, e) {
+            return this.et.getRemoteKeysForTarget(t).has(e);
+        }
+    }
+
+    function Bn() {
+        return new yn(Dt.comparator);
+    }
+
+    function Un() {
+        return new yn(Dt.comparator);
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ const qn = (() => {
+        const t = {
+            asc: "ASCENDING",
+            desc: "DESCENDING"
+        };
+        return t;
+    })(), Kn = (() => {
+        const t = {
+            "<": "LESS_THAN",
+            "<=": "LESS_THAN_OR_EQUAL",
+            ">": "GREATER_THAN",
+            ">=": "GREATER_THAN_OR_EQUAL",
+            "==": "EQUAL",
+            "!=": "NOT_EQUAL",
+            "array-contains": "ARRAY_CONTAINS",
+            in: "IN",
+            "not-in": "NOT_IN",
+            "array-contains-any": "ARRAY_CONTAINS_ANY"
+        };
+        return t;
+    })();
+
+    /**
+     * This class generates JsonObject values for the Datastore API suitable for
+     * sending to either GRPC stub methods or via the JSON/HTTP REST API.
+     *
+     * The serializer supports both Protobuf.js and Proto3 JSON formats. By
+     * setting `useProto3Json` to true, the serializer will use the Proto3 JSON
+     * format.
+     *
+     * For a description of the Proto3 JSON format check
+     * https://developers.google.com/protocol-buffers/docs/proto3#json
+     *
+     * TODO(klimt): We can remove the databaseId argument if we keep the full
+     * resource name in documents.
+     */
+    class jn {
+        constructor(t, e) {
+            this.databaseId = t, this.C = e;
+        }
+    }
+
+    /**
+     * Returns a value for a Date that's appropriate to put into a proto.
+     */
+    function Qn(t, e) {
+        if (t.C) {
+            return `${new Date(1e3 * e.seconds).toISOString().replace(/\.\d*/, "").replace("Z", "")}.${("000000000" + e.nanoseconds).slice(-9)}Z`;
+        }
+        return {
+            seconds: "" + e.seconds,
+            nanos: e.nanoseconds
+        };
+    }
+
+    /**
+     * Returns a value for bytes that's appropriate to put in a proto.
+     *
+     * Visible for testing.
+     */
+    function Wn(t, e) {
+        return t.C ? e.toBase64() : e.toUint8Array();
+    }
+
+    /**
+     * Returns a ByteString based on the proto string value.
+     */ function Gn(t, e) {
+        return Qn(t, e.toTimestamp());
+    }
+
+    function zn(t) {
+        return U(!!t), ut.fromTimestamp(function(t) {
+            const e = Et(t);
+            return new at(e.seconds, e.nanos);
+        }(t));
+    }
+
+    function Hn(t, e) {
+        return function(t) {
+            return new wt([ "projects", t.projectId, "databases", t.database ]);
+        }(t).child("documents").child(e).canonicalString();
+    }
+
+    function Jn(t) {
+        const e = wt.fromString(t);
+        return U(Rs(e)), e;
+    }
+
+    function Yn(t, e) {
+        return Hn(t.databaseId, e.path);
+    }
+
+    function Xn(t, e) {
+        const n = Jn(e);
+        if (n.get(1) !== t.databaseId.projectId) throw new Q(j.INVALID_ARGUMENT, "Tried to deserialize key from different project: " + n.get(1) + " vs " + t.databaseId.projectId);
+        if (n.get(3) !== t.databaseId.database) throw new Q(j.INVALID_ARGUMENT, "Tried to deserialize key from different database: " + n.get(3) + " vs " + t.databaseId.database);
+        return new Dt(ns(n));
+    }
+
+    function Zn(t, e) {
+        return Hn(t.databaseId, e);
+    }
+
+    function ts(t) {
+        const e = Jn(t);
+        // In v1beta1 queries for collections at the root did not have a trailing
+        // "/documents". In v1 all resource paths contain "/documents". Preserve the
+        // ability to read the v1beta1 form for compatibility with queries persisted
+        // in the local target cache.
+            return 4 === e.length ? wt.emptyPath() : ns(e);
+    }
+
+    function es(t) {
+        return new wt([ "projects", t.databaseId.projectId, "databases", t.databaseId.database ]).canonicalString();
+    }
+
+    function ns(t) {
+        return U(t.length > 4 && "documents" === t.get(4)), t.popFirst(5);
+    }
+
+    /** Creates a Document proto from key and fields (but no create/update time) */ function ss(t, e, n) {
+        return {
+            name: Yn(t, e),
+            fields: n.value.mapValue.fields
+        };
+    }
+
+    function os(t, e) {
+        let n;
+        if ("targetChange" in e) {
+            e.targetChange;
+            // proto3 default value is unset in JSON (undefined), so use 'NO_CHANGE'
+            // if unset
+            const s = function(t) {
+                return "NO_CHANGE" === t ? 0 /* NoChange */ : "ADD" === t ? 1 /* Added */ : "REMOVE" === t ? 2 /* Removed */ : "CURRENT" === t ? 3 /* Current */ : "RESET" === t ? 4 /* Reset */ : B();
+            }(e.targetChange.targetChangeType || "NO_CHANGE"), i = e.targetChange.targetIds || [], r = function(t, e) {
+                return t.C ? (U(void 0 === e || "string" == typeof e), pt.fromBase64String(e || "")) : (U(void 0 === e || e instanceof Uint8Array), 
+                pt.fromUint8Array(e || new Uint8Array));
+            }(t, e.targetChange.resumeToken), o = e.targetChange.cause, c = o && function(t) {
+                const e = void 0 === t.code ? j.UNKNOWN : gn(t.code);
+                return new Q(e, t.message || "");
+            }
+            /**
+     * Returns a value for a number (or null) that's appropriate to put into
+     * a google.protobuf.Int32Value proto.
+     * DO NOT USE THIS FOR ANYTHING ELSE.
+     * This method cheats. It's typed as returning "number" because that's what
+     * our generated proto interfaces say Int32Value must be. But GRPC actually
+     * expects a { value: <number> } struct.
+     */ (o);
+            n = new Mn(s, i, r, c || null);
+        } else if ("documentChange" in e) {
+            e.documentChange;
+            const s = e.documentChange;
+            s.document, s.document.name, s.document.updateTime;
+            const i = Xn(t, s.document.name), r = zn(s.document.updateTime), o = new Qt({
+                mapValue: {
+                    fields: s.document.fields
+                }
+            }), c = Gt.newFoundDocument(i, r, o), a = s.targetIds || [], u = s.removedTargetIds || [];
+            n = new $n(a, u, c.key, c);
+        } else if ("documentDelete" in e) {
+            e.documentDelete;
+            const s = e.documentDelete;
+            s.document;
+            const i = Xn(t, s.document), r = s.readTime ? zn(s.readTime) : ut.min(), o = Gt.newNoDocument(i, r), c = s.removedTargetIds || [];
+            n = new $n([], c, o.key, o);
+        } else if ("documentRemove" in e) {
+            e.documentRemove;
+            const s = e.documentRemove;
+            s.document;
+            const i = Xn(t, s.document), r = s.removedTargetIds || [];
+            n = new $n([], r, i, null);
+        } else {
+            if (!("filter" in e)) return B();
+            {
+                e.filter;
+                const t = e.filter;
+                t.targetId;
+                const s = t.count || 0, i = new dn(s), r = t.targetId;
+                n = new On(r, i);
+            }
+        }
+        return n;
+    }
+
+    function cs(t, e) {
+        let n;
+        if (e instanceof on) n = {
+            update: ss(t, e.key, e.value)
+        }; else if (e instanceof ln) n = {
+            delete: Yn(t, e.key)
+        }; else if (e instanceof cn) n = {
+            update: ss(t, e.key, e.data),
+            updateMask: As(e.fieldMask)
+        }; else {
+            if (!(e instanceof fn)) return B();
+            n = {
+                verify: Yn(t, e.key)
+            };
+        }
+        return e.fieldTransforms.length > 0 && (n.updateTransforms = e.fieldTransforms.map((t => function(t, e) {
+            const n = e.transform;
+            if (n instanceof Be) return {
+                fieldPath: e.field.canonicalString(),
+                setToServerValue: "REQUEST_TIME"
+            };
+            if (n instanceof Ue) return {
+                fieldPath: e.field.canonicalString(),
+                appendMissingElements: {
+                    values: n.elements
+                }
+            };
+            if (n instanceof Ke) return {
+                fieldPath: e.field.canonicalString(),
+                removeAllFromArray: {
+                    values: n.elements
+                }
+            };
+            if (n instanceof Qe) return {
+                fieldPath: e.field.canonicalString(),
+                increment: n.N
+            };
+            throw B();
+        }(0, t)))), e.precondition.isNone || (n.currentDocument = function(t, e) {
+            return void 0 !== e.updateTime ? {
+                updateTime: Gn(t, e.updateTime)
+            } : void 0 !== e.exists ? {
+                exists: e.exists
+            } : B();
+        }(t, e.precondition)), n;
+    }
+
+    function us(t, e) {
+        return t && t.length > 0 ? (U(void 0 !== e), t.map((t => function(t, e) {
+            // NOTE: Deletes don't have an updateTime.
+            let n = t.updateTime ? zn(t.updateTime) : zn(e);
+            return n.isEqual(ut.min()) && (
+            // The Firestore Emulator currently returns an update time of 0 for
+            // deletes of non-existing documents (rather than null). This breaks the
+            // test "get deleted doc while offline with source=cache" as NoDocuments
+            // with version 0 are filtered by IndexedDb's RemoteDocumentCache.
+            // TODO(#2149): Remove this when Emulator is fixed
+            n = zn(e)), new Je(n, t.transformResults || []);
+        }(t, e)))) : [];
+    }
+
+    function hs(t, e) {
+        return {
+            documents: [ Zn(t, e.path) ]
+        };
+    }
+
+    function ls(t, e) {
+        // Dissect the path into parent, collectionId, and optional key filter.
+        const n = {
+            structuredQuery: {}
+        }, s = e.path;
+        null !== e.collectionGroup ? (n.parent = Zn(t, s), n.structuredQuery.from = [ {
+            collectionId: e.collectionGroup,
+            allDescendants: !0
+        } ]) : (n.parent = Zn(t, s.popLast()), n.structuredQuery.from = [ {
+            collectionId: s.lastSegment()
+        } ]);
+        const i = function(t) {
+            if (0 === t.length) return;
+            const e = t.map((t => 
+            // visible for testing
+            function(t) {
+                if ("==" /* EQUAL */ === t.op) {
+                    if (qt(t.value)) return {
+                        unaryFilter: {
+                            field: ps(t.field),
+                            op: "IS_NAN"
+                        }
+                    };
+                    if (Ut(t.value)) return {
+                        unaryFilter: {
+                            field: ps(t.field),
+                            op: "IS_NULL"
+                        }
+                    };
+                } else if ("!=" /* NOT_EQUAL */ === t.op) {
+                    if (qt(t.value)) return {
+                        unaryFilter: {
+                            field: ps(t.field),
+                            op: "IS_NOT_NAN"
+                        }
+                    };
+                    if (Ut(t.value)) return {
+                        unaryFilter: {
+                            field: ps(t.field),
+                            op: "IS_NOT_NULL"
+                        }
+                    };
+                }
+                return {
+                    fieldFilter: {
+                        field: ps(t.field),
+                        op: ys(t.op),
+                        value: t.value
+                    }
+                };
+            }(t)));
+            if (1 === e.length) return e[0];
+            return {
+                compositeFilter: {
+                    op: "AND",
+                    filters: e
+                }
+            };
+        }(e.filters);
+        i && (n.structuredQuery.where = i);
+        const r = function(t) {
+            if (0 === t.length) return;
+            return t.map((t => 
+            // visible for testing
+            function(t) {
+                return {
+                    field: ps(t.field),
+                    direction: gs(t.dir)
+                };
+            }(t)));
+        }(e.orderBy);
+        r && (n.structuredQuery.orderBy = r);
+        const o = function(t, e) {
+            return t.C || vt(e) ? e : {
+                value: e
+            };
+        }
+        /**
+     * Returns a number (or null) from a google.protobuf.Int32Value proto.
+     */ (t, e.limit);
+        return null !== o && (n.structuredQuery.limit = o), e.startAt && (n.structuredQuery.startAt = _s(e.startAt)), 
+        e.endAt && (n.structuredQuery.endAt = _s(e.endAt)), n;
+    }
+
+    function fs(t) {
+        let e = ts(t.parent);
+        const n = t.structuredQuery, s = n.from ? n.from.length : 0;
+        let i = null;
+        if (s > 0) {
+            U(1 === s);
+            const t = n.from[0];
+            t.allDescendants ? i = t.collectionId : e = e.child(t.collectionId);
+        }
+        let r = [];
+        n.where && (r = ws(n.where));
+        let o = [];
+        n.orderBy && (o = n.orderBy.map((t => function(t) {
+            return new fe(Ts(t.field), 
+            // visible for testing
+            function(t) {
+                switch (t) {
+                  case "ASCENDING":
+                    return "asc" /* ASCENDING */;
+
+                  case "DESCENDING":
+                    return "desc" /* DESCENDING */;
+
+                  default:
+                    return;
+                }
+            }
+            // visible for testing
+            (t.direction));
+        }(t))));
+        let c = null;
+        n.limit && (c = function(t) {
+            let e;
+            return e = "object" == typeof t ? t.value : t, vt(e) ? null : e;
+        }(n.limit));
+        let a = null;
+        n.startAt && (a = ms(n.startAt));
+        let u = null;
+        return n.endAt && (u = ms(n.endAt)), ge(e, i, o, r, c, "F" /* First */ , a, u);
+    }
+
+    function ds(t, e) {
+        const n = function(t, e) {
+            switch (e) {
+              case 0 /* Listen */ :
+                return null;
+
+              case 1 /* ExistenceFilterMismatch */ :
+                return "existence-filter-mismatch";
+
+              case 2 /* LimboResolution */ :
+                return "limbo-document";
+
+              default:
+                return B();
+            }
+        }(0, e.purpose);
+        return null == n ? null : {
+            "goog-listen-tags": n
+        };
+    }
+
+    function ws(t) {
+        return t ? void 0 !== t.unaryFilter ? [ Is(t) ] : void 0 !== t.fieldFilter ? [ Es(t) ] : void 0 !== t.compositeFilter ? t.compositeFilter.filters.map((t => ws(t))).reduce(((t, e) => t.concat(e))) : B() : [];
+    }
+
+    function _s(t) {
+        return {
+            before: t.before,
+            values: t.position
+        };
+    }
+
+    function ms(t) {
+        const e = !!t.before, n = t.values || [];
+        return new he(n, e);
+    }
+
+    // visible for testing
+    function gs(t) {
+        return qn[t];
+    }
+
+    function ys(t) {
+        return Kn[t];
+    }
+
+    function ps(t) {
+        return {
+            fieldPath: t.canonicalString()
+        };
+    }
+
+    function Ts(t) {
+        return mt.fromServerFormat(t.fieldPath);
+    }
+
+    function Es(t) {
+        return te.create(Ts(t.fieldFilter.field), function(t) {
+            switch (t) {
+              case "EQUAL":
+                return "==" /* EQUAL */;
+
+              case "NOT_EQUAL":
+                return "!=" /* NOT_EQUAL */;
+
+              case "GREATER_THAN":
+                return ">" /* GREATER_THAN */;
+
+              case "GREATER_THAN_OR_EQUAL":
+                return ">=" /* GREATER_THAN_OR_EQUAL */;
+
+              case "LESS_THAN":
+                return "<" /* LESS_THAN */;
+
+              case "LESS_THAN_OR_EQUAL":
+                return "<=" /* LESS_THAN_OR_EQUAL */;
+
+              case "ARRAY_CONTAINS":
+                return "array-contains" /* ARRAY_CONTAINS */;
+
+              case "IN":
+                return "in" /* IN */;
+
+              case "NOT_IN":
+                return "not-in" /* NOT_IN */;
+
+              case "ARRAY_CONTAINS_ANY":
+                return "array-contains-any" /* ARRAY_CONTAINS_ANY */;
+
+              default:
+                return B();
+            }
+        }(t.fieldFilter.op), t.fieldFilter.value);
+    }
+
+    function Is(t) {
+        switch (t.unaryFilter.op) {
+          case "IS_NAN":
+            const e = Ts(t.unaryFilter.field);
+            return te.create(e, "==" /* EQUAL */ , {
+                doubleValue: NaN
+            });
+
+          case "IS_NULL":
+            const n = Ts(t.unaryFilter.field);
+            return te.create(n, "==" /* EQUAL */ , {
+                nullValue: "NULL_VALUE"
+            });
+
+          case "IS_NOT_NAN":
+            const s = Ts(t.unaryFilter.field);
+            return te.create(s, "!=" /* NOT_EQUAL */ , {
+                doubleValue: NaN
+            });
+
+          case "IS_NOT_NULL":
+            const i = Ts(t.unaryFilter.field);
+            return te.create(i, "!=" /* NOT_EQUAL */ , {
+                nullValue: "NULL_VALUE"
+            });
+
+          default:
+            return B();
+        }
+    }
+
+    function As(t) {
+        const e = [];
+        return t.fields.forEach((t => e.push(t.canonicalString()))), {
+            fieldPaths: e
+        };
+    }
+
+    function Rs(t) {
+        // Resource names have at least 4 components (project ID, database ID)
+        return t.length >= 4 && "projects" === t.get(0) && "databases" === t.get(2);
+    }
+
+    // Visible for testing
+    const Ws = "The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab.";
+
+    // V2 is no longer usable (see comment at top of file)
+    // Visible for testing
+    /**
+     * A base class representing a persistence transaction, encapsulating both the
+     * transaction's sequence numbers as well as a list of onCommitted listeners.
+     *
+     * When you call Persistence.runTransaction(), it will create a transaction and
+     * pass it to your callback. You then pass it to any method that operates
+     * on persistence.
+     */
+    class Gs {
+        constructor() {
+            this.onCommittedListeners = [];
+        }
+        addOnCommittedListener(t) {
+            this.onCommittedListeners.push(t);
+        }
+        raiseOnCommittedEvent() {
+            this.onCommittedListeners.forEach((t => t()));
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * PersistencePromise is essentially a re-implementation of Promise except
+     * it has a .next() method instead of .then() and .next() and .catch() callbacks
+     * are executed synchronously when a PersistencePromise resolves rather than
+     * asynchronously (Promise implementations use setImmediate() or similar).
+     *
+     * This is necessary to interoperate with IndexedDB which will automatically
+     * commit transactions if control is returned to the event loop without
+     * synchronously initiating another operation on the transaction.
+     *
+     * NOTE: .then() and .catch() only allow a single consumer, unlike normal
+     * Promises.
+     */ class zs {
+        constructor(t) {
+            // NOTE: next/catchCallback will always point to our own wrapper functions,
+            // not the user's raw next() or catch() callbacks.
+            this.nextCallback = null, this.catchCallback = null, 
+            // When the operation resolves, we'll set result or error and mark isDone.
+            this.result = void 0, this.error = void 0, this.isDone = !1, 
+            // Set to true when .then() or .catch() are called and prevents additional
+            // chaining.
+            this.callbackAttached = !1, t((t => {
+                this.isDone = !0, this.result = t, this.nextCallback && 
+                // value should be defined unless T is Void, but we can't express
+                // that in the type system.
+                this.nextCallback(t);
+            }), (t => {
+                this.isDone = !0, this.error = t, this.catchCallback && this.catchCallback(t);
+            }));
+        }
+        catch(t) {
+            return this.next(void 0, t);
+        }
+        next(t, e) {
+            return this.callbackAttached && B(), this.callbackAttached = !0, this.isDone ? this.error ? this.wrapFailure(e, this.error) : this.wrapSuccess(t, this.result) : new zs(((n, s) => {
+                this.nextCallback = e => {
+                    this.wrapSuccess(t, e).next(n, s);
+                }, this.catchCallback = t => {
+                    this.wrapFailure(e, t).next(n, s);
+                };
+            }));
+        }
+        toPromise() {
+            return new Promise(((t, e) => {
+                this.next(t, e);
+            }));
+        }
+        wrapUserFunction(t) {
+            try {
+                const e = t();
+                return e instanceof zs ? e : zs.resolve(e);
+            } catch (t) {
+                return zs.reject(t);
+            }
+        }
+        wrapSuccess(t, e) {
+            return t ? this.wrapUserFunction((() => t(e))) : zs.resolve(e);
+        }
+        wrapFailure(t, e) {
+            return t ? this.wrapUserFunction((() => t(e))) : zs.reject(e);
+        }
+        static resolve(t) {
+            return new zs(((e, n) => {
+                e(t);
+            }));
+        }
+        static reject(t) {
+            return new zs(((e, n) => {
+                n(t);
+            }));
+        }
+        static waitFor(
+        // Accept all Promise types in waitFor().
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        t) {
+            return new zs(((e, n) => {
+                let s = 0, i = 0, r = !1;
+                t.forEach((t => {
+                    ++s, t.next((() => {
+                        ++i, r && i === s && e();
+                    }), (t => n(t)));
+                })), r = !0, i === s && e();
+            }));
+        }
+        /**
+         * Given an array of predicate functions that asynchronously evaluate to a
+         * boolean, implements a short-circuiting `or` between the results. Predicates
+         * will be evaluated until one of them returns `true`, then stop. The final
+         * result will be whether any of them returned `true`.
+         */    static or(t) {
+            let e = zs.resolve(!1);
+            for (const n of t) e = e.next((t => t ? zs.resolve(t) : n()));
+            return e;
+        }
+        static forEach(t, e) {
+            const n = [];
+            return t.forEach(((t, s) => {
+                n.push(e.call(this, t, s));
+            })), this.waitFor(n);
+        }
+    }
+
+    /** Verifies whether `e` is an IndexedDbTransactionError. */ function Zs(t) {
+        // Use name equality, as instanceof checks on errors don't work with errors
+        // that wrap other errors.
+        return "IndexedDbTransactionError" === t.name;
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A batch of mutations that will be sent as one unit to the backend.
+     */ class oi {
+        /**
+         * @param batchId - The unique ID of this mutation batch.
+         * @param localWriteTime - The original write time of this mutation.
+         * @param baseMutations - Mutations that are used to populate the base
+         * values when this mutation is applied locally. This can be used to locally
+         * overwrite values that are persisted in the remote document cache. Base
+         * mutations are never sent to the backend.
+         * @param mutations - The user-provided mutations in this mutation batch.
+         * User-provided mutations are applied both locally and remotely on the
+         * backend.
+         */
+        constructor(t, e, n, s) {
+            this.batchId = t, this.localWriteTime = e, this.baseMutations = n, this.mutations = s;
+        }
+        /**
+         * Applies all the mutations in this MutationBatch to the specified document
+         * to compute the state of the remote document
+         *
+         * @param document - The document to apply mutations to.
+         * @param batchResult - The result of applying the MutationBatch to the
+         * backend.
+         */    applyToRemoteDocument(t, e) {
+            const n = e.mutationResults;
+            for (let e = 0; e < this.mutations.length; e++) {
+                const s = this.mutations[e];
+                if (s.key.isEqual(t.key)) {
+                    tn(s, t, n[e]);
+                }
+            }
+        }
+        /**
+         * Computes the local view of a document given all the mutations in this
+         * batch.
+         *
+         * @param document - The document to apply mutations to.
+         */    applyToLocalView(t) {
+            // First, apply the base state. This allows us to apply non-idempotent
+            // transform against a consistent set of values.
+            for (const e of this.baseMutations) e.key.isEqual(t.key) && en(e, t, this.localWriteTime);
+            // Second, apply all user-provided mutations.
+                    for (const e of this.mutations) e.key.isEqual(t.key) && en(e, t, this.localWriteTime);
+        }
+        /**
+         * Computes the local view for all provided documents given the mutations in
+         * this batch.
+         */    applyToLocalDocumentSet(t) {
+            // TODO(mrschmidt): This implementation is O(n^2). If we apply the mutations
+            // directly (as done in `applyToLocalView()`), we can reduce the complexity
+            // to O(n).
+            this.mutations.forEach((e => {
+                const n = t.get(e.key), s = n;
+                // TODO(mutabledocuments): This method should take a MutableDocumentMap
+                // and we should remove this cast.
+                            this.applyToLocalView(s), n.isValidDocument() || s.convertToNoDocument(ut.min());
+            }));
+        }
+        keys() {
+            return this.mutations.reduce(((t, e) => t.add(e.key)), Dn());
+        }
+        isEqual(t) {
+            return this.batchId === t.batchId && ot(this.mutations, t.mutations, ((t, e) => sn(t, e))) && ot(this.baseMutations, t.baseMutations, ((t, e) => sn(t, e)));
+        }
+    }
+
+    /** The result of applying a mutation batch to the backend. */ class ci {
+        constructor(t, e, n, 
+        /**
+         * A pre-computed mapping from each mutated document to the resulting
+         * version.
+         */
+        s) {
+            this.batch = t, this.commitVersion = e, this.mutationResults = n, this.docVersions = s;
+        }
+        /**
+         * Creates a new MutationBatchResult for the given batch and results. There
+         * must be one result for each mutation in the batch. This static factory
+         * caches a document=&gt;version mapping (docVersions).
+         */    static from(t, e, n) {
+            U(t.mutations.length === n.length);
+            let s = Vn();
+            const i = t.mutations;
+            for (let t = 0; t < i.length; t++) s = s.insert(i[t].key, n[t].version);
+            return new ci(t, e, n, s);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An immutable set of metadata that the local store tracks for each target.
+     */ class ai {
+        constructor(
+        /** The target being listened to. */
+        t, 
+        /**
+         * The target ID to which the target corresponds; Assigned by the
+         * LocalStore for user listens and by the SyncEngine for limbo watches.
+         */
+        e, 
+        /** The purpose of the target. */
+        n, 
+        /**
+         * The sequence number of the last transaction during which this target data
+         * was modified.
+         */
+        s, 
+        /** The latest snapshot version seen for this target. */
+        i = ut.min()
+        /**
+         * The maximum snapshot version at which the associated view
+         * contained no limbo documents.
+         */ , r = ut.min()
+        /**
+         * An opaque, server-assigned token that allows watching a target to be
+         * resumed after disconnecting without retransmitting all the data that
+         * matches the target. The resume token essentially identifies a point in
+         * time from which the server should resume sending results.
+         */ , o = pt.EMPTY_BYTE_STRING) {
+            this.target = t, this.targetId = e, this.purpose = n, this.sequenceNumber = s, this.snapshotVersion = i, 
+            this.lastLimboFreeSnapshotVersion = r, this.resumeToken = o;
+        }
+        /** Creates a new target data instance with an updated sequence number. */    withSequenceNumber(t) {
+            return new ai(this.target, this.targetId, this.purpose, t, this.snapshotVersion, this.lastLimboFreeSnapshotVersion, this.resumeToken);
+        }
+        /**
+         * Creates a new target data instance with an updated resume token and
+         * snapshot version.
+         */    withResumeToken(t, e) {
+            return new ai(this.target, this.targetId, this.purpose, this.sequenceNumber, e, this.lastLimboFreeSnapshotVersion, t);
+        }
+        /**
+         * Creates a new target data instance with an updated last limbo free
+         * snapshot version number.
+         */    withLastLimboFreeSnapshotVersion(t) {
+            return new ai(this.target, this.targetId, this.purpose, this.sequenceNumber, this.snapshotVersion, t, this.resumeToken);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /** Serializer for values stored in the LocalStore. */ class ui {
+        constructor(t) {
+            this.Gt = t;
+        }
+    }
+
+    /**
+     * A helper function for figuring out what kind of query has been stored.
+     */
+    /**
+     * Encodes a `BundledQuery` from bundle proto to a Query object.
+     *
+     * This reconstructs the original query used to build the bundle being loaded,
+     * including features exists only in SDKs (for example: limit-to-last).
+     */
+    function pi(t) {
+        const e = fs({
+            parent: t.parent,
+            structuredQuery: t.structuredQuery
+        });
+        return "LAST" === t.limitType ? Pe(e, e.limit, "L" /* Last */) : e;
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -870,56 +6919,44 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class $a{constructor(){this.zt=new qa}addToCollectionParentIndex(t,e){return this.zt.add(e),Oa.resolve()}getCollectionParents(t,e){return Oa.resolve(this.zt.getEntries(e))}}class qa{constructor(){this.index={}}add(t){const e=t.lastSegment(),n=t.popLast(),s=this.index[e]||new Go(ur.comparator),i=!s.has(n);return this.index[e]=s.add(n),i}has(t){const e=t.lastSegment(),n=t.popLast(),s=this.index[e];return s&&s.has(n)}getEntries(t){return(this.index[t]||new Go(ur.comparator)).toArray()}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Ba{constructor(t){this.se=t}next(){return this.se+=2,this.se}static ie(){return new Ba(0)}static re(){return new Ba(-1)}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */async function ja(t){if(t.code!==zi.FAILED_PRECONDITION||"The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab."!==t.message)throw t;Fi("LocalStore","Unexpectedly lost primary lease")}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Ha{constructor(t,e){this.mapKeyFn=t,this.equalsFn=e,this.inner={}}get(t){const e=this.mapKeyFn(t),n=this.inner[e];if(void 0!==n)for(const[e,s]of n)if(this.equalsFn(e,t))return s}has(t){return void 0!==this.get(t)}set(t,e){const n=this.mapKeyFn(t),s=this.inner[n];if(void 0!==s){for(let n=0;n<s.length;n++)if(this.equalsFn(s[n][0],t))return void(s[n]=[t,e]);s.push([t,e])}else this.inner[n]=[[t,e]]}delete(t){const e=this.mapKeyFn(t),n=this.inner[e];if(void 0===n)return!1;for(let s=0;s<n.length;s++)if(this.equalsFn(n[s][0],t))return 1===n.length?delete this.inner[e]:n.splice(s,1),!0;return!1}forEach(t){hr(this.inner,((e,n)=>{for(const[e,s]of n)t(e,s)}))}isEmpty(){return function(t){for(const e in t)if(Object.prototype.hasOwnProperty.call(t,e))return!1;return!0}(this.inner)}}
-/**
+     */
+    /**
+     * An in-memory implementation of IndexManager.
+     */ class Ai {
+        constructor() {
+            this.zt = new Ri;
+        }
+        addToCollectionParentIndex(t, e) {
+            return this.zt.add(e), zs.resolve();
+        }
+        getCollectionParents(t, e) {
+            return zs.resolve(this.zt.getEntries(e));
+        }
+    }
+
+    /**
+     * Internal implementation of the collection-parent index exposed by MemoryIndexManager.
+     * Also used for in-memory caching by IndexedDbIndexManager and initial index population
+     * in indexeddb_schema.ts
+     */ class Ri {
+        constructor() {
+            this.index = {};
+        }
+        // Returns false if the entry already existed.
+        add(t) {
+            const e = t.lastSegment(), n = t.popLast(), s = this.index[e] || new En(wt.comparator), i = !s.has(n);
+            return this.index[e] = s.add(n), i;
+        }
+        has(t) {
+            const e = t.lastSegment(), n = t.popLast(), s = this.index[e];
+            return s && s.has(n);
+        }
+        getEntries(t) {
+            return (this.index[t] || new En(wt.comparator)).toArray();
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -935,7 +6972,42 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-/**
+    /** Offset to ensure non-overlapping target ids. */
+    /**
+     * Generates monotonically increasing target IDs for sending targets to the
+     * watch stream.
+     *
+     * The client constructs two generators, one for the target cache, and one for
+     * for the sync engine (to generate limbo documents targets). These
+     * generators produce non-overlapping IDs (by using even and odd IDs
+     * respectively).
+     *
+     * By separating the target ID space, the query cache can generate target IDs
+     * that persist across client restarts, while sync engine can independently
+     * generate in-memory target IDs that are transient and can be reused after a
+     * restart.
+     */
+    class Oi {
+        constructor(t) {
+            this.se = t;
+        }
+        next() {
+            return this.se += 2, this.se;
+        }
+        static ie() {
+            // The target cache generator must return '2' in its first call to `next()`
+            // as there is no differentiation in the protocol layer between an unset
+            // number and the number '0'. If we were to sent a target with target ID
+            // '0', the backend would consider it unset and replace it with its own ID.
+            return new Oi(0);
+        }
+        static re() {
+            // Sync engine assigns target IDs for limbo document detection.
+            return new Oi(-1);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -951,8 +7023,21 @@ class Oa{constructor(t){this.nextCallback=null,this.catchCallback=null,this.resu
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An.getAllMutationBatchesAffectingDocumentKey(t,e).next((n=>this.bn(t,e,n)))}bn(t,e,n){return this.Je.getEntry(t,e).next((t=>{for(const e of n)e.applyToLocalView(t);return t}))}Pn(t,e){t.forEach(((t,n)=>{for(const t of e)t.applyToLocalView(n)}))}vn(t,e){return this.Je.getEntries(t,e).next((e=>this.Vn(t,e).next((()=>e))))}Vn(t,e){return this.An.getAllMutationBatchesAffectingDocumentKeys(t,e).next((t=>this.Pn(e,t)))}getDocumentsMatchingQuery(t,e,n){return function(t){return Ir.isDocumentKey(t.path)&&null===t.collectionGroup&&0===t.filters.length}(e)?this.Sn(t,e.path):function(t){return null!==t.collectionGroup}(e)?this.Dn(t,e,n):this.Cn(t,e,n)}Sn(t,e){return this.Rn(t,new Ir(e)).next((t=>{let e=Jo();return t.isFoundDocument()&&(e=e.insert(t.key,t)),e}))}Dn(t,e,n){const s=e.collectionGroup;let i=Jo();return this.Jt.getCollectionParents(t,s).next((r=>Oa.forEach(r,(r=>{const o=function(t,e){return new ro(e,null,t.explicitOrderBy.slice(),t.filters.slice(),t.limit,t.limitType,t.startAt,t.endAt)}(e,r.child(s));return this.Cn(t,o,n).next((t=>{t.forEach(((t,e)=>{i=i.insert(t,e)}))}))})).next((()=>i))))}Cn(t,e,n){let s,i;return this.Je.getDocumentsMatchingQuery(t,e,n).next((n=>(s=n,this.An.getAllMutationBatchesAffectingQuery(t,e)))).next((e=>(i=e,this.Nn(t,i,s).next((t=>{s=t;for(const t of i)for(const e of t.mutations){const n=e.key;let i=s.get(n);null==i&&(i=Fr.newInvalidDocument(n),s=s.insert(n,i)),Lo(e,i,t.localWriteTime),i.isFoundDocument()||(s=s.remove(n))}}))))).next((()=>(s.forEach(((t,n)=>{go(e,n)||(s=s.remove(t))})),s)))}Nn(t,e,n){let s=ta();for(const t of e)for(const e of t.mutations)e instanceof Po&&null===n.get(e.key)&&(s=s.add(e.key));let i=n;return this.Je.getEntries(t,s).next((t=>(t.forEach(((t,e)=>{e.isFoundDocument()&&(i=i.insert(t,e))})),i)))}}
-/**
+    /**
+     * Verifies the error thrown by a LocalStore operation. If a LocalStore
+     * operation fails because the primary lease has been taken by another client,
+     * we ignore the error (the persistence layer will immediately call
+     * `applyPrimaryLease` to propagate the primary state change). All other errors
+     * are re-thrown.
+     *
+     * @param err - An error returned by a LocalStore operation.
+     * @returns A Promise that resolves after we recovered, or the original error.
+     */ async function Ui(t) {
+        if (t.code !== j.FAILED_PRECONDITION || t.message !== Ws) throw t;
+        O("LocalStore", "Unexpectedly lost primary lease");
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -967,8 +7052,325 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Ka{constructor(t,e,n,s){this.targetId=t,this.fromCache=e,this.kn=n,this.xn=s}static $n(t,e){let n=ta(),s=ta();for(const t of e.docChanges)switch(t.type){case 0:n=n.add(t.doc.key);break;case 1:s=s.add(t.doc.key)}return new Ka(t,e.fromCache,n,s)}}
-/**
+     */
+    /**
+     * A map implementation that uses objects as keys. Objects must have an
+     * associated equals function and must be immutable. Entries in the map are
+     * stored together with the key being produced from the mapKeyFn. This map
+     * automatically handles collisions of keys.
+     */ class zi {
+        constructor(t, e) {
+            this.mapKeyFn = t, this.equalsFn = e, 
+            /**
+             * The inner map for a key/value pair. Due to the possibility of collisions we
+             * keep a list of entries that we do a linear search through to find an actual
+             * match. Note that collisions should be rare, so we still expect near
+             * constant time lookups in practice.
+             */
+            this.inner = {};
+        }
+        /** Get a value for this key, or undefined if it does not exist. */    get(t) {
+            const e = this.mapKeyFn(t), n = this.inner[e];
+            if (void 0 !== n) for (const [e, s] of n) if (this.equalsFn(e, t)) return s;
+        }
+        has(t) {
+            return void 0 !== this.get(t);
+        }
+        /** Put this key and value in the map. */    set(t, e) {
+            const n = this.mapKeyFn(t), s = this.inner[n];
+            if (void 0 !== s) {
+                for (let n = 0; n < s.length; n++) if (this.equalsFn(s[n][0], t)) return void (s[n] = [ t, e ]);
+                s.push([ t, e ]);
+            } else this.inner[n] = [ [ t, e ] ];
+        }
+        /**
+         * Remove this key from the map. Returns a boolean if anything was deleted.
+         */    delete(t) {
+            const e = this.mapKeyFn(t), n = this.inner[e];
+            if (void 0 === n) return !1;
+            for (let s = 0; s < n.length; s++) if (this.equalsFn(n[s][0], t)) return 1 === n.length ? delete this.inner[e] : n.splice(s, 1), 
+            !0;
+            return !1;
+        }
+        forEach(t) {
+            lt(this.inner, ((e, n) => {
+                for (const [e, s] of n) t(e, s);
+            }));
+        }
+        isEmpty() {
+            return ft(this.inner);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An in-memory buffer of entries to be written to a RemoteDocumentCache.
+     * It can be used to batch up a set of changes to be written to the cache, but
+     * additionally supports reading entries back with the `getEntry()` method,
+     * falling back to the underlying RemoteDocumentCache if no entry is
+     * buffered.
+     *
+     * Entries added to the cache *must* be read first. This is to facilitate
+     * calculating the size delta of the pending changes.
+     *
+     * PORTING NOTE: This class was implemented then removed from other platforms.
+     * If byte-counting ends up being needed on the other platforms, consider
+     * porting this class as part of that implementation work.
+     */ class Hi {
+        constructor() {
+            // A mapping of document key to the new cache entry that should be written (or null if any
+            // existing cache entry should be removed).
+            this.changes = new zi((t => t.toString()), ((t, e) => t.isEqual(e))), this.changesApplied = !1;
+        }
+        getReadTime(t) {
+            const e = this.changes.get(t);
+            return e ? e.readTime : ut.min();
+        }
+        /**
+         * Buffers a `RemoteDocumentCache.addEntry()` call.
+         *
+         * You can only modify documents that have already been retrieved via
+         * `getEntry()/getEntries()` (enforced via IndexedDbs `apply()`).
+         */    addEntry(t, e) {
+            this.assertNotApplied(), this.changes.set(t.key, {
+                document: t,
+                readTime: e
+            });
+        }
+        /**
+         * Buffers a `RemoteDocumentCache.removeEntry()` call.
+         *
+         * You can only remove documents that have already been retrieved via
+         * `getEntry()/getEntries()` (enforced via IndexedDbs `apply()`).
+         */    removeEntry(t, e = null) {
+            this.assertNotApplied(), this.changes.set(t, {
+                document: Gt.newInvalidDocument(t),
+                readTime: e
+            });
+        }
+        /**
+         * Looks up an entry in the cache. The buffered changes will first be checked,
+         * and if no buffered change applies, this will forward to
+         * `RemoteDocumentCache.getEntry()`.
+         *
+         * @param transaction - The transaction in which to perform any persistence
+         *     operations.
+         * @param documentKey - The key of the entry to look up.
+         * @returns The cached document or an invalid document if we have nothing
+         * cached.
+         */    getEntry(t, e) {
+            this.assertNotApplied();
+            const n = this.changes.get(e);
+            return void 0 !== n ? zs.resolve(n.document) : this.getFromCache(t, e);
+        }
+        /**
+         * Looks up several entries in the cache, forwarding to
+         * `RemoteDocumentCache.getEntry()`.
+         *
+         * @param transaction - The transaction in which to perform any persistence
+         *     operations.
+         * @param documentKeys - The keys of the entries to look up.
+         * @returns A map of cached documents, indexed by key. If an entry cannot be
+         *     found, the corresponding key will be mapped to an invalid document.
+         */    getEntries(t, e) {
+            return this.getAllFromCache(t, e);
+        }
+        /**
+         * Applies buffered changes to the underlying RemoteDocumentCache, using
+         * the provided transaction.
+         */    apply(t) {
+            return this.assertNotApplied(), this.changesApplied = !0, this.applyChanges(t);
+        }
+        /** Helper to assert this.changes is not null  */    assertNotApplied() {}
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A readonly view of the local state of all documents we're tracking (i.e. we
+     * have a cached version in remoteDocumentCache or local mutations for the
+     * document). The view is computed by applying the mutations in the
+     * MutationQueue to the RemoteDocumentCache.
+     */ class ur {
+        constructor(t, e, n) {
+            this.Je = t, this.An = e, this.Jt = n;
+        }
+        /**
+         * Get the local view of the document identified by `key`.
+         *
+         * @returns Local view of the document or null if we don't have any cached
+         * state for it.
+         */    Rn(t, e) {
+            return this.An.getAllMutationBatchesAffectingDocumentKey(t, e).next((n => this.bn(t, e, n)));
+        }
+        /** Internal version of `getDocument` that allows reusing batches. */    bn(t, e, n) {
+            return this.Je.getEntry(t, e).next((t => {
+                for (const e of n) e.applyToLocalView(t);
+                return t;
+            }));
+        }
+        // Returns the view of the given `docs` as they would appear after applying
+        // all mutations in the given `batches`.
+        Pn(t, e) {
+            t.forEach(((t, n) => {
+                for (const t of e) t.applyToLocalView(n);
+            }));
+        }
+        /**
+         * Gets the local view of the documents identified by `keys`.
+         *
+         * If we don't have cached state for a document in `keys`, a NoDocument will
+         * be stored for that key in the resulting set.
+         */    vn(t, e) {
+            return this.Je.getEntries(t, e).next((e => this.Vn(t, e).next((() => e))));
+        }
+        /**
+         * Applies the local view the given `baseDocs` without retrieving documents
+         * from the local store.
+         */    Vn(t, e) {
+            return this.An.getAllMutationBatchesAffectingDocumentKeys(t, e).next((t => this.Pn(e, t)));
+        }
+        /**
+         * Performs a query against the local view of all documents.
+         *
+         * @param transaction - The persistence transaction.
+         * @param query - The query to match documents against.
+         * @param sinceReadTime - If not set to SnapshotVersion.min(), return only
+         *     documents that have been read since this snapshot version (exclusive).
+         */    getDocumentsMatchingQuery(t, e, n) {
+            /**
+     * Returns whether the query matches a single document by path (rather than a
+     * collection).
+     */
+            return function(t) {
+                return Dt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
+            }(e) ? this.Sn(t, e.path) : Ae(e) ? this.Dn(t, e, n) : this.Cn(t, e, n);
+        }
+        Sn(t, e) {
+            // Just do a simple document lookup.
+            return this.Rn(t, new Dt(e)).next((t => {
+                let e = Pn();
+                return t.isFoundDocument() && (e = e.insert(t.key, t)), e;
+            }));
+        }
+        Dn(t, e, n) {
+            const s = e.collectionGroup;
+            let i = Pn();
+            return this.Jt.getCollectionParents(t, s).next((r => zs.forEach(r, (r => {
+                const o = function(t, e) {
+                    return new me(e, 
+                    /*collectionGroup=*/ null, t.explicitOrderBy.slice(), t.filters.slice(), t.limit, t.limitType, t.startAt, t.endAt);
+                }
+                /**
+     * Returns true if this query does not specify any query constraints that
+     * could remove results.
+     */ (e, r.child(s));
+                return this.Cn(t, o, n).next((t => {
+                    t.forEach(((t, e) => {
+                        i = i.insert(t, e);
+                    }));
+                }));
+            })).next((() => i))));
+        }
+        Cn(t, e, n) {
+            // Query the remote documents and overlay mutations.
+            let s, i;
+            return this.Je.getDocumentsMatchingQuery(t, e, n).next((n => (s = n, this.An.getAllMutationBatchesAffectingQuery(t, e)))).next((e => (i = e, 
+            this.Nn(t, i, s).next((t => {
+                s = t;
+                for (const t of i) for (const e of t.mutations) {
+                    const n = e.key;
+                    let i = s.get(n);
+                    null == i && (
+                    // Create invalid document to apply mutations on top of
+                    i = Gt.newInvalidDocument(n), s = s.insert(n, i)), en(e, i, t.localWriteTime), i.isFoundDocument() || (s = s.remove(n));
+                }
+            }))))).next((() => (
+            // Finally, filter out any documents that don't actually match
+            // the query.
+            s.forEach(((t, n) => {
+                De(e, n) || (s = s.remove(t));
+            })), s)));
+        }
+        Nn(t, e, n) {
+            let s = Dn();
+            for (const t of e) for (const e of t.mutations) e instanceof cn && null === n.get(e.key) && (s = s.add(e.key));
+            let i = n;
+            return this.Je.getEntries(t, s).next((t => (t.forEach(((t, e) => {
+                e.isFoundDocument() && (i = i.insert(t, e));
+            })), i)));
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A set of changes to what documents are currently in view and out of view for
+     * a given query. These changes are sent to the LocalStore by the View (via
+     * the SyncEngine) and are used to pin / unpin documents as appropriate.
+     */ class hr {
+        constructor(t, e, n, s) {
+            this.targetId = t, this.fromCache = e, this.kn = n, this.xn = s;
+        }
+        static $n(t, e) {
+            let n = Dn(), s = Dn();
+            for (const t of e.docChanges) switch (t.type) {
+              case 0 /* Added */ :
+                n = n.add(t.doc.key);
+                break;
+
+              case 1 /* Removed */ :
+                s = s.add(t.doc.key);
+     // do nothing
+                    }
+            return new hr(t, e.fromCache, n, s);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -983,8 +7385,89 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Ga{On(t){this.Mn=t}getDocumentsMatchingQuery(t,e,n,s){return function(t){return 0===t.filters.length&&null===t.limit&&null==t.startAt&&null==t.endAt&&(0===t.explicitOrderBy.length||1===t.explicitOrderBy.length&&t.explicitOrderBy[0].field.isKeyField())}(e)||n.isEqual(or.min())?this.Fn(t,e):this.Mn.vn(t,s).next((i=>{const r=this.Ln(e,i);return(ao(e)||ho(e))&&this.Bn(e.limitType,r,s,n)?this.Fn(t,e):(Vi()<=st.DEBUG&&Fi("QueryEngine","Re-using previous result from %s to execute query: %s",n.toString(),po(e)),this.Mn.getDocumentsMatchingQuery(t,e,n).next((t=>(r.forEach((e=>{t=t.insert(e.key,e)})),t))))}))}Ln(t,e){let n=new Go(mo(t));return e.forEach(((e,s)=>{go(t,s)&&(n=n.add(s))})),n}Bn(t,e,n,s){if(n.size!==e.size)return!0;const i="F"===t?e.last():e.first();return!!i&&(i.hasPendingWrites||i.version.compareTo(s)>0)}Fn(t,e){return Vi()<=st.DEBUG&&Fi("QueryEngine","Using full collection scan to execute query:",po(e)),this.Mn.getDocumentsMatchingQuery(t,e,or.min())}}
-/**
+     */
+    /**
+     * A query engine that takes advantage of the target document mapping in the
+     * QueryCache. Query execution is optimized by only reading the documents that
+     * previously matched a query plus any documents that were edited after the
+     * query was last listened to.
+     *
+     * There are some cases when this optimization is not guaranteed to produce
+     * the same results as full collection scans. In these cases, query
+     * processing falls back to full scans. These cases are:
+     *
+     * - Limit queries where a document that matched the query previously no longer
+     *   matches the query.
+     *
+     * - Limit queries where a document edit may cause the document to sort below
+     *   another document that is in the local cache.
+     *
+     * - Queries that have never been CURRENT or free of limbo documents.
+     */ class lr {
+        /** Sets the document view to query against. */
+        On(t) {
+            this.Mn = t;
+        }
+        /** Returns all local documents matching the specified query. */    getDocumentsMatchingQuery(t, e, n, s) {
+            // Queries that match all documents don't benefit from using
+            // key-based lookups. It is more efficient to scan all documents in a
+            // collection, rather than to perform individual lookups.
+            return function(t) {
+                return 0 === t.filters.length && null === t.limit && null == t.startAt && null == t.endAt && (0 === t.explicitOrderBy.length || 1 === t.explicitOrderBy.length && t.explicitOrderBy[0].field.isKeyField());
+            }(e) || n.isEqual(ut.min()) ? this.Fn(t, e) : this.Mn.vn(t, s).next((i => {
+                const r = this.Ln(e, i);
+                return (pe(e) || Te(e)) && this.Bn(e.limitType, r, s, n) ? this.Fn(t, e) : (x() <= LogLevel.DEBUG && O("QueryEngine", "Re-using previous result from %s to execute query: %s", n.toString(), Se(e)), 
+                this.Mn.getDocumentsMatchingQuery(t, e, n).next((t => (
+                // We merge `previousResults` into `updateResults`, since
+                // `updateResults` is already a DocumentMap. If a document is
+                // contained in both lists, then its contents are the same.
+                r.forEach((e => {
+                    t = t.insert(e.key, e);
+                })), t))));
+            }));
+            // Queries that have never seen a snapshot without limbo free documents
+            // should also be run as a full collection scan.
+            }
+        /** Applies the query filter and sorting to the provided documents.  */    Ln(t, e) {
+            // Sort the documents and re-apply the query filter since previously
+            // matching documents do not necessarily still match the query.
+            let n = new En(Ce(t));
+            return e.forEach(((e, s) => {
+                De(t, s) && (n = n.add(s));
+            })), n;
+        }
+        /**
+         * Determines if a limit query needs to be refilled from cache, making it
+         * ineligible for index-free execution.
+         *
+         * @param sortedPreviousResults - The documents that matched the query when it
+         * was last synchronized, sorted by the query's comparator.
+         * @param remoteKeys - The document keys that matched the query at the last
+         * snapshot.
+         * @param limboFreeSnapshotVersion - The version of the snapshot when the
+         * query was last synchronized.
+         */    Bn(t, e, n, s) {
+            // The query needs to be refilled if a previously matching document no
+            // longer matches.
+            if (n.size !== e.size) return !0;
+            // Limit queries are not eligible for index-free query execution if there is
+            // a potential that an older document from cache now sorts before a document
+            // that was previously part of the limit. This, however, can only happen if
+            // the document at the edge of the limit goes out of limit.
+            // If a document that is not the limit boundary sorts differently,
+            // the boundary of the limit itself did not change and documents from cache
+            // will continue to be "rejected" by this boundary. Therefore, we can ignore
+            // any modifications that don't affect the last document.
+                    const i = "F" /* First */ === t ? e.last() : e.first();
+            return !!i && (i.hasPendingWrites || i.version.compareTo(s) > 0);
+        }
+        Fn(t, e) {
+            return x() <= LogLevel.DEBUG && O("QueryEngine", "Using full collection scan to execute query:", Se(e)), 
+            this.Mn.getDocumentsMatchingQuery(t, e, ut.min());
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -999,8 +7482,362 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Wa{constructor(t,e,n,s){this.persistence=t,this.Un=e,this.k=s,this.qn=new Ho(sr),this.Kn=new Ha((t=>qr(t)),Br),this.jn=or.min(),this.An=t.getMutationQueue(n),this.Qn=t.getRemoteDocumentCache(),this.He=t.getTargetCache(),this.Wn=new za(this.Qn,this.An,this.persistence.getIndexManager()),this.Ye=t.getBundleCache(),this.Un.On(this.Wn)}collectGarbage(t){return this.persistence.runTransaction("Collect garbage","readwrite-primary",(e=>t.collect(e,this.qn)))}}async function Ya(t,e){const n=Hi(t);let s=n.An,i=n.Wn;const r=await n.persistence.runTransaction("Handle user change","readonly",(t=>{let r;return n.An.getAllMutationBatches(t).next((o=>(r=o,s=n.persistence.getMutationQueue(e),i=new za(n.Qn,s,n.persistence.getIndexManager()),s.getAllMutationBatches(t)))).next((e=>{const n=[],s=[];let o=ta();for(const t of r){n.push(t.batchId);for(const e of t.mutations)o=o.add(e.key)}for(const t of e){s.push(t.batchId);for(const e of t.mutations)o=o.add(e.key)}return i.vn(t,o).next((t=>({Gn:t,removedBatchIds:n,addedBatchIds:s})))}))}));return n.An=s,n.Wn=i,n.Un.On(n.Wn),r}function Qa(t){const e=Hi(t);return e.persistence.runTransaction("Get last remote snapshot version","readonly",(t=>e.He.getLastRemoteSnapshotVersion(t)))}function Xa(t,e){const n=Hi(t),s=e.snapshotVersion;let i=n.qn;return n.persistence.runTransaction("Apply remote event","readwrite-primary",(t=>{const r=n.Qn.newChangeBuffer({trackRemovals:!0});i=n.qn;const o=[];e.targetChanges.forEach(((r,a)=>{const h=i.get(a);if(!h)return;o.push(n.He.removeMatchingKeys(t,r.removedDocuments,a).next((()=>n.He.addMatchingKeys(t,r.addedDocuments,a))));let c=h.withSequenceNumber(t.currentSequenceNumber);e.targetMismatches.has(a)?c=c.withResumeToken(fr.EMPTY_BYTE_STRING,or.min()).withLastLimboFreeSnapshotVersion(or.min()):r.resumeToken.approximateByteSize()>0&&(c=c.withResumeToken(r.resumeToken,s)),i=i.insert(a,c),function(t,e,n){return 0===t.resumeToken.approximateByteSize()||(e.snapshotVersion.toMicroseconds()-t.snapshotVersion.toMicroseconds()>=3e8||n.addedDocuments.size+n.modifiedDocuments.size+n.removedDocuments.size>0)}(h,c,r)&&o.push(n.He.updateTargetData(t,c))}));let a=Qo();if(e.documentUpdates.forEach(((s,i)=>{e.resolvedLimboDocuments.has(s)&&o.push(n.persistence.referenceDelegate.updateLimboDocument(t,s))})),o.push(function(t,e,n,s,i){let r=ta();return n.forEach((t=>r=r.add(t))),e.getEntries(t,r).next((t=>{let r=Qo();return n.forEach(((n,o)=>{const a=t.get(n),h=(null==i?void 0:i.get(n))||s;o.isNoDocument()&&o.version.isEqual(or.min())?(e.removeEntry(n,h),r=r.insert(n,o)):!a.isValidDocument()||o.version.compareTo(a.version)>0||0===o.version.compareTo(a.version)&&a.hasPendingWrites?(e.addEntry(o,h),r=r.insert(n,o)):Fi("LocalStore","Ignoring outdated watch update for ",n,". Current version:",a.version," Watch version:",o.version)})),r}))}(t,r,e.documentUpdates,s,void 0).next((t=>{a=t}))),!s.isEqual(or.min())){const e=n.He.getLastRemoteSnapshotVersion(t).next((e=>n.He.setTargetsMetadata(t,t.currentSequenceNumber,s)));o.push(e)}return Oa.waitFor(o).next((()=>r.apply(t))).next((()=>n.Wn.Vn(t,a))).next((()=>a))})).then((t=>(n.qn=i,t)))}async function Ja(t,e,n){const s=Hi(t),i=s.qn.get(e),r=n?"readwrite":"readwrite-primary";try{n||await s.persistence.runTransaction("Release target",r,(t=>s.persistence.referenceDelegate.removeTarget(t,i)))}catch(t){if(!Ma(t))throw t;Fi("LocalStore",`Failed to update sequence numbers for target ${e}: ${t}`)}s.qn=s.qn.remove(e),s.Kn.delete(i.target)}function Za(t,e,n){const s=Hi(t);let i=or.min(),r=ta();return s.persistence.runTransaction("Execute query","readonly",(t=>function(t,e,n){const s=Hi(t),i=s.Kn.get(n);return void 0!==i?Oa.resolve(s.qn.get(i)):s.He.getTargetData(e,n)}(s,t,uo(e)).next((e=>{if(e)return i=e.lastLimboFreeSnapshotVersion,s.He.getMatchingKeysForTargetId(t,e.targetId).next((t=>{r=t}))})).next((()=>s.Un.getDocumentsMatchingQuery(t,e,n?i:or.min(),n?r:ta()))).next((t=>({documents:t,zn:r})))))}
-/**
+     */
+    /**
+     * Implements `LocalStore` interface.
+     *
+     * Note: some field defined in this class might have public access level, but
+     * the class is not exported so they are only accessible from this module.
+     * This is useful to implement optional features (like bundles) in free
+     * functions, such that they are tree-shakeable.
+     */
+    class fr {
+        constructor(
+        /** Manages our in-memory or durable persistence. */
+        t, e, n, s) {
+            this.persistence = t, this.Un = e, this.k = s, 
+            /**
+             * Maps a targetID to data about its target.
+             *
+             * PORTING NOTE: We are using an immutable data structure on Web to make re-runs
+             * of `applyRemoteEvent()` idempotent.
+             */
+            this.qn = new yn(rt), 
+            /** Maps a target to its targetID. */
+            // TODO(wuandy): Evaluate if TargetId can be part of Target.
+            this.Kn = new zi((t => Jt(t)), Xt), 
+            /**
+             * The read time of the last entry processed by `getNewDocumentChanges()`.
+             *
+             * PORTING NOTE: This is only used for multi-tab synchronization.
+             */
+            this.jn = ut.min(), this.An = t.getMutationQueue(n), this.Qn = t.getRemoteDocumentCache(), 
+            this.He = t.getTargetCache(), this.Wn = new ur(this.Qn, this.An, this.persistence.getIndexManager()), 
+            this.Ye = t.getBundleCache(), this.Un.On(this.Wn);
+        }
+        collectGarbage(t) {
+            return this.persistence.runTransaction("Collect garbage", "readwrite-primary", (e => t.collect(e, this.qn)));
+        }
+    }
+
+    function dr(
+    /** Manages our in-memory or durable persistence. */
+    t, e, n, s) {
+        return new fr(t, e, n, s);
+    }
+
+    /**
+     * Tells the LocalStore that the currently authenticated user has changed.
+     *
+     * In response the local store switches the mutation queue to the new user and
+     * returns any resulting document changes.
+     */
+    // PORTING NOTE: Android and iOS only return the documents affected by the
+    // change.
+    async function wr(t, e) {
+        const n = K(t);
+        let s = n.An, i = n.Wn;
+        const r = await n.persistence.runTransaction("Handle user change", "readonly", (t => {
+            // Swap out the mutation queue, grabbing the pending mutation batches
+            // before and after.
+            let r;
+            return n.An.getAllMutationBatches(t).next((o => (r = o, s = n.persistence.getMutationQueue(e), 
+            // Recreate our LocalDocumentsView using the new
+            // MutationQueue.
+            i = new ur(n.Qn, s, n.persistence.getIndexManager()), s.getAllMutationBatches(t)))).next((e => {
+                const n = [], s = [];
+                // Union the old/new changed keys.
+                let o = Dn();
+                for (const t of r) {
+                    n.push(t.batchId);
+                    for (const e of t.mutations) o = o.add(e.key);
+                }
+                for (const t of e) {
+                    s.push(t.batchId);
+                    for (const e of t.mutations) o = o.add(e.key);
+                }
+                // Return the set of all (potentially) changed documents and the list
+                // of mutation batch IDs that were affected by change.
+                            return i.vn(t, o).next((t => ({
+                    Gn: t,
+                    removedBatchIds: n,
+                    addedBatchIds: s
+                })));
+            }));
+        }));
+        return n.An = s, n.Wn = i, n.Un.On(n.Wn), r;
+    }
+
+    /* Accepts locally generated Mutations and commit them to storage. */
+    /**
+     * Acknowledges the given batch.
+     *
+     * On the happy path when a batch is acknowledged, the local store will
+     *
+     *  + remove the batch from the mutation queue;
+     *  + apply the changes to the remote document cache;
+     *  + recalculate the latency compensated view implied by those changes (there
+     *    may be mutations in the queue that affect the documents but haven't been
+     *    acknowledged yet); and
+     *  + give the changed documents back the sync engine
+     *
+     * @returns The resulting (modified) documents.
+     */
+    function _r(t, e) {
+        const n = K(t);
+        return n.persistence.runTransaction("Acknowledge batch", "readwrite-primary", (t => {
+            const s = e.batch.keys(), i = n.Qn.newChangeBuffer({
+                trackRemovals: !0
+            });
+            return function(t, e, n, s) {
+                const i = n.batch, r = i.keys();
+                let o = zs.resolve();
+                return r.forEach((t => {
+                    o = o.next((() => s.getEntry(e, t))).next((e => {
+                        const r = n.docVersions.get(t);
+                        U(null !== r), e.version.compareTo(r) < 0 && (i.applyToRemoteDocument(e, n), e.isValidDocument() && 
+                        // We use the commitVersion as the readTime rather than the
+                        // document's updateTime since the updateTime is not advanced
+                        // for updates that do not modify the underlying document.
+                        s.addEntry(e, n.commitVersion));
+                    }));
+                })), o.next((() => t.An.removeMutationBatch(e, i)));
+            }
+            /** Returns the local view of the documents affected by a mutation batch. */
+            // PORTING NOTE: Multi-Tab only.
+            (n, t, e, i).next((() => i.apply(t))).next((() => n.An.performConsistencyCheck(t))).next((() => n.Wn.vn(t, s)));
+        }));
+    }
+
+    /**
+     * Removes mutations from the MutationQueue for the specified batch;
+     * LocalDocuments will be recalculated.
+     *
+     * @returns The resulting modified documents.
+     */
+    /**
+     * Returns the last consistent snapshot processed (used by the RemoteStore to
+     * determine whether to buffer incoming snapshots from the backend).
+     */
+    function mr(t) {
+        const e = K(t);
+        return e.persistence.runTransaction("Get last remote snapshot version", "readonly", (t => e.He.getLastRemoteSnapshotVersion(t)));
+    }
+
+    /**
+     * Updates the "ground-state" (remote) documents. We assume that the remote
+     * event reflects any write batches that have been acknowledged or rejected
+     * (i.e. we do not re-apply local mutations to updates from this event).
+     *
+     * LocalDocuments are re-calculated if there are remaining mutations in the
+     * queue.
+     */ function gr(t, e) {
+        const n = K(t), s = e.snapshotVersion;
+        let i = n.qn;
+        return n.persistence.runTransaction("Apply remote event", "readwrite-primary", (t => {
+            const r = n.Qn.newChangeBuffer({
+                trackRemovals: !0
+            });
+            // Reset newTargetDataByTargetMap in case this transaction gets re-run.
+                    i = n.qn;
+            const o = [];
+            e.targetChanges.forEach(((r, c) => {
+                const a = i.get(c);
+                if (!a) return;
+                // Only update the remote keys if the target is still active. This
+                // ensures that we can persist the updated target data along with
+                // the updated assignment.
+                            o.push(n.He.removeMatchingKeys(t, r.removedDocuments, c).next((() => n.He.addMatchingKeys(t, r.addedDocuments, c))));
+                let u = a.withSequenceNumber(t.currentSequenceNumber);
+                e.targetMismatches.has(c) ? u = u.withResumeToken(pt.EMPTY_BYTE_STRING, ut.min()).withLastLimboFreeSnapshotVersion(ut.min()) : r.resumeToken.approximateByteSize() > 0 && (u = u.withResumeToken(r.resumeToken, s)), 
+                i = i.insert(c, u), 
+                // Update the target data if there are target changes (or if
+                // sufficient time has passed since the last update).
+                /**
+     * Returns true if the newTargetData should be persisted during an update of
+     * an active target. TargetData should always be persisted when a target is
+     * being released and should not call this function.
+     *
+     * While the target is active, TargetData updates can be omitted when nothing
+     * about the target has changed except metadata like the resume token or
+     * snapshot version. Occasionally it's worth the extra write to prevent these
+     * values from getting too stale after a crash, but this doesn't have to be
+     * too frequent.
+     */
+                function(t, e, n) {
+                    // Always persist target data if we don't already have a resume token.
+                    if (0 === t.resumeToken.approximateByteSize()) return !0;
+                    // Don't allow resume token changes to be buffered indefinitely. This
+                    // allows us to be reasonably up-to-date after a crash and avoids needing
+                    // to loop over all active queries on shutdown. Especially in the browser
+                    // we may not get time to do anything interesting while the current tab is
+                    // closing.
+                                    if (e.snapshotVersion.toMicroseconds() - t.snapshotVersion.toMicroseconds() >= 3e8) return !0;
+                    // Otherwise if the only thing that has changed about a target is its resume
+                    // token it's not worth persisting. Note that the RemoteStore keeps an
+                    // in-memory view of the currently active targets which includes the current
+                    // resume token, so stream failure or user changes will still use an
+                    // up-to-date resume token regardless of what we do here.
+                                    return n.addedDocuments.size + n.modifiedDocuments.size + n.removedDocuments.size > 0;
+                }
+                /**
+     * Notifies local store of the changed views to locally pin documents.
+     */ (a, u, r) && o.push(n.He.updateTargetData(t, u));
+            }));
+            let c = Rn();
+            // HACK: The only reason we allow a null snapshot version is so that we
+            // can synthesize remote events when we get permission denied errors while
+            // trying to resolve the state of a locally cached document that is in
+            // limbo.
+            if (e.documentUpdates.forEach(((s, i) => {
+                e.resolvedLimboDocuments.has(s) && o.push(n.persistence.referenceDelegate.updateLimboDocument(t, s));
+            })), 
+            // Each loop iteration only affects its "own" doc, so it's safe to get all the remote
+            // documents in advance in a single call.
+            o.push(yr(t, r, e.documentUpdates, s, void 0).next((t => {
+                c = t;
+            }))), !s.isEqual(ut.min())) {
+                const e = n.He.getLastRemoteSnapshotVersion(t).next((e => n.He.setTargetsMetadata(t, t.currentSequenceNumber, s)));
+                o.push(e);
+            }
+            return zs.waitFor(o).next((() => r.apply(t))).next((() => n.Wn.Vn(t, c))).next((() => c));
+        })).then((t => (n.qn = i, t)));
+    }
+
+    /**
+     * Populates document change buffer with documents from backend or a bundle.
+     * Returns the document changes resulting from applying those documents.
+     *
+     * @param txn - Transaction to use to read existing documents from storage.
+     * @param documentBuffer - Document buffer to collect the resulted changes to be
+     *        applied to storage.
+     * @param documents - Documents to be applied.
+     * @param globalVersion - A `SnapshotVersion` representing the read time if all
+     *        documents have the same read time.
+     * @param documentVersions - A DocumentKey-to-SnapshotVersion map if documents
+     *        have their own read time.
+     *
+     * Note: this function will use `documentVersions` if it is defined;
+     * when it is not defined, resorts to `globalVersion`.
+     */ function yr(t, e, n, s, 
+    // TODO(wuandy): We could add `readTime` to MaybeDocument instead to remove
+    // this parameter.
+    i) {
+        let r = Dn();
+        return n.forEach((t => r = r.add(t))), e.getEntries(t, r).next((t => {
+            let r = Rn();
+            return n.forEach(((n, o) => {
+                const c = t.get(n), a = (null == i ? void 0 : i.get(n)) || s;
+                // Note: The order of the steps below is important, since we want
+                // to ensure that rejected limbo resolutions (which fabricate
+                // NoDocuments with SnapshotVersion.min()) never add documents to
+                // cache.
+                o.isNoDocument() && o.version.isEqual(ut.min()) ? (
+                // NoDocuments with SnapshotVersion.min() are used in manufactured
+                // events. We remove these documents from cache since we lost
+                // access.
+                e.removeEntry(n, a), r = r.insert(n, o)) : !c.isValidDocument() || o.version.compareTo(c.version) > 0 || 0 === o.version.compareTo(c.version) && c.hasPendingWrites ? (e.addEntry(o, a), 
+                r = r.insert(n, o)) : O("LocalStore", "Ignoring outdated watch update for ", n, ". Current version:", c.version, " Watch version:", o.version);
+            })), r;
+        }));
+    }
+
+    /**
+     * Gets the mutation batch after the passed in batchId in the mutation queue
+     * or null if empty.
+     * @param afterBatchId - If provided, the batch to search after.
+     * @returns The next mutation or null if there wasn't one.
+     */
+    function pr(t, e) {
+        const n = K(t);
+        return n.persistence.runTransaction("Get next mutation batch", "readonly", (t => (void 0 === e && (e = -1), 
+        n.An.getNextMutationBatchAfterBatchId(t, e))));
+    }
+
+    /**
+     * Reads the current value of a Document with a given key or null if not
+     * found - used for testing.
+     */
+    /**
+     * Assigns the given target an internal ID so that its results can be pinned so
+     * they don't get GC'd. A target must be allocated in the local store before
+     * the store can be used to manage its view.
+     *
+     * Allocating an already allocated `Target` will return the existing `TargetData`
+     * for that `Target`.
+     */
+    function Tr(t, e) {
+        const n = K(t);
+        return n.persistence.runTransaction("Allocate target", "readwrite", (t => {
+            let s;
+            return n.He.getTargetData(t, e).next((i => i ? (
+            // This target has been listened to previously, so reuse the
+            // previous targetID.
+            // TODO(mcg): freshen last accessed date?
+            s = i, zs.resolve(s)) : n.He.allocateTargetId(t).next((i => (s = new ai(e, i, 0 /* Listen */ , t.currentSequenceNumber), 
+            n.He.addTargetData(t, s).next((() => s)))))));
+        })).then((t => {
+            // If Multi-Tab is enabled, the existing target data may be newer than
+            // the in-memory data
+            const s = n.qn.get(t.targetId);
+            return (null === s || t.snapshotVersion.compareTo(s.snapshotVersion) > 0) && (n.qn = n.qn.insert(t.targetId, t), 
+            n.Kn.set(e, t.targetId)), t;
+        }));
+    }
+
+    /**
+     * Returns the TargetData as seen by the LocalStore, including updates that may
+     * have not yet been persisted to the TargetCache.
+     */
+    // Visible for testing.
+    /**
+     * Unpins all the documents associated with the given target. If
+     * `keepPersistedTargetData` is set to false and Eager GC enabled, the method
+     * directly removes the associated target data from the target cache.
+     *
+     * Releasing a non-existing `Target` is a no-op.
+     */
+    // PORTING NOTE: `keepPersistedTargetData` is multi-tab only.
+    async function Er(t, e, n) {
+        const s = K(t), i = s.qn.get(e), r = n ? "readwrite" : "readwrite-primary";
+        try {
+            n || await s.persistence.runTransaction("Release target", r, (t => s.persistence.referenceDelegate.removeTarget(t, i)));
+        } catch (t) {
+            if (!Zs(t)) throw t;
+            // All `releaseTarget` does is record the final metadata state for the
+            // target, but we've been recording this periodically during target
+            // activity. If we lose this write this could cause a very slight
+            // difference in the order of target deletion during GC, but we
+            // don't define exact LRU semantics so this is acceptable.
+            O("LocalStore", `Failed to update sequence numbers for target ${e}: ${t}`);
+        }
+        s.qn = s.qn.remove(e), s.Kn.delete(i.target);
+    }
+
+    /**
+     * Runs the specified query against the local store and returns the results,
+     * potentially taking advantage of query data from previous executions (such
+     * as the set of remote keys).
+     *
+     * @param usePreviousResults - Whether results from previous executions can
+     * be used to optimize this query execution.
+     */ function Ir(t, e, n) {
+        const s = K(t);
+        let i = ut.min(), r = Dn();
+        return s.persistence.runTransaction("Execute query", "readonly", (t => function(t, e, n) {
+            const s = K(t), i = s.Kn.get(n);
+            return void 0 !== i ? zs.resolve(s.qn.get(i)) : s.He.getTargetData(e, n);
+        }(s, t, be(e)).next((e => {
+            if (e) return i = e.lastLimboFreeSnapshotVersion, s.He.getMatchingKeysForTargetId(t, e.targetId).next((t => {
+                r = t;
+            }));
+        })).next((() => s.Un.getDocumentsMatchingQuery(t, e, n ? i : ut.min(), n ? r : Dn()))).next((t => ({
+            documents: t,
+            zn: r
+        })))));
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1015,8 +7852,37 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class th{constructor(t){this.k=t,this.Xn=new Map,this.Zn=new Map}getBundleMetadata(t,e){return Oa.resolve(this.Xn.get(e))}saveBundleMetadata(t,e){var n;return this.Xn.set(e.id,{id:(n=e).id,version:n.version,createTime:ga(n.createTime)}),Oa.resolve()}getNamedQuery(t,e){return Oa.resolve(this.Zn.get(e))}saveNamedQuery(t,e){return this.Zn.set(e.name,function(t){return{name:t.name,query:Ua(t.bundledQuery),readTime:ga(t.readTime)}}(e)),Oa.resolve()}}
-/**
+     */ class Vr {
+        constructor(t) {
+            this.k = t, this.Xn = new Map, this.Zn = new Map;
+        }
+        getBundleMetadata(t, e) {
+            return zs.resolve(this.Xn.get(e));
+        }
+        saveBundleMetadata(t, e) {
+            /** Decodes a BundleMetadata proto into a BundleMetadata object. */
+            var n;
+            return this.Xn.set(e.id, {
+                id: (n = e).id,
+                version: n.version,
+                createTime: zn(n.createTime)
+            }), zs.resolve();
+        }
+        getNamedQuery(t, e) {
+            return zs.resolve(this.Zn.get(e));
+        }
+        saveNamedQuery(t, e) {
+            return this.Zn.set(e.name, function(t) {
+                return {
+                    name: t.name,
+                    query: pi(t.bundledQuery),
+                    readTime: zn(t.readTime)
+                };
+            }(e)), zs.resolve();
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1031,8 +7897,88 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class eh{constructor(){this.ts=new Go(nh.es),this.ns=new Go(nh.ss)}isEmpty(){return this.ts.isEmpty()}addReference(t,e){const n=new nh(t,e);this.ts=this.ts.add(n),this.ns=this.ns.add(n)}rs(t,e){t.forEach((t=>this.addReference(t,e)))}removeReference(t,e){this.os(new nh(t,e))}cs(t,e){t.forEach((t=>this.removeReference(t,e)))}us(t){const e=new Ir(new ur([])),n=new nh(e,t),s=new nh(e,t+1),i=[];return this.ns.forEachInRange([n,s],(t=>{this.os(t),i.push(t.key)})),i}hs(){this.ts.forEach((t=>this.os(t)))}os(t){this.ts=this.ts.delete(t),this.ns=this.ns.delete(t)}ls(t){const e=new Ir(new ur([])),n=new nh(e,t),s=new nh(e,t+1);let i=ta();return this.ns.forEachInRange([n,s],(t=>{i=i.add(t.key)})),i}containsKey(t){const e=new nh(t,0),n=this.ts.firstAfterOrEqual(e);return null!==n&&t.isEqual(n.key)}}class nh{constructor(t,e){this.key=t,this.fs=e}static es(t,e){return Ir.comparator(t.key,e.key)||sr(t.fs,e.fs)}static ss(t,e){return sr(t.fs,e.fs)||Ir.comparator(t.key,e.key)}}
-/**
+     */
+    /**
+     * A collection of references to a document from some kind of numbered entity
+     * (either a target ID or batch ID). As references are added to or removed from
+     * the set corresponding events are emitted to a registered garbage collector.
+     *
+     * Each reference is represented by a DocumentReference object. Each of them
+     * contains enough information to uniquely identify the reference. They are all
+     * stored primarily in a set sorted by key. A document is considered garbage if
+     * there's no references in that set (this can be efficiently checked thanks to
+     * sorting by key).
+     *
+     * ReferenceSet also keeps a secondary set that contains references sorted by
+     * IDs. This one is used to efficiently implement removal of all references by
+     * some target ID.
+     */ class Sr {
+        constructor() {
+            // A set of outstanding references to a document sorted by key.
+            this.ts = new En(Dr.es), 
+            // A set of outstanding references to a document sorted by target id.
+            this.ns = new En(Dr.ss);
+        }
+        /** Returns true if the reference set contains no references. */    isEmpty() {
+            return this.ts.isEmpty();
+        }
+        /** Adds a reference to the given document key for the given ID. */    addReference(t, e) {
+            const n = new Dr(t, e);
+            this.ts = this.ts.add(n), this.ns = this.ns.add(n);
+        }
+        /** Add references to the given document keys for the given ID. */    rs(t, e) {
+            t.forEach((t => this.addReference(t, e)));
+        }
+        /**
+         * Removes a reference to the given document key for the given
+         * ID.
+         */    removeReference(t, e) {
+            this.os(new Dr(t, e));
+        }
+        cs(t, e) {
+            t.forEach((t => this.removeReference(t, e)));
+        }
+        /**
+         * Clears all references with a given ID. Calls removeRef() for each key
+         * removed.
+         */    us(t) {
+            const e = new Dt(new wt([])), n = new Dr(e, t), s = new Dr(e, t + 1), i = [];
+            return this.ns.forEachInRange([ n, s ], (t => {
+                this.os(t), i.push(t.key);
+            })), i;
+        }
+        hs() {
+            this.ts.forEach((t => this.os(t)));
+        }
+        os(t) {
+            this.ts = this.ts.delete(t), this.ns = this.ns.delete(t);
+        }
+        ls(t) {
+            const e = new Dt(new wt([])), n = new Dr(e, t), s = new Dr(e, t + 1);
+            let i = Dn();
+            return this.ns.forEachInRange([ n, s ], (t => {
+                i = i.add(t.key);
+            })), i;
+        }
+        containsKey(t) {
+            const e = new Dr(t, 0), n = this.ts.firstAfterOrEqual(e);
+            return null !== n && t.isEqual(n.key);
+        }
+    }
+
+    class Dr {
+        constructor(t, e) {
+            this.key = t, this.fs = e;
+        }
+        /** Compare by key then by ID */    static es(t, e) {
+            return Dt.comparator(t.key, e.key) || rt(t.fs, e.fs);
+        }
+        /** Compare by ID then by key */    static ss(t, e) {
+            return rt(t.fs, e.fs) || Dt.comparator(t.key, e.key);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1047,8 +7993,155 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class sh{constructor(t,e){this.Jt=t,this.referenceDelegate=e,this.An=[],this.ds=1,this.ws=new Go(nh.es)}checkEmpty(t){return Oa.resolve(0===this.An.length)}addMutationBatch(t,e,n,s){const i=this.ds;this.ds++,this.An.length>0&&this.An[this.An.length-1];const r=new Pa(i,e,n,s);this.An.push(r);for(const e of s)this.ws=this.ws.add(new nh(e.key,i)),this.Jt.addToCollectionParentIndex(t,e.key.path.popLast());return Oa.resolve(r)}lookupMutationBatch(t,e){return Oa.resolve(this._s(e))}getNextMutationBatchAfterBatchId(t,e){const n=e+1,s=this.gs(n),i=s<0?0:s;return Oa.resolve(this.An.length>i?this.An[i]:null)}getHighestUnacknowledgedBatchId(){return Oa.resolve(0===this.An.length?-1:this.ds-1)}getAllMutationBatches(t){return Oa.resolve(this.An.slice())}getAllMutationBatchesAffectingDocumentKey(t,e){const n=new nh(e,0),s=new nh(e,Number.POSITIVE_INFINITY),i=[];return this.ws.forEachInRange([n,s],(t=>{const e=this._s(t.fs);i.push(e)})),Oa.resolve(i)}getAllMutationBatchesAffectingDocumentKeys(t,e){let n=new Go(sr);return e.forEach((t=>{const e=new nh(t,0),s=new nh(t,Number.POSITIVE_INFINITY);this.ws.forEachInRange([e,s],(t=>{n=n.add(t.fs)}))})),Oa.resolve(this.ys(n))}getAllMutationBatchesAffectingQuery(t,e){const n=e.path,s=n.length+1;let i=n;Ir.isDocumentKey(i)||(i=i.child(""));const r=new nh(new Ir(i),0);let o=new Go(sr);return this.ws.forEachWhile((t=>{const e=t.key.path;return!!n.isPrefixOf(e)&&(e.length===s&&(o=o.add(t.fs)),!0)}),r),Oa.resolve(this.ys(o))}ys(t){const e=[];return t.forEach((t=>{const n=this._s(t);null!==n&&e.push(n)})),e}removeMutationBatch(t,e){ji(0===this.ps(e.batchId,"removed")),this.An.shift();let n=this.ws;return Oa.forEach(e.mutations,(s=>{const i=new nh(s.key,e.batchId);return n=n.delete(i),this.referenceDelegate.markPotentiallyOrphaned(t,s.key)})).next((()=>{this.ws=n}))}ee(t){}containsKey(t,e){const n=new nh(e,0),s=this.ws.firstAfterOrEqual(n);return Oa.resolve(e.isEqual(s&&s.key))}performConsistencyCheck(t){return this.An.length,Oa.resolve()}ps(t,e){return this.gs(t)}gs(t){return 0===this.An.length?0:t-this.An[0].batchId}_s(t){const e=this.gs(t);return e<0||e>=this.An.length?null:this.An[e]}}
-/**
+     */ class Cr {
+        constructor(t, e) {
+            this.Jt = t, this.referenceDelegate = e, 
+            /**
+             * The set of all mutations that have been sent but not yet been applied to
+             * the backend.
+             */
+            this.An = [], 
+            /** Next value to use when assigning sequential IDs to each mutation batch. */
+            this.ds = 1, 
+            /** An ordered mapping between documents and the mutations batch IDs. */
+            this.ws = new En(Dr.es);
+        }
+        checkEmpty(t) {
+            return zs.resolve(0 === this.An.length);
+        }
+        addMutationBatch(t, e, n, s) {
+            const i = this.ds;
+            this.ds++, this.An.length > 0 && this.An[this.An.length - 1];
+            const r = new oi(i, e, n, s);
+            this.An.push(r);
+            // Track references by document key and index collection parents.
+            for (const e of s) this.ws = this.ws.add(new Dr(e.key, i)), this.Jt.addToCollectionParentIndex(t, e.key.path.popLast());
+            return zs.resolve(r);
+        }
+        lookupMutationBatch(t, e) {
+            return zs.resolve(this._s(e));
+        }
+        getNextMutationBatchAfterBatchId(t, e) {
+            const n = e + 1, s = this.gs(n), i = s < 0 ? 0 : s;
+            // The requested batchId may still be out of range so normalize it to the
+            // start of the queue.
+                    return zs.resolve(this.An.length > i ? this.An[i] : null);
+        }
+        getHighestUnacknowledgedBatchId() {
+            return zs.resolve(0 === this.An.length ? -1 : this.ds - 1);
+        }
+        getAllMutationBatches(t) {
+            return zs.resolve(this.An.slice());
+        }
+        getAllMutationBatchesAffectingDocumentKey(t, e) {
+            const n = new Dr(e, 0), s = new Dr(e, Number.POSITIVE_INFINITY), i = [];
+            return this.ws.forEachInRange([ n, s ], (t => {
+                const e = this._s(t.fs);
+                i.push(e);
+            })), zs.resolve(i);
+        }
+        getAllMutationBatchesAffectingDocumentKeys(t, e) {
+            let n = new En(rt);
+            return e.forEach((t => {
+                const e = new Dr(t, 0), s = new Dr(t, Number.POSITIVE_INFINITY);
+                this.ws.forEachInRange([ e, s ], (t => {
+                    n = n.add(t.fs);
+                }));
+            })), zs.resolve(this.ys(n));
+        }
+        getAllMutationBatchesAffectingQuery(t, e) {
+            // Use the query path as a prefix for testing if a document matches the
+            // query.
+            const n = e.path, s = n.length + 1;
+            // Construct a document reference for actually scanning the index. Unlike
+            // the prefix the document key in this reference must have an even number of
+            // segments. The empty segment can be used a suffix of the query path
+            // because it precedes all other segments in an ordered traversal.
+            let i = n;
+            Dt.isDocumentKey(i) || (i = i.child(""));
+            const r = new Dr(new Dt(i), 0);
+            // Find unique batchIDs referenced by all documents potentially matching the
+            // query.
+                    let o = new En(rt);
+            return this.ws.forEachWhile((t => {
+                const e = t.key.path;
+                return !!n.isPrefixOf(e) && (
+                // Rows with document keys more than one segment longer than the query
+                // path can't be matches. For example, a query on 'rooms' can't match
+                // the document /rooms/abc/messages/xyx.
+                // TODO(mcg): we'll need a different scanner when we implement
+                // ancestor queries.
+                e.length === s && (o = o.add(t.fs)), !0);
+            }), r), zs.resolve(this.ys(o));
+        }
+        ys(t) {
+            // Construct an array of matching batches, sorted by batchID to ensure that
+            // multiple mutations affecting the same document key are applied in order.
+            const e = [];
+            return t.forEach((t => {
+                const n = this._s(t);
+                null !== n && e.push(n);
+            })), e;
+        }
+        removeMutationBatch(t, e) {
+            U(0 === this.ps(e.batchId, "removed")), this.An.shift();
+            let n = this.ws;
+            return zs.forEach(e.mutations, (s => {
+                const i = new Dr(s.key, e.batchId);
+                return n = n.delete(i), this.referenceDelegate.markPotentiallyOrphaned(t, s.key);
+            })).next((() => {
+                this.ws = n;
+            }));
+        }
+        ee(t) {
+            // No-op since the memory mutation queue does not maintain a separate cache.
+        }
+        containsKey(t, e) {
+            const n = new Dr(e, 0), s = this.ws.firstAfterOrEqual(n);
+            return zs.resolve(e.isEqual(s && s.key));
+        }
+        performConsistencyCheck(t) {
+            return this.An.length, zs.resolve();
+        }
+        /**
+         * Finds the index of the given batchId in the mutation queue and asserts that
+         * the resulting index is within the bounds of the queue.
+         *
+         * @param batchId - The batchId to search for
+         * @param action - A description of what the caller is doing, phrased in passive
+         * form (e.g. "acknowledged" in a routine that acknowledges batches).
+         */    ps(t, e) {
+            return this.gs(t);
+        }
+        /**
+         * Finds the index of the given batchId in the mutation queue. This operation
+         * is O(1).
+         *
+         * @returns The computed index of the batch with the given batchId, based on
+         * the state of the queue. Note this index can be negative if the requested
+         * batchId has already been remvoed from the queue or past the end of the
+         * queue if the batchId is larger than the last added batch.
+         */    gs(t) {
+            if (0 === this.An.length) 
+            // As an index this is past the end of the queue
+            return 0;
+            // Examine the front of the queue to figure out the difference between the
+            // batchId and indexes in the array. Note that since the queue is ordered
+            // by batchId, if the first batch has a larger batchId then the requested
+            // batchId doesn't exist in the queue.
+                    return t - this.An[0].batchId;
+        }
+        /**
+         * A version of lookupMutationBatch that doesn't return a promise, this makes
+         * other functions that uses this code easier to read and more efficent.
+         */    _s(t) {
+            const e = this.gs(t);
+            if (e < 0 || e >= this.An.length) return null;
+            return this.An[e];
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1063,8 +8156,112 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class ih{constructor(t,e){this.Jt=t,this.Ts=e,this.docs=new Ho(Ir.comparator),this.size=0}addEntry(t,e,n){const s=e.key,i=this.docs.get(s),r=i?i.size:0,o=this.Ts(e);return this.docs=this.docs.insert(s,{document:e.mutableCopy(),size:o,readTime:n}),this.size+=o-r,this.Jt.addToCollectionParentIndex(t,s.path.popLast())}removeEntry(t){const e=this.docs.get(t);e&&(this.docs=this.docs.remove(t),this.size-=e.size)}getEntry(t,e){const n=this.docs.get(e);return Oa.resolve(n?n.document.mutableCopy():Fr.newInvalidDocument(e))}getEntries(t,e){let n=Qo();return e.forEach((t=>{const e=this.docs.get(t);n=n.insert(t,e?e.document.mutableCopy():Fr.newInvalidDocument(t))})),Oa.resolve(n)}getDocumentsMatchingQuery(t,e,n){let s=Qo();const i=new Ir(e.path.child("")),r=this.docs.getIteratorFrom(i);for(;r.hasNext();){const{key:t,value:{document:i,readTime:o}}=r.getNext();if(!e.path.isPrefixOf(t.path))break;o.compareTo(n)<=0||go(e,i)&&(s=s.insert(i.key,i.mutableCopy()))}return Oa.resolve(s)}Es(t,e){return Oa.forEach(this.docs,(t=>e(t)))}newChangeBuffer(t){return new rh(this)}getSize(t){return Oa.resolve(this.size)}}class rh extends class{constructor(){this.changes=new Ha((t=>t.toString()),((t,e)=>t.isEqual(e))),this.changesApplied=!1}getReadTime(t){const e=this.changes.get(t);return e?e.readTime:or.min()}addEntry(t,e){this.assertNotApplied(),this.changes.set(t.key,{document:t,readTime:e})}removeEntry(t,e=null){this.assertNotApplied(),this.changes.set(t,{document:Fr.newInvalidDocument(t),readTime:e})}getEntry(t,e){this.assertNotApplied();const n=this.changes.get(e);return void 0!==n?Oa.resolve(n.document):this.getFromCache(t,e)}getEntries(t,e){return this.getAllFromCache(t,e)}apply(t){return this.assertNotApplied(),this.changesApplied=!0,this.applyChanges(t)}assertNotApplied(){}}{constructor(t){super(),this.De=t}applyChanges(t){const e=[];return this.changes.forEach(((n,s)=>{s.document.isValidDocument()?e.push(this.De.addEntry(t,s.document,this.getReadTime(n))):this.De.removeEntry(n)})),Oa.waitFor(e)}getFromCache(t,e){return this.De.getEntry(t,e)}getAllFromCache(t,e){return this.De.getEntries(t,e)}}
-/**
+     */
+    /**
+     * The memory-only RemoteDocumentCache for IndexedDb. To construct, invoke
+     * `newMemoryRemoteDocumentCache()`.
+     */
+    class Nr {
+        /**
+         * @param sizer - Used to assess the size of a document. For eager GC, this is
+         * expected to just return 0 to avoid unnecessarily doing the work of
+         * calculating the size.
+         */
+        constructor(t, e) {
+            this.Jt = t, this.Ts = e, 
+            /** Underlying cache of documents and their read times. */
+            this.docs = new yn(Dt.comparator), 
+            /** Size of all cached documents. */
+            this.size = 0;
+        }
+        /**
+         * Adds the supplied entry to the cache and updates the cache size as appropriate.
+         *
+         * All calls of `addEntry`  are required to go through the RemoteDocumentChangeBuffer
+         * returned by `newChangeBuffer()`.
+         */    addEntry(t, e, n) {
+            const s = e.key, i = this.docs.get(s), r = i ? i.size : 0, o = this.Ts(e);
+            return this.docs = this.docs.insert(s, {
+                document: e.mutableCopy(),
+                size: o,
+                readTime: n
+            }), this.size += o - r, this.Jt.addToCollectionParentIndex(t, s.path.popLast());
+        }
+        /**
+         * Removes the specified entry from the cache and updates the cache size as appropriate.
+         *
+         * All calls of `removeEntry` are required to go through the RemoteDocumentChangeBuffer
+         * returned by `newChangeBuffer()`.
+         */    removeEntry(t) {
+            const e = this.docs.get(t);
+            e && (this.docs = this.docs.remove(t), this.size -= e.size);
+        }
+        getEntry(t, e) {
+            const n = this.docs.get(e);
+            return zs.resolve(n ? n.document.mutableCopy() : Gt.newInvalidDocument(e));
+        }
+        getEntries(t, e) {
+            let n = Rn();
+            return e.forEach((t => {
+                const e = this.docs.get(t);
+                n = n.insert(t, e ? e.document.mutableCopy() : Gt.newInvalidDocument(t));
+            })), zs.resolve(n);
+        }
+        getDocumentsMatchingQuery(t, e, n) {
+            let s = Rn();
+            // Documents are ordered by key, so we can use a prefix scan to narrow down
+            // the documents we need to match the query against.
+                    const i = new Dt(e.path.child("")), r = this.docs.getIteratorFrom(i);
+            for (;r.hasNext(); ) {
+                const {key: t, value: {document: i, readTime: o}} = r.getNext();
+                if (!e.path.isPrefixOf(t.path)) break;
+                o.compareTo(n) <= 0 || De(e, i) && (s = s.insert(i.key, i.mutableCopy()));
+            }
+            return zs.resolve(s);
+        }
+        Es(t, e) {
+            return zs.forEach(this.docs, (t => e(t)));
+        }
+        newChangeBuffer(t) {
+            // `trackRemovals` is ignores since the MemoryRemoteDocumentCache keeps
+            // a separate changelog and does not need special handling for removals.
+            return new kr(this);
+        }
+        getSize(t) {
+            return zs.resolve(this.size);
+        }
+    }
+
+    /**
+     * Creates a new memory-only RemoteDocumentCache.
+     *
+     * @param indexManager - A class that manages collection group indices.
+     * @param sizer - Used to assess the size of a document. For eager GC, this is
+     * expected to just return 0 to avoid unnecessarily doing the work of
+     * calculating the size.
+     */
+    /**
+     * Handles the details of adding and updating documents in the MemoryRemoteDocumentCache.
+     */
+    class kr extends Hi {
+        constructor(t) {
+            super(), this.De = t;
+        }
+        applyChanges(t) {
+            const e = [];
+            return this.changes.forEach(((n, s) => {
+                s.document.isValidDocument() ? e.push(this.De.addEntry(t, s.document, this.getReadTime(n))) : this.De.removeEntry(n);
+            })), zs.waitFor(e);
+        }
+        getFromCache(t, e) {
+            return this.De.getEntry(t, e);
+        }
+        getAllFromCache(t, e) {
+            return this.De.getEntries(t, e);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1079,8 +8276,94 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class oh{constructor(t){this.persistence=t,this.Is=new Ha((t=>qr(t)),Br),this.lastRemoteSnapshotVersion=or.min(),this.highestTargetId=0,this.As=0,this.Rs=new eh,this.targetCount=0,this.bs=Ba.ie()}forEachTarget(t,e){return this.Is.forEach(((t,n)=>e(n))),Oa.resolve()}getLastRemoteSnapshotVersion(t){return Oa.resolve(this.lastRemoteSnapshotVersion)}getHighestSequenceNumber(t){return Oa.resolve(this.As)}allocateTargetId(t){return this.highestTargetId=this.bs.next(),Oa.resolve(this.highestTargetId)}setTargetsMetadata(t,e,n){return n&&(this.lastRemoteSnapshotVersion=n),e>this.As&&(this.As=e),Oa.resolve()}ae(t){this.Is.set(t.target,t);const e=t.targetId;e>this.highestTargetId&&(this.bs=new Ba(e),this.highestTargetId=e),t.sequenceNumber>this.As&&(this.As=t.sequenceNumber)}addTargetData(t,e){return this.ae(e),this.targetCount+=1,Oa.resolve()}updateTargetData(t,e){return this.ae(e),Oa.resolve()}removeTargetData(t,e){return this.Is.delete(e.target),this.Rs.us(e.targetId),this.targetCount-=1,Oa.resolve()}removeTargets(t,e,n){let s=0;const i=[];return this.Is.forEach(((r,o)=>{o.sequenceNumber<=e&&null===n.get(o.targetId)&&(this.Is.delete(r),i.push(this.removeMatchingKeysForTargetId(t,o.targetId)),s++)})),Oa.waitFor(i).next((()=>s))}getTargetCount(t){return Oa.resolve(this.targetCount)}getTargetData(t,e){const n=this.Is.get(e)||null;return Oa.resolve(n)}addMatchingKeys(t,e,n){return this.Rs.rs(e,n),Oa.resolve()}removeMatchingKeys(t,e,n){this.Rs.cs(e,n);const s=this.persistence.referenceDelegate,i=[];return s&&e.forEach((e=>{i.push(s.markPotentiallyOrphaned(t,e))})),Oa.waitFor(i)}removeMatchingKeysForTargetId(t,e){return this.Rs.us(e),Oa.resolve()}getMatchingKeysForTargetId(t,e){const n=this.Rs.ls(e);return Oa.resolve(n)}containsKey(t,e){return Oa.resolve(this.Rs.containsKey(e))}}
-/**
+     */ class xr {
+        constructor(t) {
+            this.persistence = t, 
+            /**
+             * Maps a target to the data about that target
+             */
+            this.Is = new zi((t => Jt(t)), Xt), 
+            /** The last received snapshot version. */
+            this.lastRemoteSnapshotVersion = ut.min(), 
+            /** The highest numbered target ID encountered. */
+            this.highestTargetId = 0, 
+            /** The highest sequence number encountered. */
+            this.As = 0, 
+            /**
+             * A ordered bidirectional mapping between documents and the remote target
+             * IDs.
+             */
+            this.Rs = new Sr, this.targetCount = 0, this.bs = Oi.ie();
+        }
+        forEachTarget(t, e) {
+            return this.Is.forEach(((t, n) => e(n))), zs.resolve();
+        }
+        getLastRemoteSnapshotVersion(t) {
+            return zs.resolve(this.lastRemoteSnapshotVersion);
+        }
+        getHighestSequenceNumber(t) {
+            return zs.resolve(this.As);
+        }
+        allocateTargetId(t) {
+            return this.highestTargetId = this.bs.next(), zs.resolve(this.highestTargetId);
+        }
+        setTargetsMetadata(t, e, n) {
+            return n && (this.lastRemoteSnapshotVersion = n), e > this.As && (this.As = e), 
+            zs.resolve();
+        }
+        ae(t) {
+            this.Is.set(t.target, t);
+            const e = t.targetId;
+            e > this.highestTargetId && (this.bs = new Oi(e), this.highestTargetId = e), t.sequenceNumber > this.As && (this.As = t.sequenceNumber);
+        }
+        addTargetData(t, e) {
+            return this.ae(e), this.targetCount += 1, zs.resolve();
+        }
+        updateTargetData(t, e) {
+            return this.ae(e), zs.resolve();
+        }
+        removeTargetData(t, e) {
+            return this.Is.delete(e.target), this.Rs.us(e.targetId), this.targetCount -= 1, 
+            zs.resolve();
+        }
+        removeTargets(t, e, n) {
+            let s = 0;
+            const i = [];
+            return this.Is.forEach(((r, o) => {
+                o.sequenceNumber <= e && null === n.get(o.targetId) && (this.Is.delete(r), i.push(this.removeMatchingKeysForTargetId(t, o.targetId)), 
+                s++);
+            })), zs.waitFor(i).next((() => s));
+        }
+        getTargetCount(t) {
+            return zs.resolve(this.targetCount);
+        }
+        getTargetData(t, e) {
+            const n = this.Is.get(e) || null;
+            return zs.resolve(n);
+        }
+        addMatchingKeys(t, e, n) {
+            return this.Rs.rs(e, n), zs.resolve();
+        }
+        removeMatchingKeys(t, e, n) {
+            this.Rs.cs(e, n);
+            const s = this.persistence.referenceDelegate, i = [];
+            return s && e.forEach((e => {
+                i.push(s.markPotentiallyOrphaned(t, e));
+            })), zs.waitFor(i);
+        }
+        removeMatchingKeysForTargetId(t, e) {
+            return this.Rs.us(e), zs.resolve();
+        }
+        getMatchingKeysForTargetId(t, e) {
+            const n = this.Rs.ls(e);
+            return zs.resolve(n);
+        }
+        containsKey(t, e) {
+            return zs.resolve(this.Rs.containsKey(e));
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1095,8 +8378,217 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class ah{constructor(t,e){this.Ps={},this.Be=new er(0),this.Ue=!1,this.Ue=!0,this.referenceDelegate=t(this),this.He=new oh(this),this.Jt=new $a,this.Je=function(t,e){return new ih(t,e)}(this.Jt,(t=>this.referenceDelegate.vs(t))),this.k=new Fa(e),this.Ye=new th(this.k)}start(){return Promise.resolve()}shutdown(){return this.Ue=!1,Promise.resolve()}get started(){return this.Ue}setDatabaseDeletedListener(){}setNetworkEnabled(){}getIndexManager(){return this.Jt}getMutationQueue(t){let e=this.Ps[t.toKey()];return e||(e=new sh(this.Jt,this.referenceDelegate),this.Ps[t.toKey()]=e),e}getTargetCache(){return this.He}getRemoteDocumentCache(){return this.Je}getBundleCache(){return this.Ye}runTransaction(t,e,n){Fi("MemoryPersistence","Starting transaction:",t);const s=new hh(this.Be.next());return this.referenceDelegate.Vs(),n(s).next((t=>this.referenceDelegate.Ss(s).next((()=>t)))).toPromise().then((t=>(s.raiseOnCommittedEvent(),t)))}Ds(t,e){return Oa.or(Object.values(this.Ps).map((n=>()=>n.containsKey(t,e))))}}class hh extends class{constructor(){this.onCommittedListeners=[]}addOnCommittedListener(t){this.onCommittedListeners.push(t)}raiseOnCommittedEvent(){this.onCommittedListeners.forEach((t=>t()))}}{constructor(t){super(),this.currentSequenceNumber=t}}class ch{constructor(t){this.persistence=t,this.Cs=new eh,this.Ns=null}static ks(t){return new ch(t)}get xs(){if(this.Ns)return this.Ns;throw Bi()}addReference(t,e,n){return this.Cs.addReference(n,e),this.xs.delete(n.toString()),Oa.resolve()}removeReference(t,e,n){return this.Cs.removeReference(n,e),this.xs.add(n.toString()),Oa.resolve()}markPotentiallyOrphaned(t,e){return this.xs.add(e.toString()),Oa.resolve()}removeTarget(t,e){this.Cs.us(e.targetId).forEach((t=>this.xs.add(t.toString())));const n=this.persistence.getTargetCache();return n.getMatchingKeysForTargetId(t,e.targetId).next((t=>{t.forEach((t=>this.xs.add(t.toString())))})).next((()=>n.removeTargetData(t,e)))}Vs(){this.Ns=new Set}Ss(t){const e=this.persistence.getRemoteDocumentCache().newChangeBuffer();return Oa.forEach(this.xs,(n=>{const s=Ir.fromPath(n);return this.$s(t,s).next((t=>{t||e.removeEntry(s)}))})).next((()=>(this.Ns=null,e.apply(t))))}updateLimboDocument(t,e){return this.$s(t,e).next((t=>{t?this.xs.delete(e.toString()):this.xs.add(e.toString())}))}vs(t){return 0}$s(t,e){return Oa.or([()=>Oa.resolve(this.Cs.containsKey(e)),()=>this.persistence.getTargetCache().containsKey(t,e),()=>this.persistence.Ds(t,e)])}}class uh{constructor(){this.activeTargetIds=na()}Fs(t){this.activeTargetIds=this.activeTargetIds.add(t)}Ls(t){this.activeTargetIds=this.activeTargetIds.delete(t)}Ms(){const t={activeTargetIds:this.activeTargetIds.toArray(),updateTimeMs:Date.now()};return JSON.stringify(t)}}class lh{constructor(){this.pi=new uh,this.Ti={},this.onlineStateHandler=null,this.sequenceNumberHandler=null}addPendingMutation(t){}updateMutationState(t,e,n){}addLocalQueryTarget(t){return this.pi.Fs(t),this.Ti[t]||"not-current"}updateQueryState(t,e,n){this.Ti[t]=e}removeLocalQueryTarget(t){this.pi.Ls(t)}isLocalQueryTarget(t){return this.pi.activeTargetIds.has(t)}clearQueryState(t){delete this.Ti[t]}getAllActiveQueryTargets(){return this.pi.activeTargetIds}isActiveQueryTarget(t){return this.pi.activeTargetIds.has(t)}start(){return this.pi=new uh,Promise.resolve()}handleUserChange(t,e,n){}setOnlineState(t){}shutdown(){}writeSequenceNumber(t){}notifyBundleLoaded(){}}
-/**
+     */
+    /**
+     * A memory-backed instance of Persistence. Data is stored only in RAM and
+     * not persisted across sessions.
+     */
+    class $r {
+        /**
+         * The constructor accepts a factory for creating a reference delegate. This
+         * allows both the delegate and this instance to have strong references to
+         * each other without having nullable fields that would then need to be
+         * checked or asserted on every access.
+         */
+        constructor(t, e) {
+            this.Ps = {}, this.Be = new nt(0), this.Ue = !1, this.Ue = !0, this.referenceDelegate = t(this), 
+            this.He = new xr(this);
+            this.Jt = new Ai, this.Je = function(t, e) {
+                return new Nr(t, e);
+            }(this.Jt, (t => this.referenceDelegate.vs(t))), this.k = new ui(e), this.Ye = new Vr(this.k);
+        }
+        start() {
+            return Promise.resolve();
+        }
+        shutdown() {
+            // No durable state to ensure is closed on shutdown.
+            return this.Ue = !1, Promise.resolve();
+        }
+        get started() {
+            return this.Ue;
+        }
+        setDatabaseDeletedListener() {
+            // No op.
+        }
+        setNetworkEnabled() {
+            // No op.
+        }
+        getIndexManager() {
+            return this.Jt;
+        }
+        getMutationQueue(t) {
+            let e = this.Ps[t.toKey()];
+            return e || (e = new Cr(this.Jt, this.referenceDelegate), this.Ps[t.toKey()] = e), 
+            e;
+        }
+        getTargetCache() {
+            return this.He;
+        }
+        getRemoteDocumentCache() {
+            return this.Je;
+        }
+        getBundleCache() {
+            return this.Ye;
+        }
+        runTransaction(t, e, n) {
+            O("MemoryPersistence", "Starting transaction:", t);
+            const s = new Or(this.Be.next());
+            return this.referenceDelegate.Vs(), n(s).next((t => this.referenceDelegate.Ss(s).next((() => t)))).toPromise().then((t => (s.raiseOnCommittedEvent(), 
+            t)));
+        }
+        Ds(t, e) {
+            return zs.or(Object.values(this.Ps).map((n => () => n.containsKey(t, e))));
+        }
+    }
+
+    /**
+     * Memory persistence is not actually transactional, but future implementations
+     * may have transaction-scoped state.
+     */ class Or extends Gs {
+        constructor(t) {
+            super(), this.currentSequenceNumber = t;
+        }
+    }
+
+    class Mr {
+        constructor(t) {
+            this.persistence = t, 
+            /** Tracks all documents that are active in Query views. */
+            this.Cs = new Sr, 
+            /** The list of documents that are potentially GCed after each transaction. */
+            this.Ns = null;
+        }
+        static ks(t) {
+            return new Mr(t);
+        }
+        get xs() {
+            if (this.Ns) return this.Ns;
+            throw B();
+        }
+        addReference(t, e, n) {
+            return this.Cs.addReference(n, e), this.xs.delete(n.toString()), zs.resolve();
+        }
+        removeReference(t, e, n) {
+            return this.Cs.removeReference(n, e), this.xs.add(n.toString()), zs.resolve();
+        }
+        markPotentiallyOrphaned(t, e) {
+            return this.xs.add(e.toString()), zs.resolve();
+        }
+        removeTarget(t, e) {
+            this.Cs.us(e.targetId).forEach((t => this.xs.add(t.toString())));
+            const n = this.persistence.getTargetCache();
+            return n.getMatchingKeysForTargetId(t, e.targetId).next((t => {
+                t.forEach((t => this.xs.add(t.toString())));
+            })).next((() => n.removeTargetData(t, e)));
+        }
+        Vs() {
+            this.Ns = new Set;
+        }
+        Ss(t) {
+            // Remove newly orphaned documents.
+            const e = this.persistence.getRemoteDocumentCache().newChangeBuffer();
+            return zs.forEach(this.xs, (n => {
+                const s = Dt.fromPath(n);
+                return this.$s(t, s).next((t => {
+                    t || e.removeEntry(s);
+                }));
+            })).next((() => (this.Ns = null, e.apply(t))));
+        }
+        updateLimboDocument(t, e) {
+            return this.$s(t, e).next((t => {
+                t ? this.xs.delete(e.toString()) : this.xs.add(e.toString());
+            }));
+        }
+        vs(t) {
+            // For eager GC, we don't care about the document size, there are no size thresholds.
+            return 0;
+        }
+        $s(t, e) {
+            return zs.or([ () => zs.resolve(this.Cs.containsKey(e)), () => this.persistence.getTargetCache().containsKey(t, e), () => this.persistence.Ds(t, e) ]);
+        }
+    }
+
+    /**
+     * Metadata state of the local client. Unlike `RemoteClientState`, this class is
+     * mutable and keeps track of all pending mutations, which allows us to
+     * update the range of pending mutation batch IDs as new mutations are added or
+     * removed.
+     *
+     * The data in `LocalClientState` is not read from WebStorage and instead
+     * updated via its instance methods. The updated state can be serialized via
+     * `toWebStorageJSON()`.
+     */
+    // Visible for testing.
+    class Qr {
+        constructor() {
+            this.activeTargetIds = Nn();
+        }
+        Fs(t) {
+            this.activeTargetIds = this.activeTargetIds.add(t);
+        }
+        Ls(t) {
+            this.activeTargetIds = this.activeTargetIds.delete(t);
+        }
+        /**
+         * Converts this entry into a JSON-encoded format we can use for WebStorage.
+         * Does not encode `clientId` as it is part of the key in WebStorage.
+         */    Ms() {
+            const t = {
+                activeTargetIds: this.activeTargetIds.toArray(),
+                updateTimeMs: Date.now()
+            };
+            return JSON.stringify(t);
+        }
+    }
+
+    class Gr {
+        constructor() {
+            this.pi = new Qr, this.Ti = {}, this.onlineStateHandler = null, this.sequenceNumberHandler = null;
+        }
+        addPendingMutation(t) {
+            // No op.
+        }
+        updateMutationState(t, e, n) {
+            // No op.
+        }
+        addLocalQueryTarget(t) {
+            return this.pi.Fs(t), this.Ti[t] || "not-current";
+        }
+        updateQueryState(t, e, n) {
+            this.Ti[t] = e;
+        }
+        removeLocalQueryTarget(t) {
+            this.pi.Ls(t);
+        }
+        isLocalQueryTarget(t) {
+            return this.pi.activeTargetIds.has(t);
+        }
+        clearQueryState(t) {
+            delete this.Ti[t];
+        }
+        getAllActiveQueryTargets() {
+            return this.pi.activeTargetIds;
+        }
+        isActiveQueryTarget(t) {
+            return this.pi.activeTargetIds.has(t);
+        }
+        start() {
+            return this.pi = new Qr, Promise.resolve();
+        }
+        handleUserChange(t, e, n) {
+            // No op.
+        }
+        setOnlineState(t) {
+            // No op.
+        }
+        shutdown() {}
+        writeSequenceNumber(t) {}
+        notifyBundleLoaded() {
+            // No op.
+        }
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -1111,8 +8603,16 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class dh{Ei(t){}shutdown(){}}
-/**
+     */ class zr {
+        Ei(t) {
+            // No-op.
+        }
+        shutdown() {
+            // No-op.
+        }
+    }
+
+    /**
      * @license
      * Copyright 2019 Google LLC
      *
@@ -1127,8 +8627,42 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class fh{constructor(){this.Ii=()=>this.Ai(),this.Ri=()=>this.bi(),this.Pi=[],this.vi()}Ei(t){this.Pi.push(t)}shutdown(){window.removeEventListener("online",this.Ii),window.removeEventListener("offline",this.Ri)}vi(){window.addEventListener("online",this.Ii),window.addEventListener("offline",this.Ri)}Ai(){Fi("ConnectivityMonitor","Network connectivity changed: AVAILABLE");for(const t of this.Pi)t(0)}bi(){Fi("ConnectivityMonitor","Network connectivity changed: UNAVAILABLE");for(const t of this.Pi)t(1)}static Pt(){return"undefined"!=typeof window&&void 0!==window.addEventListener&&void 0!==window.removeEventListener}}
-/**
+     */
+    // References to `window` are guarded by BrowserConnectivityMonitor.isAvailable()
+    /* eslint-disable no-restricted-globals */
+    /**
+     * Browser implementation of ConnectivityMonitor.
+     */
+    class Hr {
+        constructor() {
+            this.Ii = () => this.Ai(), this.Ri = () => this.bi(), this.Pi = [], this.vi();
+        }
+        Ei(t) {
+            this.Pi.push(t);
+        }
+        shutdown() {
+            window.removeEventListener("online", this.Ii), window.removeEventListener("offline", this.Ri);
+        }
+        vi() {
+            window.addEventListener("online", this.Ii), window.addEventListener("offline", this.Ri);
+        }
+        Ai() {
+            O("ConnectivityMonitor", "Network connectivity changed: AVAILABLE");
+            for (const t of this.Pi) t(0 /* AVAILABLE */);
+        }
+        bi() {
+            O("ConnectivityMonitor", "Network connectivity changed: UNAVAILABLE");
+            for (const t of this.Pi) t(1 /* UNAVAILABLE */);
+        }
+        // TODO(chenbrian): Consider passing in window either into this component or
+        // here for testing via FakeWindow.
+        /** Checks that all used attributes of window are available. */
+        static Pt() {
+            return "undefined" != typeof window && void 0 !== window.addEventListener && void 0 !== window.removeEventListener;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1143,8 +8677,18 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */const ph={BatchGetDocuments:"batchGet",Commit:"commit",RunQuery:"runQuery"};
-/**
+     */ const Jr = {
+        BatchGetDocuments: "batchGet",
+        Commit: "commit",
+        RunQuery: "runQuery"
+    };
+
+    /**
+     * Maps RPC names to the corresponding REST endpoint name.
+     *
+     * We use array notation to avoid mangling.
+     */
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1159,8 +8703,43 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class gh{constructor(t){this.Vi=t.Vi,this.Si=t.Si}Di(t){this.Ci=t}Ni(t){this.ki=t}onMessage(t){this.xi=t}close(){this.Si()}send(t){this.Vi(t)}$i(){this.Ci()}Oi(t){this.ki(t)}Mi(t){this.xi(t)}}
-/**
+     */
+    /**
+     * Provides a simple helper class that implements the Stream interface to
+     * bridge to other implementations that are streams but do not implement the
+     * interface. The stream callbacks are invoked with the callOn... methods.
+     */
+    class Yr {
+        constructor(t) {
+            this.Vi = t.Vi, this.Si = t.Si;
+        }
+        Di(t) {
+            this.Ci = t;
+        }
+        Ni(t) {
+            this.ki = t;
+        }
+        onMessage(t) {
+            this.xi = t;
+        }
+        close() {
+            this.Si();
+        }
+        send(t) {
+            this.Vi(t);
+        }
+        $i() {
+            this.Ci();
+        }
+        Oi(t) {
+            this.ki(t);
+        }
+        Mi(t) {
+            this.xi(t);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1175,8 +8754,232 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class mh extends class{constructor(t){this.databaseInfo=t,this.databaseId=t.databaseId;const e=t.ssl?"https":"http";this.Fi=e+"://"+t.host,this.Li="projects/"+this.databaseId.projectId+"/databases/"+this.databaseId.database+"/documents"}Bi(t,e,n,s,i){const r=this.Ui(t,e);Fi("RestConnection","Sending: ",r,n);const o={};return this.qi(o,s,i),this.Ki(t,r,o,n).then((t=>(Fi("RestConnection","Received: ",t),t)),(e=>{throw $i("RestConnection",`${t} failed with error: `,e,"url: ",r,"request:",n),e}))}ji(t,e,n,s,i){return this.Bi(t,e,n,s,i)}qi(t,e,n){t["X-Goog-Api-Client"]="gl-js/ fire/"+Mi,t["Content-Type"]="text/plain",this.databaseInfo.appId&&(t["X-Firebase-GMPID"]=this.databaseInfo.appId),e&&e.headers.forEach(((e,n)=>t[n]=e)),n&&n.headers.forEach(((e,n)=>t[n]=e))}Ui(t,e){const n=ph[t];return`${this.Fi}/v1/${e}:${n}`}}{constructor(t){super(t),this.forceLongPolling=t.forceLongPolling,this.autoDetectLongPolling=t.autoDetectLongPolling,this.useFetchStreams=t.useFetchStreams}Ki(t,e,n,s){return new Promise(((i,r)=>{const o=new Li;o.listenOnce(Ai.COMPLETE,(()=>{try{switch(o.getLastErrorCode()){case Ci.NO_ERROR:const e=o.getResponseJson();Fi("Connection","XHR received:",JSON.stringify(e)),i(e);break;case Ci.TIMEOUT:Fi("Connection",'RPC "'+t+'" timed out'),r(new Ki(zi.DEADLINE_EXCEEDED,"Request time out"));break;case Ci.HTTP_ERROR:const n=o.getStatus();if(Fi("Connection",'RPC "'+t+'" failed with status:',n,"response text:",o.getResponseText()),n>0){const t=o.getResponseJson().error;if(t&&t.status&&t.message){const e=function(t){const e=t.toLowerCase().replace(/_/g,"-");return Object.values(zi).indexOf(e)>=0?e:zi.UNKNOWN}(t.status);r(new Ki(e,t.message))}else r(new Ki(zi.UNKNOWN,"Server responded with status "+o.getStatus()))}else r(new Ki(zi.UNAVAILABLE,"Connection failed."));break;default:Bi()}}finally{Fi("Connection",'RPC "'+t+'" completed.')}}));const a=JSON.stringify(s);o.send(e,"POST",a,n,15)}))}Qi(t,e,n){const s=[this.Fi,"/","google.firestore.v1.Firestore","/",t,"/channel"],i=new Ei,r=pn(),o={httpSessionIdParam:"gsessionid",initMessageHeaders:{},messageUrlParams:{database:`projects/${this.databaseId.projectId}/databases/${this.databaseId.database}`},sendRawJson:!0,supportsCrossDomainXhr:!0,internalChannelParams:{forwardChannelRequestTimeoutMs:6e5},forceLongPolling:this.forceLongPolling,detectBufferingProxy:this.autoDetectLongPolling};this.useFetchStreams&&(o.xmlHttpFactory=new ki({})),this.qi(o.initMessageHeaders,e,n),"undefined"!=typeof window&&(window.cordova||window.phonegap||window.PhoneGap)&&/ios|iphone|ipod|ipad|android|blackberry|iemobile/i.test(G())||"object"==typeof navigator&&"ReactNative"===navigator.product||G().indexOf("Electron/")>=0||function(){const t=G();return t.indexOf("MSIE ")>=0||t.indexOf("Trident/")>=0}()||G().indexOf("MSAppHost/")>=0||function(){const t="object"==typeof chrome?chrome.runtime:"object"==typeof browser?browser.runtime:void 0;return"object"==typeof t&&void 0!==t.id}()||(o.httpHeadersOverwriteParam="$httpHeaders");const a=s.join("");Fi("Connection","Creating WebChannel: "+a,o);const h=i.createWebChannel(a,o);let c=!1,u=!1;const l=new gh({Vi:t=>{u?Fi("Connection","Not sending because WebChannel is closed:",t):(c||(Fi("Connection","Opening WebChannel transport."),h.open(),c=!0),Fi("Connection","WebChannel sending:",t),h.send(t))},Si:()=>h.close()}),d=(t,e,n)=>{t.listen(e,(t=>{try{n(t)}catch(t){setTimeout((()=>{throw t}),0)}}))};return d(h,Ri.EventType.OPEN,(()=>{u||Fi("Connection","WebChannel transport opened.")})),d(h,Ri.EventType.CLOSE,(()=>{u||(u=!0,Fi("Connection","WebChannel transport closed"),l.Oi())})),d(h,Ri.EventType.ERROR,(t=>{u||(u=!0,$i("Connection","WebChannel transport errored:",t),l.Oi(new Ki(zi.UNAVAILABLE,"The operation could not be completed")))})),d(h,Ri.EventType.MESSAGE,(t=>{var e;if(!u){const n=t.data[0];ji(!!n);const s=n,i=s.error||(null===(e=s[0])||void 0===e?void 0:e.error);if(i){Fi("Connection","WebChannel received error:",i);const t=i.status;let e=function(t){const e=qo[t];if(void 0!==e)return jo(e)}(t),n=i.message;void 0===e&&(e=zi.INTERNAL,n="Unknown error status: "+t+" with message "+i.message),u=!0,l.Oi(new Ki(e,n)),h.close()}else Fi("Connection","WebChannel received:",n),l.Mi(n)}})),d(r,_i.STAT_EVENT,(t=>{t.stat===Ni?Fi("Connection","Detected buffering proxy"):t.stat===Di&&Fi("Connection","Detected no buffering proxy")})),setTimeout((()=>{l.$i()}),0),l}}function yh(){return"undefined"!=typeof document?document:null}
-/**
+     */ class Xr extends 
+    /**
+     * Base class for all Rest-based connections to the backend (WebChannel and
+     * HTTP).
+     */
+    class {
+        constructor(t) {
+            this.databaseInfo = t, this.databaseId = t.databaseId;
+            const e = t.ssl ? "https" : "http";
+            this.Fi = e + "://" + t.host, this.Li = "projects/" + this.databaseId.projectId + "/databases/" + this.databaseId.database + "/documents";
+        }
+        Bi(t, e, n, s, i) {
+            const r = this.Ui(t, e);
+            O("RestConnection", "Sending: ", r, n);
+            const o = {};
+            return this.qi(o, s, i), this.Ki(t, r, o, n).then((t => (O("RestConnection", "Received: ", t), 
+            t)), (e => {
+                throw F("RestConnection", `${t} failed with error: `, e, "url: ", r, "request:", n), 
+                e;
+            }));
+        }
+        ji(t, e, n, s, i) {
+            // The REST API automatically aggregates all of the streamed results, so we
+            // can just use the normal invoke() method.
+            return this.Bi(t, e, n, s, i);
+        }
+        /**
+         * Modifies the headers for a request, adding any authorization token if
+         * present and any additional headers for the request.
+         */    qi(t, e, n) {
+            t["X-Goog-Api-Client"] = "gl-js/ fire/" + N, 
+            // Content-Type: text/plain will avoid preflight requests which might
+            // mess with CORS and redirects by proxies. If we add custom headers
+            // we will need to change this code to potentially use the $httpOverwrite
+            // parameter supported by ESF to avoid triggering preflight requests.
+            t["Content-Type"] = "text/plain", this.databaseInfo.appId && (t["X-Firebase-GMPID"] = this.databaseInfo.appId), 
+            e && e.headers.forEach(((e, n) => t[n] = e)), n && n.headers.forEach(((e, n) => t[n] = e));
+        }
+        Ui(t, e) {
+            const n = Jr[t];
+            return `${this.Fi}/v1/${e}:${n}`;
+        }
+    } {
+        constructor(t) {
+            super(t), this.forceLongPolling = t.forceLongPolling, this.autoDetectLongPolling = t.autoDetectLongPolling, 
+            this.useFetchStreams = t.useFetchStreams;
+        }
+        Ki(t, e, n, s) {
+            return new Promise(((i, r) => {
+                const o = new XhrIo;
+                o.listenOnce(EventType.COMPLETE, (() => {
+                    try {
+                        switch (o.getLastErrorCode()) {
+                          case ErrorCode.NO_ERROR:
+                            const e = o.getResponseJson();
+                            O("Connection", "XHR received:", JSON.stringify(e)), i(e);
+                            break;
+
+                          case ErrorCode.TIMEOUT:
+                            O("Connection", 'RPC "' + t + '" timed out'), r(new Q(j.DEADLINE_EXCEEDED, "Request time out"));
+                            break;
+
+                          case ErrorCode.HTTP_ERROR:
+                            const n = o.getStatus();
+                            if (O("Connection", 'RPC "' + t + '" failed with status:', n, "response text:", o.getResponseText()), 
+                            n > 0) {
+                                const t = o.getResponseJson().error;
+                                if (t && t.status && t.message) {
+                                    const e = function(t) {
+                                        const e = t.toLowerCase().replace(/_/g, "-");
+                                        return Object.values(j).indexOf(e) >= 0 ? e : j.UNKNOWN;
+                                    }(t.status);
+                                    r(new Q(e, t.message));
+                                } else r(new Q(j.UNKNOWN, "Server responded with status " + o.getStatus()));
+                            } else 
+                            // If we received an HTTP_ERROR but there's no status code,
+                            // it's most probably a connection issue
+                            r(new Q(j.UNAVAILABLE, "Connection failed."));
+                            break;
+
+                          default:
+                            B();
+                        }
+                    } finally {
+                        O("Connection", 'RPC "' + t + '" completed.');
+                    }
+                }));
+                const c = JSON.stringify(s);
+                o.send(e, "POST", c, n, 15);
+            }));
+        }
+        Qi(t, e, n) {
+            const s = [ this.Fi, "/", "google.firestore.v1.Firestore", "/", t, "/channel" ], i = createWebChannelTransport(), r = getStatEventTarget(), o = {
+                // Required for backend stickiness, routing behavior is based on this
+                // parameter.
+                httpSessionIdParam: "gsessionid",
+                initMessageHeaders: {},
+                messageUrlParams: {
+                    // This param is used to improve routing and project isolation by the
+                    // backend and must be included in every request.
+                    database: `projects/${this.databaseId.projectId}/databases/${this.databaseId.database}`
+                },
+                sendRawJson: !0,
+                supportsCrossDomainXhr: !0,
+                internalChannelParams: {
+                    // Override the default timeout (randomized between 10-20 seconds) since
+                    // a large write batch on a slow internet connection may take a long
+                    // time to send to the backend. Rather than have WebChannel impose a
+                    // tight timeout which could lead to infinite timeouts and retries, we
+                    // set it very large (5-10 minutes) and rely on the browser's builtin
+                    // timeouts to kick in if the request isn't working.
+                    forwardChannelRequestTimeoutMs: 6e5
+                },
+                forceLongPolling: this.forceLongPolling,
+                detectBufferingProxy: this.autoDetectLongPolling
+            };
+            this.useFetchStreams && (o.xmlHttpFactory = new FetchXmlHttpFactory({})), this.qi(o.initMessageHeaders, e, n), 
+            // Sending the custom headers we just added to request.initMessageHeaders
+            // (Authorization, etc.) will trigger the browser to make a CORS preflight
+            // request because the XHR will no longer meet the criteria for a "simple"
+            // CORS request:
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#Simple_requests
+            // Therefore to avoid the CORS preflight request (an extra network
+            // roundtrip), we use the httpHeadersOverwriteParam option to specify that
+            // the headers should instead be encoded into a special "$httpHeaders" query
+            // parameter, which is recognized by the webchannel backend. This is
+            // formally defined here:
+            // https://github.com/google/closure-library/blob/b0e1815b13fb92a46d7c9b3c30de5d6a396a3245/closure/goog/net/rpc/httpcors.js#L32
+            // TODO(b/145624756): There is a backend bug where $httpHeaders isn't respected if the request
+            // doesn't have an Origin header. So we have to exclude a few browser environments that are
+            // known to (sometimes) not include an Origin. See
+            // https://github.com/firebase/firebase-js-sdk/issues/1491.
+            isMobileCordova() || isReactNative() || isElectron() || isIE() || isUWP() || isBrowserExtension() || (o.httpHeadersOverwriteParam = "$httpHeaders");
+            const c = s.join("");
+            O("Connection", "Creating WebChannel: " + c, o);
+            const a = i.createWebChannel(c, o);
+            // WebChannel supports sending the first message with the handshake - saving
+            // a network round trip. However, it will have to call send in the same
+            // JS event loop as open. In order to enforce this, we delay actually
+            // opening the WebChannel until send is called. Whether we have called
+            // open is tracked with this variable.
+                    let u = !1, h = !1;
+            // A flag to determine whether the stream was closed (by us or through an
+            // error/close event) to avoid delivering multiple close events or sending
+            // on a closed stream
+                    const l = new Yr({
+                Vi: t => {
+                    h ? O("Connection", "Not sending because WebChannel is closed:", t) : (u || (O("Connection", "Opening WebChannel transport."), 
+                    a.open(), u = !0), O("Connection", "WebChannel sending:", t), a.send(t));
+                },
+                Si: () => a.close()
+            }), y = (t, e, n) => {
+                // TODO(dimond): closure typing seems broken because WebChannel does
+                // not implement goog.events.Listenable
+                t.listen(e, (t => {
+                    try {
+                        n(t);
+                    } catch (t) {
+                        setTimeout((() => {
+                            throw t;
+                        }), 0);
+                    }
+                }));
+            };
+            // Closure events are guarded and exceptions are swallowed, so catch any
+            // exception and rethrow using a setTimeout so they become visible again.
+            // Note that eventually this function could go away if we are confident
+            // enough the code is exception free.
+                    return y(a, WebChannel.EventType.OPEN, (() => {
+                h || O("Connection", "WebChannel transport opened.");
+            })), y(a, WebChannel.EventType.CLOSE, (() => {
+                h || (h = !0, O("Connection", "WebChannel transport closed"), l.Oi());
+            })), y(a, WebChannel.EventType.ERROR, (t => {
+                h || (h = !0, F("Connection", "WebChannel transport errored:", t), l.Oi(new Q(j.UNAVAILABLE, "The operation could not be completed")));
+            })), y(a, WebChannel.EventType.MESSAGE, (t => {
+                var e;
+                if (!h) {
+                    const n = t.data[0];
+                    U(!!n);
+                    // TODO(b/35143891): There is a bug in One Platform that caused errors
+                    // (and only errors) to be wrapped in an extra array. To be forward
+                    // compatible with the bug we need to check either condition. The latter
+                    // can be removed once the fix has been rolled out.
+                    // Use any because msgData.error is not typed.
+                    const s = n, i = s.error || (null === (e = s[0]) || void 0 === e ? void 0 : e.error);
+                    if (i) {
+                        O("Connection", "WebChannel received error:", i);
+                        // error.status will be a string like 'OK' or 'NOT_FOUND'.
+                        const t = i.status;
+                        let e = 
+                        /**
+     * Maps an error Code from a GRPC status identifier like 'NOT_FOUND'.
+     *
+     * @returns The Code equivalent to the given status string or undefined if
+     *     there is no match.
+     */
+                        function(t) {
+                            // lookup by string
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const e = wn[t];
+                            if (void 0 !== e) return gn(e);
+                        }(t), n = i.message;
+                        void 0 === e && (e = j.INTERNAL, n = "Unknown error status: " + t + " with message " + i.message), 
+                        // Mark closed so no further events are propagated
+                        h = !0, l.Oi(new Q(e, n)), a.close();
+                    } else O("Connection", "WebChannel received:", n), l.Mi(n);
+                }
+            })), y(r, Event.STAT_EVENT, (t => {
+                t.stat === Stat.PROXY ? O("Connection", "Detected buffering proxy") : t.stat === Stat.NOPROXY && O("Connection", "Detected no buffering proxy");
+            })), setTimeout((() => {
+                // Technically we could/should wait for the WebChannel opened event,
+                // but because we want to send the first message with the WebChannel
+                // handshake we pretend the channel opened here (asynchronously), and
+                // then delay the actual open until the first message is sent.
+                l.$i();
+            }), 0), l;
+        }
+    }
+
+    /** The Platform's 'document' implementation or null if not available. */ function to() {
+        // `document` is not always available, e.g. in ReactNative and WebWorkers.
+        // eslint-disable-next-line no-restricted-globals
+        return "undefined" != typeof document ? document : null;
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1191,8 +8994,97 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function vh(t){return new pa(t,!0)}class wh{constructor(t,e,n=1e3,s=1.5,i=6e4){this.Me=t,this.timerId=e,this.Wi=n,this.Gi=s,this.zi=i,this.Hi=0,this.Ji=null,this.Yi=Date.now(),this.reset()}reset(){this.Hi=0}Xi(){this.Hi=this.zi}Zi(t){this.cancel();const e=Math.floor(this.Hi+this.tr()),n=Math.max(0,Date.now()-this.Yi),s=Math.max(0,e-n);s>0&&Fi("ExponentialBackoff",`Backing off for ${s} ms (base delay: ${this.Hi} ms, delay with jitter: ${e} ms, last attempt: ${n} ms ago)`),this.Ji=this.Me.enqueueAfterDelay(this.timerId,s,(()=>(this.Yi=Date.now(),t()))),this.Hi*=this.Gi,this.Hi<this.Wi&&(this.Hi=this.Wi),this.Hi>this.zi&&(this.Hi=this.zi)}er(){null!==this.Ji&&(this.Ji.skipDelay(),this.Ji=null)}cancel(){null!==this.Ji&&(this.Ji.cancel(),this.Ji=null)}tr(){return(Math.random()-.5)*this.Hi}}
-/**
+     */ function eo(t) {
+        return new jn(t, /* useProto3Json= */ !0);
+    }
+
+    /**
+     * An instance of the Platform's 'TextEncoder' implementation.
+     */
+    /**
+     * A helper for running delayed tasks following an exponential backoff curve
+     * between attempts.
+     *
+     * Each delay is made up of a "base" delay which follows the exponential
+     * backoff curve, and a +/- 50% "jitter" that is calculated and added to the
+     * base delay. This prevents clients from accidentally synchronizing their
+     * delays causing spikes of load to the backend.
+     */
+    class no {
+        constructor(
+        /**
+         * The AsyncQueue to run backoff operations on.
+         */
+        t, 
+        /**
+         * The ID to use when scheduling backoff operations on the AsyncQueue.
+         */
+        e, 
+        /**
+         * The initial delay (used as the base delay on the first retry attempt).
+         * Note that jitter will still be applied, so the actual delay could be as
+         * little as 0.5*initialDelayMs.
+         */
+        n = 1e3
+        /**
+         * The multiplier to use to determine the extended base delay after each
+         * attempt.
+         */ , s = 1.5
+        /**
+         * The maximum base delay after which no further backoff is performed.
+         * Note that jitter will still be applied, so the actual delay could be as
+         * much as 1.5*maxDelayMs.
+         */ , i = 6e4) {
+            this.Me = t, this.timerId = e, this.Wi = n, this.Gi = s, this.zi = i, this.Hi = 0, 
+            this.Ji = null, 
+            /** The last backoff attempt, as epoch milliseconds. */
+            this.Yi = Date.now(), this.reset();
+        }
+        /**
+         * Resets the backoff delay.
+         *
+         * The very next backoffAndWait() will have no delay. If it is called again
+         * (i.e. due to an error), initialDelayMs (plus jitter) will be used, and
+         * subsequent ones will increase according to the backoffFactor.
+         */    reset() {
+            this.Hi = 0;
+        }
+        /**
+         * Resets the backoff delay to the maximum delay (e.g. for use after a
+         * RESOURCE_EXHAUSTED error).
+         */    Xi() {
+            this.Hi = this.zi;
+        }
+        /**
+         * Returns a promise that resolves after currentDelayMs, and increases the
+         * delay for any subsequent attempts. If there was a pending backoff operation
+         * already, it will be canceled.
+         */    Zi(t) {
+            // Cancel any pending backoff operation.
+            this.cancel();
+            // First schedule using the current base (which may be 0 and should be
+            // honored as such).
+            const e = Math.floor(this.Hi + this.tr()), n = Math.max(0, Date.now() - this.Yi), s = Math.max(0, e - n);
+            // Guard against lastAttemptTime being in the future due to a clock change.
+                    s > 0 && O("ExponentialBackoff", `Backing off for ${s} ms (base delay: ${this.Hi} ms, delay with jitter: ${e} ms, last attempt: ${n} ms ago)`), 
+            this.Ji = this.Me.enqueueAfterDelay(this.timerId, s, (() => (this.Yi = Date.now(), 
+            t()))), 
+            // Apply backoff factor to determine next delay and ensure it is within
+            // bounds.
+            this.Hi *= this.Gi, this.Hi < this.Wi && (this.Hi = this.Wi), this.Hi > this.zi && (this.Hi = this.zi);
+        }
+        er() {
+            null !== this.Ji && (this.Ji.skipDelay(), this.Ji = null);
+        }
+        cancel() {
+            null !== this.Ji && (this.Ji.cancel(), this.Ji = null);
+        }
+        /** Returns a random value in the range [-currentBaseMs/2, currentBaseMs/2] */    tr() {
+            return (Math.random() - .5) * this.Hi;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1207,8 +9099,351 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Eh extends class{constructor(t,e,n,s,i,r,o,a){this.Me=t,this.nr=n,this.sr=s,this.ir=i,this.authCredentialsProvider=r,this.appCheckCredentialsProvider=o,this.listener=a,this.state=0,this.rr=0,this.cr=null,this.ar=null,this.stream=null,this.ur=new wh(t,e)}hr(){return 1===this.state||5===this.state||this.lr()}lr(){return 2===this.state||3===this.state}start(){4!==this.state?this.auth():this.dr()}async stop(){this.hr()&&await this.close(0)}wr(){this.state=0,this.ur.reset()}_r(){this.lr()&&null===this.cr&&(this.cr=this.Me.enqueueAfterDelay(this.nr,6e4,(()=>this.mr())))}gr(t){this.yr(),this.stream.send(t)}async mr(){if(this.lr())return this.close(0)}yr(){this.cr&&(this.cr.cancel(),this.cr=null)}pr(){this.ar&&(this.ar.cancel(),this.ar=null)}async close(t,e){this.yr(),this.pr(),this.ur.cancel(),this.rr++,4!==t?this.ur.reset():e&&e.code===zi.RESOURCE_EXHAUSTED?(Ui(e.toString()),Ui("Using maximum backoff delay to prevent overloading the backend."),this.ur.Xi()):e&&e.code===zi.UNAUTHENTICATED&&3!==this.state&&(this.authCredentialsProvider.invalidateToken(),this.appCheckCredentialsProvider.invalidateToken()),null!==this.stream&&(this.Tr(),this.stream.close(),this.stream=null),this.state=t,await this.listener.Ni(e)}Tr(){}auth(){this.state=1;const t=this.Er(this.rr),e=this.rr;Promise.all([this.authCredentialsProvider.getToken(),this.appCheckCredentialsProvider.getToken()]).then((([t,n])=>{this.rr===e&&this.Ir(t,n)}),(e=>{t((()=>{const t=new Ki(zi.UNKNOWN,"Fetching auth token failed: "+e.message);return this.Ar(t)}))}))}Ir(t,e){const n=this.Er(this.rr);this.stream=this.Rr(t,e),this.stream.Di((()=>{n((()=>(this.state=2,this.ar=this.Me.enqueueAfterDelay(this.sr,1e4,(()=>(this.lr()&&(this.state=3),Promise.resolve()))),this.listener.Di())))})),this.stream.Ni((t=>{n((()=>this.Ar(t)))})),this.stream.onMessage((t=>{n((()=>this.onMessage(t)))}))}dr(){this.state=5,this.ur.Zi((async()=>{this.state=0,this.start()}))}Ar(t){return Fi("PersistentStream",`close with error: ${t}`),this.stream=null,this.close(4,t)}Er(t){return e=>{this.Me.enqueueAndForget((()=>this.rr===t?e():(Fi("PersistentStream","stream callback skipped by getCloseGuardedDispatcher."),Promise.resolve())))}}}{constructor(t,e,n,s,i,r){super(t,"listen_stream_connection_backoff","listen_stream_idle","health_check_timeout",e,n,s,r),this.k=i}Rr(t,e){return this.ir.Qi("Listen",t,e)}onMessage(t){this.ur.reset();const e=function(t,e){let n;if("targetChange"in e){e.targetChange;const s=function(t){return"NO_CHANGE"===t?0:"ADD"===t?1:"REMOVE"===t?2:"CURRENT"===t?3:"RESET"===t?4:Bi()}(e.targetChange.targetChangeType||"NO_CHANGE"),i=e.targetChange.targetIds||[],r=function(t,e){return t.C?(ji(void 0===e||"string"==typeof e),fr.fromBase64String(e||"")):(ji(void 0===e||e instanceof Uint8Array),fr.fromUint8Array(e||new Uint8Array))}(t,e.targetChange.resumeToken),o=e.targetChange.cause,a=o&&function(t){const e=void 0===t.code?zi.UNKNOWN:jo(t.code);return new Ki(e,t.message||"")}(o);n=new aa(s,i,r,a||null)}else if("documentChange"in e){e.documentChange;const s=e.documentChange;s.document,s.document.name,s.document.updateTime;const i=ya(t,s.document.name),r=ga(s.document.updateTime),o=new Vr({mapValue:{fields:s.document.fields}}),a=Fr.newFoundDocument(i,r,o),h=s.targetIds||[],c=s.removedTargetIds||[];n=new ra(h,c,a.key,a)}else if("documentDelete"in e){e.documentDelete;const s=e.documentDelete;s.document;const i=ya(t,s.document),r=s.readTime?ga(s.readTime):or.min(),o=Fr.newNoDocument(i,r),a=s.removedTargetIds||[];n=new ra([],a,o.key,o)}else if("documentRemove"in e){e.documentRemove;const s=e.documentRemove;s.document;const i=ya(t,s.document),r=s.removedTargetIds||[];n=new ra([],r,i,null)}else{if(!("filter"in e))return Bi();{e.filter;const t=e.filter;t.targetId;const s=t.count||0,i=new $o(s),r=t.targetId;n=new oa(r,i)}}return n}(this.k,t),n=function(t){if(!("targetChange"in t))return or.min();const e=t.targetChange;return e.targetIds&&e.targetIds.length?or.min():e.readTime?ga(e.readTime):or.min()}(t);return this.listener.br(e,n)}Pr(t){const e={};e.database=wa(this.k),e.addTarget=function(t,e){let n;const s=e.target;return n=jr(s)?{documents:ba(t,s)}:{query:Ta(t,s)},n.targetId=e.targetId,e.resumeToken.approximateByteSize()>0?n.resumeToken=function(t,e){return t.C?e.toBase64():e.toUint8Array()}(t,e.resumeToken):e.snapshotVersion.compareTo(or.min())>0&&(n.readTime=function(t,e){return t.C?`${new Date(1e3*e.seconds).toISOString().replace(/\.\d*/,"").replace("Z","")}.${("000000000"+e.nanoseconds).slice(-9)}Z`:{seconds:""+e.seconds,nanos:e.nanoseconds}}(t,e.snapshotVersion.toTimestamp())),n}(this.k,t);const n=function(t,e){const n=function(t,e){switch(e){case 0:return null;case 1:return"existence-filter-mismatch";case 2:return"limbo-document";default:return Bi()}}(0,e.purpose);return null==n?null:{"goog-listen-tags":n}}(this.k,t);n&&(e.labels=n),this.gr(e)}vr(t){const e={};e.database=wa(this.k),e.removeTarget=t,this.gr(e)}}
-/**
+     */
+    /**
+     * A PersistentStream is an abstract base class that represents a streaming RPC
+     * to the Firestore backend. It's built on top of the connections own support
+     * for streaming RPCs, and adds several critical features for our clients:
+     *
+     *   - Exponential backoff on failure
+     *   - Authentication via CredentialsProvider
+     *   - Dispatching all callbacks into the shared worker queue
+     *   - Closing idle streams after 60 seconds of inactivity
+     *
+     * Subclasses of PersistentStream implement serialization of models to and
+     * from the JSON representation of the protocol buffers for a specific
+     * streaming RPC.
+     *
+     * ## Starting and Stopping
+     *
+     * Streaming RPCs are stateful and need to be start()ed before messages can
+     * be sent and received. The PersistentStream will call the onOpen() function
+     * of the listener once the stream is ready to accept requests.
+     *
+     * Should a start() fail, PersistentStream will call the registered onClose()
+     * listener with a FirestoreError indicating what went wrong.
+     *
+     * A PersistentStream can be started and stopped repeatedly.
+     *
+     * Generic types:
+     *  SendType: The type of the outgoing message of the underlying
+     *    connection stream
+     *  ReceiveType: The type of the incoming message of the underlying
+     *    connection stream
+     *  ListenerType: The type of the listener that will be used for callbacks
+     */
+    class so {
+        constructor(t, e, n, s, i, r, o, c) {
+            this.Me = t, this.nr = n, this.sr = s, this.ir = i, this.authCredentialsProvider = r, 
+            this.appCheckCredentialsProvider = o, this.listener = c, this.state = 0 /* Initial */ , 
+            /**
+             * A close count that's incremented every time the stream is closed; used by
+             * getCloseGuardedDispatcher() to invalidate callbacks that happen after
+             * close.
+             */
+            this.rr = 0, this.cr = null, this.ar = null, this.stream = null, this.ur = new no(t, e);
+        }
+        /**
+         * Returns true if start() has been called and no error has occurred. True
+         * indicates the stream is open or in the process of opening (which
+         * encompasses respecting backoff, getting auth tokens, and starting the
+         * actual RPC). Use isOpen() to determine if the stream is open and ready for
+         * outbound requests.
+         */    hr() {
+            return 1 /* Starting */ === this.state || 5 /* Backoff */ === this.state || this.lr();
+        }
+        /**
+         * Returns true if the underlying RPC is open (the onOpen() listener has been
+         * called) and the stream is ready for outbound requests.
+         */    lr() {
+            return 2 /* Open */ === this.state || 3 /* Healthy */ === this.state;
+        }
+        /**
+         * Starts the RPC. Only allowed if isStarted() returns false. The stream is
+         * not immediately ready for use: onOpen() will be invoked when the RPC is
+         * ready for outbound requests, at which point isOpen() will return true.
+         *
+         * When start returns, isStarted() will return true.
+         */    start() {
+            4 /* Error */ !== this.state ? this.auth() : this.dr();
+        }
+        /**
+         * Stops the RPC. This call is idempotent and allowed regardless of the
+         * current isStarted() state.
+         *
+         * When stop returns, isStarted() and isOpen() will both return false.
+         */    async stop() {
+            this.hr() && await this.close(0 /* Initial */);
+        }
+        /**
+         * After an error the stream will usually back off on the next attempt to
+         * start it. If the error warrants an immediate restart of the stream, the
+         * sender can use this to indicate that the receiver should not back off.
+         *
+         * Each error will call the onClose() listener. That function can decide to
+         * inhibit backoff if required.
+         */    wr() {
+            this.state = 0 /* Initial */ , this.ur.reset();
+        }
+        /**
+         * Marks this stream as idle. If no further actions are performed on the
+         * stream for one minute, the stream will automatically close itself and
+         * notify the stream's onClose() handler with Status.OK. The stream will then
+         * be in a !isStarted() state, requiring the caller to start the stream again
+         * before further use.
+         *
+         * Only streams that are in state 'Open' can be marked idle, as all other
+         * states imply pending network operations.
+         */    _r() {
+            // Starts the idle time if we are in state 'Open' and are not yet already
+            // running a timer (in which case the previous idle timeout still applies).
+            this.lr() && null === this.cr && (this.cr = this.Me.enqueueAfterDelay(this.nr, 6e4, (() => this.mr())));
+        }
+        /** Sends a message to the underlying stream. */    gr(t) {
+            this.yr(), this.stream.send(t);
+        }
+        /** Called by the idle timer when the stream should close due to inactivity. */    async mr() {
+            if (this.lr()) 
+            // When timing out an idle stream there's no reason to force the stream into backoff when
+            // it restarts so set the stream state to Initial instead of Error.
+            return this.close(0 /* Initial */);
+        }
+        /** Marks the stream as active again. */    yr() {
+            this.cr && (this.cr.cancel(), this.cr = null);
+        }
+        /** Cancels the health check delayed operation. */    pr() {
+            this.ar && (this.ar.cancel(), this.ar = null);
+        }
+        /**
+         * Closes the stream and cleans up as necessary:
+         *
+         * * closes the underlying GRPC stream;
+         * * calls the onClose handler with the given 'error';
+         * * sets internal stream state to 'finalState';
+         * * adjusts the backoff timer based on the error
+         *
+         * A new stream can be opened by calling start().
+         *
+         * @param finalState - the intended state of the stream after closing.
+         * @param error - the error the connection was closed with.
+         */    async close(t, e) {
+            // Cancel any outstanding timers (they're guaranteed not to execute).
+            this.yr(), this.pr(), this.ur.cancel(), 
+            // Invalidates any stream-related callbacks (e.g. from auth or the
+            // underlying stream), guaranteeing they won't execute.
+            this.rr++, 4 /* Error */ !== t ? 
+            // If this is an intentional close ensure we don't delay our next connection attempt.
+            this.ur.reset() : e && e.code === j.RESOURCE_EXHAUSTED ? (
+            // Log the error. (Probably either 'quota exceeded' or 'max queue length reached'.)
+            M(e.toString()), M("Using maximum backoff delay to prevent overloading the backend."), 
+            this.ur.Xi()) : e && e.code === j.UNAUTHENTICATED && 3 /* Healthy */ !== this.state && (
+            // "unauthenticated" error means the token was rejected. This should rarely
+            // happen since both Auth and AppCheck ensure a sufficient TTL when we
+            // request a token. If a user manually resets their system clock this can
+            // fail, however. In this case, we should get a Code.UNAUTHENTICATED error
+            // before we received the first message and we need to invalidate the token
+            // to ensure that we fetch a new token.
+            this.authCredentialsProvider.invalidateToken(), this.appCheckCredentialsProvider.invalidateToken()), 
+            // Clean up the underlying stream because we are no longer interested in events.
+            null !== this.stream && (this.Tr(), this.stream.close(), this.stream = null), 
+            // This state must be assigned before calling onClose() to allow the callback to
+            // inhibit backoff or otherwise manipulate the state in its non-started state.
+            this.state = t, 
+            // Notify the listener that the stream closed.
+            await this.listener.Ni(e);
+        }
+        /**
+         * Can be overridden to perform additional cleanup before the stream is closed.
+         * Calling super.tearDown() is not required.
+         */    Tr() {}
+        auth() {
+            this.state = 1 /* Starting */;
+            const t = this.Er(this.rr), e = this.rr;
+            // TODO(mikelehen): Just use dispatchIfNotClosed, but see TODO below.
+                    Promise.all([ this.authCredentialsProvider.getToken(), this.appCheckCredentialsProvider.getToken() ]).then((([t, n]) => {
+                // Stream can be stopped while waiting for authentication.
+                // TODO(mikelehen): We really should just use dispatchIfNotClosed
+                // and let this dispatch onto the queue, but that opened a spec test can
+                // of worms that I don't want to deal with in this PR.
+                this.rr === e && 
+                // Normally we'd have to schedule the callback on the AsyncQueue.
+                // However, the following calls are safe to be called outside the
+                // AsyncQueue since they don't chain asynchronous calls
+                this.Ir(t, n);
+            }), (e => {
+                t((() => {
+                    const t = new Q(j.UNKNOWN, "Fetching auth token failed: " + e.message);
+                    return this.Ar(t);
+                }));
+            }));
+        }
+        Ir(t, e) {
+            const n = this.Er(this.rr);
+            this.stream = this.Rr(t, e), this.stream.Di((() => {
+                n((() => (this.state = 2 /* Open */ , this.ar = this.Me.enqueueAfterDelay(this.sr, 1e4, (() => (this.lr() && (this.state = 3 /* Healthy */), 
+                Promise.resolve()))), this.listener.Di())));
+            })), this.stream.Ni((t => {
+                n((() => this.Ar(t)));
+            })), this.stream.onMessage((t => {
+                n((() => this.onMessage(t)));
+            }));
+        }
+        dr() {
+            this.state = 5 /* Backoff */ , this.ur.Zi((async () => {
+                this.state = 0 /* Initial */ , this.start();
+            }));
+        }
+        // Visible for tests
+        Ar(t) {
+            // In theory the stream could close cleanly, however, in our current model
+            // we never expect this to happen because if we stop a stream ourselves,
+            // this callback will never be called. To prevent cases where we retry
+            // without a backoff accidentally, we set the stream to error in all cases.
+            return O("PersistentStream", `close with error: ${t}`), this.stream = null, this.close(4 /* Error */ , t);
+        }
+        /**
+         * Returns a "dispatcher" function that dispatches operations onto the
+         * AsyncQueue but only runs them if closeCount remains unchanged. This allows
+         * us to turn auth / stream callbacks into no-ops if the stream is closed /
+         * re-opened, etc.
+         */    Er(t) {
+            return e => {
+                this.Me.enqueueAndForget((() => this.rr === t ? e() : (O("PersistentStream", "stream callback skipped by getCloseGuardedDispatcher."), 
+                Promise.resolve())));
+            };
+        }
+    }
+
+    /**
+     * A PersistentStream that implements the Listen RPC.
+     *
+     * Once the Listen stream has called the onOpen() listener, any number of
+     * listen() and unlisten() calls can be made to control what changes will be
+     * sent from the server for ListenResponses.
+     */ class io extends so {
+        constructor(t, e, n, s, i, r) {
+            super(t, "listen_stream_connection_backoff" /* ListenStreamConnectionBackoff */ , "listen_stream_idle" /* ListenStreamIdle */ , "health_check_timeout" /* HealthCheckTimeout */ , e, n, s, r), 
+            this.k = i;
+        }
+        Rr(t, e) {
+            return this.ir.Qi("Listen", t, e);
+        }
+        onMessage(t) {
+            // A successful response means the stream is healthy
+            this.ur.reset();
+            const e = os(this.k, t), n = function(t) {
+                // We have only reached a consistent snapshot for the entire stream if there
+                // is a read_time set and it applies to all targets (i.e. the list of
+                // targets is empty). The backend is guaranteed to send such responses.
+                if (!("targetChange" in t)) return ut.min();
+                const e = t.targetChange;
+                return e.targetIds && e.targetIds.length ? ut.min() : e.readTime ? zn(e.readTime) : ut.min();
+            }(t);
+            return this.listener.br(e, n);
+        }
+        /**
+         * Registers interest in the results of the given target. If the target
+         * includes a resumeToken it will be included in the request. Results that
+         * affect the target will be streamed back as WatchChange messages that
+         * reference the targetId.
+         */    Pr(t) {
+            const e = {};
+            e.database = es(this.k), e.addTarget = function(t, e) {
+                let n;
+                const s = e.target;
+                return n = Zt(s) ? {
+                    documents: hs(t, s)
+                } : {
+                    query: ls(t, s)
+                }, n.targetId = e.targetId, e.resumeToken.approximateByteSize() > 0 ? n.resumeToken = Wn(t, e.resumeToken) : e.snapshotVersion.compareTo(ut.min()) > 0 && (
+                // TODO(wuandy): Consider removing above check because it is most likely true.
+                // Right now, many tests depend on this behaviour though (leaving min() out
+                // of serialization).
+                n.readTime = Qn(t, e.snapshotVersion.toTimestamp())), n;
+            }(this.k, t);
+            const n = ds(this.k, t);
+            n && (e.labels = n), this.gr(e);
+        }
+        /**
+         * Unregisters interest in the results of the target associated with the
+         * given targetId.
+         */    vr(t) {
+            const e = {};
+            e.database = es(this.k), e.removeTarget = t, this.gr(e);
+        }
+    }
+
+    /**
+     * A Stream that implements the Write RPC.
+     *
+     * The Write RPC requires the caller to maintain special streamToken
+     * state in between calls, to help the server understand which responses the
+     * client has processed by the time the next request is made. Every response
+     * will contain a streamToken; this value must be passed to the next
+     * request.
+     *
+     * After calling start() on this stream, the next request must be a handshake,
+     * containing whatever streamToken is on hand. Once a response to this
+     * request is received, all pending mutations may be submitted. When
+     * submitting multiple batches of mutations at the same time, it's
+     * okay to use the same streamToken for the calls to writeMutations.
+     *
+     * TODO(b/33271235): Use proto types
+     */ class ro extends so {
+        constructor(t, e, n, s, i, r) {
+            super(t, "write_stream_connection_backoff" /* WriteStreamConnectionBackoff */ , "write_stream_idle" /* WriteStreamIdle */ , "health_check_timeout" /* HealthCheckTimeout */ , e, n, s, r), 
+            this.k = i, this.Vr = !1;
+        }
+        /**
+         * Tracks whether or not a handshake has been successfully exchanged and
+         * the stream is ready to accept mutations.
+         */    get Sr() {
+            return this.Vr;
+        }
+        // Override of PersistentStream.start
+        start() {
+            this.Vr = !1, this.lastStreamToken = void 0, super.start();
+        }
+        Tr() {
+            this.Vr && this.Dr([]);
+        }
+        Rr(t, e) {
+            return this.ir.Qi("Write", t, e);
+        }
+        onMessage(t) {
+            if (
+            // Always capture the last stream token.
+            U(!!t.streamToken), this.lastStreamToken = t.streamToken, this.Vr) {
+                // A successful first write response means the stream is healthy,
+                // Note, that we could consider a successful handshake healthy, however,
+                // the write itself might be causing an error we want to back off from.
+                this.ur.reset();
+                const e = us(t.writeResults, t.commitTime), n = zn(t.commitTime);
+                return this.listener.Cr(n, e);
+            }
+            // The first response is always the handshake response
+            return U(!t.writeResults || 0 === t.writeResults.length), this.Vr = !0, this.listener.Nr();
+        }
+        /**
+         * Sends an initial streamToken to the server, performing the handshake
+         * required to make the StreamingWrite RPC work. Subsequent
+         * calls should wait until onHandshakeComplete was called.
+         */    kr() {
+            // TODO(dimond): Support stream resumption. We intentionally do not set the
+            // stream token on the handshake, ignoring any stream token we might have.
+            const t = {};
+            t.database = es(this.k), this.gr(t);
+        }
+        /** Sends a group of mutations to the Firestore backend to apply. */    Dr(t) {
+            const e = {
+                streamToken: this.lastStreamToken,
+                writes: t.map((t => cs(this.k, t)))
+            };
+            this.gr(e);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1223,8 +9458,124 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class bh extends class{}{constructor(t,e,n,s){super(),this.authCredentials=t,this.appCheckCredentials=e,this.ir=n,this.k=s,this.$r=!1}Or(){if(this.$r)throw new Ki(zi.FAILED_PRECONDITION,"The client has already been terminated.")}Bi(t,e,n){return this.Or(),Promise.all([this.authCredentials.getToken(),this.appCheckCredentials.getToken()]).then((([s,i])=>this.ir.Bi(t,e,n,s,i))).catch((t=>{throw"FirebaseError"===t.name?(t.code===zi.UNAUTHENTICATED&&(this.authCredentials.invalidateToken(),this.appCheckCredentials.invalidateToken()),t):new Ki(zi.UNKNOWN,t.toString())}))}ji(t,e,n){return this.Or(),Promise.all([this.authCredentials.getToken(),this.appCheckCredentials.getToken()]).then((([s,i])=>this.ir.ji(t,e,n,s,i))).catch((t=>{throw"FirebaseError"===t.name?(t.code===zi.UNAUTHENTICATED&&(this.authCredentials.invalidateToken(),this.appCheckCredentials.invalidateToken()),t):new Ki(zi.UNKNOWN,t.toString())}))}terminate(){this.$r=!0}}class Th{constructor(t,e){this.asyncQueue=t,this.onlineStateHandler=e,this.state="Unknown",this.Mr=0,this.Fr=null,this.Lr=!0}Br(){0===this.Mr&&(this.Ur("Unknown"),this.Fr=this.asyncQueue.enqueueAfterDelay("online_state_timeout",1e4,(()=>(this.Fr=null,this.qr("Backend didn't respond within 10 seconds."),this.Ur("Offline"),Promise.resolve()))))}Kr(t){"Online"===this.state?this.Ur("Unknown"):(this.Mr++,this.Mr>=1&&(this.jr(),this.qr(`Connection failed 1 times. Most recent error: ${t.toString()}`),this.Ur("Offline")))}set(t){this.jr(),this.Mr=0,"Online"===t&&(this.Lr=!1),this.Ur(t)}Ur(t){t!==this.state&&(this.state=t,this.onlineStateHandler(t))}qr(t){const e=`Could not reach Cloud Firestore backend. ${t}\nThis typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.`;this.Lr?(Ui(e),this.Lr=!1):Fi("OnlineStateTracker",e)}jr(){null!==this.Fr&&(this.Fr.cancel(),this.Fr=null)}}
-/**
+     */
+    /**
+     * Datastore and its related methods are a wrapper around the external Google
+     * Cloud Datastore grpc API, which provides an interface that is more convenient
+     * for the rest of the client SDK architecture to consume.
+     */
+    /**
+     * An implementation of Datastore that exposes additional state for internal
+     * consumption.
+     */
+    class oo extends class {} {
+        constructor(t, e, n, s) {
+            super(), this.authCredentials = t, this.appCheckCredentials = e, this.ir = n, this.k = s, 
+            this.$r = !1;
+        }
+        Or() {
+            if (this.$r) throw new Q(j.FAILED_PRECONDITION, "The client has already been terminated.");
+        }
+        /** Invokes the provided RPC with auth and AppCheck tokens. */    Bi(t, e, n) {
+            return this.Or(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.ir.Bi(t, e, n, s, i))).catch((t => {
+                throw "FirebaseError" === t.name ? (t.code === j.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
+                this.appCheckCredentials.invalidateToken()), t) : new Q(j.UNKNOWN, t.toString());
+            }));
+        }
+        /** Invokes the provided RPC with streamed results with auth and AppCheck tokens. */    ji(t, e, n) {
+            return this.Or(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.ir.ji(t, e, n, s, i))).catch((t => {
+                throw "FirebaseError" === t.name ? (t.code === j.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
+                this.appCheckCredentials.invalidateToken()), t) : new Q(j.UNKNOWN, t.toString());
+            }));
+        }
+        terminate() {
+            this.$r = !0;
+        }
+    }
+
+    // TODO(firestorexp): Make sure there is only one Datastore instance per
+    // firestore-exp client.
+    /**
+     * A component used by the RemoteStore to track the OnlineState (that is,
+     * whether or not the client as a whole should be considered to be online or
+     * offline), implementing the appropriate heuristics.
+     *
+     * In particular, when the client is trying to connect to the backend, we
+     * allow up to MAX_WATCH_STREAM_FAILURES within ONLINE_STATE_TIMEOUT_MS for
+     * a connection to succeed. If we have too many failures or the timeout elapses,
+     * then we set the OnlineState to Offline, and the client will behave as if
+     * it is offline (get()s will return cached data, etc.).
+     */
+    class co {
+        constructor(t, e) {
+            this.asyncQueue = t, this.onlineStateHandler = e, 
+            /** The current OnlineState. */
+            this.state = "Unknown" /* Unknown */ , 
+            /**
+             * A count of consecutive failures to open the stream. If it reaches the
+             * maximum defined by MAX_WATCH_STREAM_FAILURES, we'll set the OnlineState to
+             * Offline.
+             */
+            this.Mr = 0, 
+            /**
+             * A timer that elapses after ONLINE_STATE_TIMEOUT_MS, at which point we
+             * transition from OnlineState.Unknown to OnlineState.Offline without waiting
+             * for the stream to actually fail (MAX_WATCH_STREAM_FAILURES times).
+             */
+            this.Fr = null, 
+            /**
+             * Whether the client should log a warning message if it fails to connect to
+             * the backend (initially true, cleared after a successful stream, or if we've
+             * logged the message already).
+             */
+            this.Lr = !0;
+        }
+        /**
+         * Called by RemoteStore when a watch stream is started (including on each
+         * backoff attempt).
+         *
+         * If this is the first attempt, it sets the OnlineState to Unknown and starts
+         * the onlineStateTimer.
+         */    Br() {
+            0 === this.Mr && (this.Ur("Unknown" /* Unknown */), this.Fr = this.asyncQueue.enqueueAfterDelay("online_state_timeout" /* OnlineStateTimeout */ , 1e4, (() => (this.Fr = null, 
+            this.qr("Backend didn't respond within 10 seconds."), this.Ur("Offline" /* Offline */), 
+            Promise.resolve()))));
+        }
+        /**
+         * Updates our OnlineState as appropriate after the watch stream reports a
+         * failure. The first failure moves us to the 'Unknown' state. We then may
+         * allow multiple failures (based on MAX_WATCH_STREAM_FAILURES) before we
+         * actually transition to the 'Offline' state.
+         */    Kr(t) {
+            "Online" /* Online */ === this.state ? this.Ur("Unknown" /* Unknown */) : (this.Mr++, 
+            this.Mr >= 1 && (this.jr(), this.qr(`Connection failed 1 times. Most recent error: ${t.toString()}`), 
+            this.Ur("Offline" /* Offline */)));
+        }
+        /**
+         * Explicitly sets the OnlineState to the specified state.
+         *
+         * Note that this resets our timers / failure counters, etc. used by our
+         * Offline heuristics, so must not be used in place of
+         * handleWatchStreamStart() and handleWatchStreamFailure().
+         */    set(t) {
+            this.jr(), this.Mr = 0, "Online" /* Online */ === t && (
+            // We've connected to watch at least once. Don't warn the developer
+            // about being offline going forward.
+            this.Lr = !1), this.Ur(t);
+        }
+        Ur(t) {
+            t !== this.state && (this.state = t, this.onlineStateHandler(t));
+        }
+        qr(t) {
+            const e = `Could not reach Cloud Firestore backend. ${t}\nThis typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.`;
+            this.Lr ? (M(e), this.Lr = !1) : O("OnlineStateTracker", e);
+        }
+        jr() {
+            null !== this.Fr && (this.Fr.cancel(), this.Fr = null);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1239,8 +9590,375 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Ih{constructor(t,e,n,s,i){this.localStore=t,this.datastore=e,this.asyncQueue=n,this.remoteSyncer={},this.Qr=[],this.Wr=new Map,this.Gr=new Set,this.zr=[],this.Hr=i,this.Hr.Ei((t=>{n.enqueueAndForget((async()=>{Lh(this)&&(Fi("RemoteStore","Restarting streams for network reachability change."),await async function(t){const e=Hi(t);e.Gr.add(4),await Ch(e),e.Jr.set("Unknown"),e.Gr.delete(4),await Sh(e)}(this))}))})),this.Jr=new Th(n,s)}}async function Sh(t){if(Lh(t))for(const e of t.zr)await e(!0)}async function Ch(t){for(const e of t.zr)await e(!1)}function Ah(t,e){const n=Hi(t);n.Wr.has(e.targetId)||(n.Wr.set(e.targetId,e),Rh(n)?kh(n):Fh(n).lr()&&Nh(n,e))}function _h(t,e){const n=Hi(t),s=Fh(n);n.Wr.delete(e),s.lr()&&Dh(n,e),0===n.Wr.size&&(s.lr()?s._r():Lh(n)&&n.Jr.set("Unknown"))}function Nh(t,e){t.Yr.X(e.targetId),Fh(t).Pr(e)}function Dh(t,e){t.Yr.X(e),Fh(t).vr(e)}function kh(t){t.Yr=new ca({getRemoteKeysForTarget:e=>t.remoteSyncer.getRemoteKeysForTarget(e),Et:e=>t.Wr.get(e)||null}),Fh(t).start(),t.Jr.Br()}function Rh(t){return Lh(t)&&!Fh(t).hr()&&t.Wr.size>0}function Lh(t){return 0===Hi(t).Gr.size}function xh(t){t.Yr=void 0}async function Oh(t){t.Wr.forEach(((e,n)=>{Nh(t,e)}))}async function Mh(t,e){xh(t),Rh(t)?(t.Jr.Kr(e),kh(t)):t.Jr.set("Unknown")}async function Ph(t,e,n){if(t.Jr.set("Online"),e instanceof aa&&2===e.state&&e.cause)try{await async function(t,e){const n=e.cause;for(const s of e.targetIds)t.Wr.has(s)&&(await t.remoteSyncer.rejectListen(s,n),t.Wr.delete(s),t.Yr.removeTarget(s))}(t,e)}catch(n){Fi("RemoteStore","Failed to remove targets %s: %s ",e.targetIds.join(","),n),await Vh(t,n)}else if(e instanceof ra?t.Yr.ot(e):e instanceof oa?t.Yr.dt(e):t.Yr.ut(e),!n.isEqual(or.min()))try{const e=await Qa(t.localStore);n.compareTo(e)>=0&&await function(t,e){const n=t.Yr.gt(e);return n.targetChanges.forEach(((n,s)=>{if(n.resumeToken.approximateByteSize()>0){const i=t.Wr.get(s);i&&t.Wr.set(s,i.withResumeToken(n.resumeToken,e))}})),n.targetMismatches.forEach((e=>{const n=t.Wr.get(e);if(!n)return;t.Wr.set(e,n.withResumeToken(fr.EMPTY_BYTE_STRING,n.snapshotVersion)),Dh(t,e);const s=new Va(n.target,e,1,n.sequenceNumber);Nh(t,s)})),t.remoteSyncer.applyRemoteEvent(n)}(t,n)}catch(e){Fi("RemoteStore","Failed to raise snapshot:",e),await Vh(t,e)}}async function Vh(t,e,n){if(!Ma(e))throw e;t.Gr.add(1),await Ch(t),t.Jr.set("Offline"),n||(n=()=>Qa(t.localStore)),t.asyncQueue.enqueueRetryable((async()=>{Fi("RemoteStore","Retrying IndexedDB access"),await n(),t.Gr.delete(1),await Sh(t)}))}function Fh(t){return t.Xr||(t.Xr=function(t,e,n){const s=Hi(t);return s.Or(),new Eh(e,s.ir,s.authCredentials,s.appCheckCredentials,s.k,n)
-/**
+     */ class ao {
+        constructor(
+        /**
+         * The local store, used to fill the write pipeline with outbound mutations.
+         */
+        t, 
+        /** The client-side proxy for interacting with the backend. */
+        e, n, s, i) {
+            this.localStore = t, this.datastore = e, this.asyncQueue = n, this.remoteSyncer = {}, 
+            /**
+             * A list of up to MAX_PENDING_WRITES writes that we have fetched from the
+             * LocalStore via fillWritePipeline() and have or will send to the write
+             * stream.
+             *
+             * Whenever writePipeline.length > 0 the RemoteStore will attempt to start or
+             * restart the write stream. When the stream is established the writes in the
+             * pipeline will be sent in order.
+             *
+             * Writes remain in writePipeline until they are acknowledged by the backend
+             * and thus will automatically be re-sent if the stream is interrupted /
+             * restarted before they're acknowledged.
+             *
+             * Write responses from the backend are linked to their originating request
+             * purely based on order, and so we can just shift() writes from the front of
+             * the writePipeline as we receive responses.
+             */
+            this.Qr = [], 
+            /**
+             * A mapping of watched targets that the client cares about tracking and the
+             * user has explicitly called a 'listen' for this target.
+             *
+             * These targets may or may not have been sent to or acknowledged by the
+             * server. On re-establishing the listen stream, these targets should be sent
+             * to the server. The targets removed with unlistens are removed eagerly
+             * without waiting for confirmation from the listen stream.
+             */
+            this.Wr = new Map, 
+            /**
+             * A set of reasons for why the RemoteStore may be offline. If empty, the
+             * RemoteStore may start its network connections.
+             */
+            this.Gr = new Set, 
+            /**
+             * Event handlers that get called when the network is disabled or enabled.
+             *
+             * PORTING NOTE: These functions are used on the Web client to create the
+             * underlying streams (to support tree-shakeable streams). On Android and iOS,
+             * the streams are created during construction of RemoteStore.
+             */
+            this.zr = [], this.Hr = i, this.Hr.Ei((t => {
+                n.enqueueAndForget((async () => {
+                    // Porting Note: Unlike iOS, `restartNetwork()` is called even when the
+                    // network becomes unreachable as we don't have any other way to tear
+                    // down our streams.
+                    yo(this) && (O("RemoteStore", "Restarting streams for network reachability change."), 
+                    await async function(t) {
+                        const e = K(t);
+                        e.Gr.add(4 /* ConnectivityChange */), await ho(e), e.Jr.set("Unknown" /* Unknown */), 
+                        e.Gr.delete(4 /* ConnectivityChange */), await uo(e);
+                    }(this));
+                }));
+            })), this.Jr = new co(n, s);
+        }
+    }
+
+    async function uo(t) {
+        if (yo(t)) for (const e of t.zr) await e(/* enabled= */ !0);
+    }
+
+    /**
+     * Temporarily disables the network. The network can be re-enabled using
+     * enableNetwork().
+     */ async function ho(t) {
+        for (const e of t.zr) await e(/* enabled= */ !1);
+    }
+
+    /**
+     * Starts new listen for the given target. Uses resume token if provided. It
+     * is a no-op if the target of given `TargetData` is already being listened to.
+     */
+    function lo(t, e) {
+        const n = K(t);
+        n.Wr.has(e.targetId) || (
+        // Mark this as something the client is currently listening for.
+        n.Wr.set(e.targetId, e), go(n) ? 
+        // The listen will be sent in onWatchStreamOpen
+        mo(n) : $o(n).lr() && wo(n, e));
+    }
+
+    /**
+     * Removes the listen from server. It is a no-op if the given target id is
+     * not being listened to.
+     */ function fo(t, e) {
+        const n = K(t), s = $o(n);
+        n.Wr.delete(e), s.lr() && _o(n, e), 0 === n.Wr.size && (s.lr() ? s._r() : yo(n) && 
+        // Revert to OnlineState.Unknown if the watch stream is not open and we
+        // have no listeners, since without any listens to send we cannot
+        // confirm if the stream is healthy and upgrade to OnlineState.Online.
+        n.Jr.set("Unknown" /* Unknown */));
+    }
+
+    /**
+     * We need to increment the the expected number of pending responses we're due
+     * from watch so we wait for the ack to process any messages from this target.
+     */ function wo(t, e) {
+        t.Yr.X(e.targetId), $o(t).Pr(e);
+    }
+
+    /**
+     * We need to increment the expected number of pending responses we're due
+     * from watch so we wait for the removal on the server before we process any
+     * messages from this target.
+     */ function _o(t, e) {
+        t.Yr.X(e), $o(t).vr(e);
+    }
+
+    function mo(t) {
+        t.Yr = new Ln({
+            getRemoteKeysForTarget: e => t.remoteSyncer.getRemoteKeysForTarget(e),
+            Et: e => t.Wr.get(e) || null
+        }), $o(t).start(), t.Jr.Br();
+    }
+
+    /**
+     * Returns whether the watch stream should be started because it's necessary
+     * and has not yet been started.
+     */ function go(t) {
+        return yo(t) && !$o(t).hr() && t.Wr.size > 0;
+    }
+
+    function yo(t) {
+        return 0 === K(t).Gr.size;
+    }
+
+    function po(t) {
+        t.Yr = void 0;
+    }
+
+    async function To(t) {
+        t.Wr.forEach(((e, n) => {
+            wo(t, e);
+        }));
+    }
+
+    async function Eo(t, e) {
+        po(t), 
+        // If we still need the watch stream, retry the connection.
+        go(t) ? (t.Jr.Kr(e), mo(t)) : 
+        // No need to restart watch stream because there are no active targets.
+        // The online state is set to unknown because there is no active attempt
+        // at establishing a connection
+        t.Jr.set("Unknown" /* Unknown */);
+    }
+
+    async function Io(t, e, n) {
+        if (
+        // Mark the client as online since we got a message from the server
+        t.Jr.set("Online" /* Online */), e instanceof Mn && 2 /* Removed */ === e.state && e.cause) 
+        // There was an error on a target, don't wait for a consistent snapshot
+        // to raise events
+        try {
+            await 
+            /** Handles an error on a target */
+            async function(t, e) {
+                const n = e.cause;
+                for (const s of e.targetIds) 
+                // A watched target might have been removed already.
+                t.Wr.has(s) && (await t.remoteSyncer.rejectListen(s, n), t.Wr.delete(s), t.Yr.removeTarget(s));
+            }
+            /**
+     * Attempts to fill our write pipeline with writes from the LocalStore.
+     *
+     * Called internally to bootstrap or refill the write pipeline and by
+     * SyncEngine whenever there are new mutations to process.
+     *
+     * Starts the write stream if necessary.
+     */ (t, e);
+        } catch (n) {
+            O("RemoteStore", "Failed to remove targets %s: %s ", e.targetIds.join(","), n), 
+            await Ao(t, n);
+        } else if (e instanceof $n ? t.Yr.ot(e) : e instanceof On ? t.Yr.dt(e) : t.Yr.ut(e), 
+        !n.isEqual(ut.min())) try {
+            const e = await mr(t.localStore);
+            n.compareTo(e) >= 0 && 
+            // We have received a target change with a global snapshot if the snapshot
+            // version is not equal to SnapshotVersion.min().
+            await 
+            /**
+     * Takes a batch of changes from the Datastore, repackages them as a
+     * RemoteEvent, and passes that on to the listener, which is typically the
+     * SyncEngine.
+     */
+            function(t, e) {
+                const n = t.Yr.gt(e);
+                // Update in-memory resume tokens. LocalStore will update the
+                // persistent view of these when applying the completed RemoteEvent.
+                            return n.targetChanges.forEach(((n, s) => {
+                    if (n.resumeToken.approximateByteSize() > 0) {
+                        const i = t.Wr.get(s);
+                        // A watched target might have been removed already.
+                                            i && t.Wr.set(s, i.withResumeToken(n.resumeToken, e));
+                    }
+                })), 
+                // Re-establish listens for the targets that have been invalidated by
+                // existence filter mismatches.
+                n.targetMismatches.forEach((e => {
+                    const n = t.Wr.get(e);
+                    if (!n) 
+                    // A watched target might have been removed already.
+                    return;
+                    // Clear the resume token for the target, since we're in a known mismatch
+                    // state.
+                                    t.Wr.set(e, n.withResumeToken(pt.EMPTY_BYTE_STRING, n.snapshotVersion)), 
+                    // Cause a hard reset by unwatching and rewatching immediately, but
+                    // deliberately don't send a resume token so that we get a full update.
+                    _o(t, e);
+                    // Mark the target we send as being on behalf of an existence filter
+                    // mismatch, but don't actually retain that in listenTargets. This ensures
+                    // that we flag the first re-listen this way without impacting future
+                    // listens of this target (that might happen e.g. on reconnect).
+                    const s = new ai(n.target, e, 1 /* ExistenceFilterMismatch */ , n.sequenceNumber);
+                    wo(t, s);
+                })), t.remoteSyncer.applyRemoteEvent(n);
+            }(t, n);
+        } catch (e) {
+            O("RemoteStore", "Failed to raise snapshot:", e), await Ao(t, e);
+        }
+    }
+
+    /**
+     * Recovery logic for IndexedDB errors that takes the network offline until
+     * `op` succeeds. Retries are scheduled with backoff using
+     * `enqueueRetryable()`. If `op()` is not provided, IndexedDB access is
+     * validated via a generic operation.
+     *
+     * The returned Promise is resolved once the network is disabled and before
+     * any retry attempt.
+     */ async function Ao(t, e, n) {
+        if (!Zs(e)) throw e;
+        t.Gr.add(1 /* IndexedDbFailed */), 
+        // Disable network and raise offline snapshots
+        await ho(t), t.Jr.set("Offline" /* Offline */), n || (
+        // Use a simple read operation to determine if IndexedDB recovered.
+        // Ideally, we would expose a health check directly on SimpleDb, but
+        // RemoteStore only has access to persistence through LocalStore.
+        n = () => mr(t.localStore)), 
+        // Probe IndexedDB periodically and re-enable network
+        t.asyncQueue.enqueueRetryable((async () => {
+            O("RemoteStore", "Retrying IndexedDB access"), await n(), t.Gr.delete(1 /* IndexedDbFailed */), 
+            await uo(t);
+        }));
+    }
+
+    /**
+     * Executes `op`. If `op` fails, takes the network offline until `op`
+     * succeeds. Returns after the first attempt.
+     */ function Ro(t, e) {
+        return e().catch((n => Ao(t, n, e)));
+    }
+
+    async function bo(t) {
+        const e = K(t), n = Oo(e);
+        let s = e.Qr.length > 0 ? e.Qr[e.Qr.length - 1].batchId : -1;
+        for (;Po(e); ) try {
+            const t = await pr(e.localStore, s);
+            if (null === t) {
+                0 === e.Qr.length && n._r();
+                break;
+            }
+            s = t.batchId, vo(e, t);
+        } catch (t) {
+            await Ao(e, t);
+        }
+        Vo(e) && So(e);
+    }
+
+    /**
+     * Returns true if we can add to the write pipeline (i.e. the network is
+     * enabled and the write pipeline is not full).
+     */ function Po(t) {
+        return yo(t) && t.Qr.length < 10;
+    }
+
+    /**
+     * Queues additional writes to be sent to the write stream, sending them
+     * immediately if the write stream is established.
+     */ function vo(t, e) {
+        t.Qr.push(e);
+        const n = Oo(t);
+        n.lr() && n.Sr && n.Dr(e.mutations);
+    }
+
+    function Vo(t) {
+        return yo(t) && !Oo(t).hr() && t.Qr.length > 0;
+    }
+
+    function So(t) {
+        Oo(t).start();
+    }
+
+    async function Do(t) {
+        Oo(t).kr();
+    }
+
+    async function Co(t) {
+        const e = Oo(t);
+        // Send the write pipeline now that the stream is established.
+            for (const n of t.Qr) e.Dr(n.mutations);
+    }
+
+    async function No(t, e, n) {
+        const s = t.Qr.shift(), i = ci.from(s, e, n);
+        await Ro(t, (() => t.remoteSyncer.applySuccessfulWrite(i))), 
+        // It's possible that with the completion of this mutation another
+        // slot has freed up.
+        await bo(t);
+    }
+
+    async function ko(t, e) {
+        // If the write stream closed after the write handshake completes, a write
+        // operation failed and we fail the pending operation.
+        e && Oo(t).Sr && 
+        // This error affects the actual write.
+        await async function(t, e) {
+            // Only handle permanent errors here. If it's transient, just let the retry
+            // logic kick in.
+            if (n = e.code, mn(n) && n !== j.ABORTED) {
+                // This was a permanent error, the request itself was the problem
+                // so it's not going to succeed if we resend it.
+                const n = t.Qr.shift();
+                // In this case it's also unlikely that the server itself is melting
+                // down -- this was just a bad request so inhibit backoff on the next
+                // restart.
+                            Oo(t).wr(), await Ro(t, (() => t.remoteSyncer.rejectFailedWrite(n.batchId, e))), 
+                // It's possible that with the completion of this mutation
+                // another slot has freed up.
+                await bo(t);
+            }
+            var n;
+        }(t, e), 
+        // The write stream might have been started by refilling the write
+        // pipeline for failed writes
+        Vo(t) && So(t);
+    }
+
+    /**
+     * Toggles the network state when the client gains or loses its primary lease.
+     */
+    async function xo(t, e) {
+        const n = K(t);
+        e ? (n.Gr.delete(2 /* IsSecondary */), await uo(n)) : e || (n.Gr.add(2 /* IsSecondary */), 
+        await ho(n), n.Jr.set("Unknown" /* Unknown */));
+    }
+
+    /**
+     * If not yet initialized, registers the WatchStream and its network state
+     * callback with `remoteStoreImpl`. Returns the existing stream if one is
+     * already available.
+     *
+     * PORTING NOTE: On iOS and Android, the WatchStream gets registered on startup.
+     * This is not done on Web to allow it to be tree-shaken.
+     */ function $o(t) {
+        return t.Xr || (
+        // Create stream (but note that it is not started yet).
+        t.Xr = function(t, e, n) {
+            const s = K(t);
+            return s.Or(), new io(e, s.ir, s.authCredentials, s.appCheckCredentials, s.k, n);
+        }
+        /**
      * @license
      * Copyright 2018 Google LLC
      *
@@ -1255,8 +9973,43 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */}(t.datastore,t.asyncQueue,{Di:Oh.bind(null,t),Ni:Mh.bind(null,t),br:Ph.bind(null,t)}),t.zr.push((async e=>{e?(t.Xr.wr(),Rh(t)?kh(t):t.Jr.set("Unknown")):(await t.Xr.stop(),xh(t))}))),t.Xr
-/**
+     */ (t.datastore, t.asyncQueue, {
+            Di: To.bind(null, t),
+            Ni: Eo.bind(null, t),
+            br: Io.bind(null, t)
+        }), t.zr.push((async e => {
+            e ? (t.Xr.wr(), go(t) ? mo(t) : t.Jr.set("Unknown" /* Unknown */)) : (await t.Xr.stop(), 
+            po(t));
+        }))), t.Xr;
+    }
+
+    /**
+     * If not yet initialized, registers the WriteStream and its network state
+     * callback with `remoteStoreImpl`. Returns the existing stream if one is
+     * already available.
+     *
+     * PORTING NOTE: On iOS and Android, the WriteStream gets registered on startup.
+     * This is not done on Web to allow it to be tree-shaken.
+     */ function Oo(t) {
+        return t.Zr || (
+        // Create stream (but note that it is not started yet).
+        t.Zr = function(t, e, n) {
+            const s = K(t);
+            return s.Or(), new ro(e, s.ir, s.authCredentials, s.appCheckCredentials, s.k, n);
+        }(t.datastore, t.asyncQueue, {
+            Di: Do.bind(null, t),
+            Ni: ko.bind(null, t),
+            Nr: Co.bind(null, t),
+            Cr: No.bind(null, t)
+        }), t.zr.push((async e => {
+            e ? (t.Zr.wr(), 
+            // This will start the write stream if necessary.
+            await bo(t)) : (await t.Zr.stop(), t.Qr.length > 0 && (O("RemoteStore", `Stopping write stream with ${t.Qr.length} pending writes`), 
+            t.Qr = []));
+        }))), t.Zr;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1271,8 +10024,84 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */}class Uh{constructor(t,e,n,s,i){this.asyncQueue=t,this.timerId=e,this.targetTimeMs=n,this.op=s,this.removalCallback=i,this.deferred=new Gi,this.then=this.deferred.promise.then.bind(this.deferred.promise),this.deferred.promise.catch((t=>{}))}static createAndSchedule(t,e,n,s,i){const r=Date.now()+n,o=new Uh(t,e,r,s,i);return o.start(n),o}start(t){this.timerHandle=setTimeout((()=>this.handleDelayElapsed()),t)}skipDelay(){return this.handleDelayElapsed()}cancel(t){null!==this.timerHandle&&(this.clearTimeout(),this.deferred.reject(new Ki(zi.CANCELLED,"Operation cancelled"+(t?": "+t:""))))}handleDelayElapsed(){this.asyncQueue.enqueueAndForget((()=>null!==this.timerHandle?(this.clearTimeout(),this.op().then((t=>this.deferred.resolve(t)))):Promise.resolve()))}clearTimeout(){null!==this.timerHandle&&(this.removalCallback(this),clearTimeout(this.timerHandle),this.timerHandle=null)}}function $h(t,e){if(Ui("AsyncQueue",`${e}: ${t}`),Ma(t))return new Ki(zi.UNAVAILABLE,`${e}: ${t}`);throw t}
-/**
+     */
+    /**
+     * Represents an operation scheduled to be run in the future on an AsyncQueue.
+     *
+     * It is created via DelayedOperation.createAndSchedule().
+     *
+     * Supports cancellation (via cancel()) and early execution (via skipDelay()).
+     *
+     * Note: We implement `PromiseLike` instead of `Promise`, as the `Promise` type
+     * in newer versions of TypeScript defines `finally`, which is not available in
+     * IE.
+     */
+    class Mo {
+        constructor(t, e, n, s, i) {
+            this.asyncQueue = t, this.timerId = e, this.targetTimeMs = n, this.op = s, this.removalCallback = i, 
+            this.deferred = new W, this.then = this.deferred.promise.then.bind(this.deferred.promise), 
+            // It's normal for the deferred promise to be canceled (due to cancellation)
+            // and so we attach a dummy catch callback to avoid
+            // 'UnhandledPromiseRejectionWarning' log spam.
+            this.deferred.promise.catch((t => {}));
+        }
+        /**
+         * Creates and returns a DelayedOperation that has been scheduled to be
+         * executed on the provided asyncQueue after the provided delayMs.
+         *
+         * @param asyncQueue - The queue to schedule the operation on.
+         * @param id - A Timer ID identifying the type of operation this is.
+         * @param delayMs - The delay (ms) before the operation should be scheduled.
+         * @param op - The operation to run.
+         * @param removalCallback - A callback to be called synchronously once the
+         *   operation is executed or canceled, notifying the AsyncQueue to remove it
+         *   from its delayedOperations list.
+         *   PORTING NOTE: This exists to prevent making removeDelayedOperation() and
+         *   the DelayedOperation class public.
+         */    static createAndSchedule(t, e, n, s, i) {
+            const r = Date.now() + n, o = new Mo(t, e, r, s, i);
+            return o.start(n), o;
+        }
+        /**
+         * Starts the timer. This is called immediately after construction by
+         * createAndSchedule().
+         */    start(t) {
+            this.timerHandle = setTimeout((() => this.handleDelayElapsed()), t);
+        }
+        /**
+         * Queues the operation to run immediately (if it hasn't already been run or
+         * canceled).
+         */    skipDelay() {
+            return this.handleDelayElapsed();
+        }
+        /**
+         * Cancels the operation if it hasn't already been executed or canceled. The
+         * promise will be rejected.
+         *
+         * As long as the operation has not yet been run, calling cancel() provides a
+         * guarantee that the operation will not be run.
+         */    cancel(t) {
+            null !== this.timerHandle && (this.clearTimeout(), this.deferred.reject(new Q(j.CANCELLED, "Operation cancelled" + (t ? ": " + t : ""))));
+        }
+        handleDelayElapsed() {
+            this.asyncQueue.enqueueAndForget((() => null !== this.timerHandle ? (this.clearTimeout(), 
+            this.op().then((t => this.deferred.resolve(t)))) : Promise.resolve()));
+        }
+        clearTimeout() {
+            null !== this.timerHandle && (this.removalCallback(this), clearTimeout(this.timerHandle), 
+            this.timerHandle = null);
+        }
+    }
+
+    /**
+     * Returns a FirestoreError that can be surfaced to the user if the provided
+     * error is an IndexedDbTransactionError. Re-throws the error otherwise.
+     */ function Fo(t, e) {
+        if (M("AsyncQueue", `${e}: ${t}`), Zs(t)) return new Q(j.UNAVAILABLE, `${e}: ${t}`);
+        throw t;
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1287,8 +10116,86 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class qh{constructor(t){this.comparator=t?(e,n)=>t(e,n)||Ir.comparator(e.key,n.key):(t,e)=>Ir.comparator(t.key,e.key),this.keyedMap=Jo(),this.sortedSet=new Ho(this.comparator)}static emptySet(t){return new qh(t.comparator)}has(t){return null!=this.keyedMap.get(t)}get(t){return this.keyedMap.get(t)}first(){return this.sortedSet.minKey()}last(){return this.sortedSet.maxKey()}isEmpty(){return this.sortedSet.isEmpty()}indexOf(t){const e=this.keyedMap.get(t);return e?this.sortedSet.indexOf(e):-1}get size(){return this.sortedSet.size}forEach(t){this.sortedSet.inorderTraversal(((e,n)=>(t(e),!1)))}add(t){const e=this.delete(t.key);return e.copy(e.keyedMap.insert(t.key,t),e.sortedSet.insert(t,null))}delete(t){const e=this.get(t);return e?this.copy(this.keyedMap.remove(t),this.sortedSet.remove(e)):this}isEqual(t){if(!(t instanceof qh))return!1;if(this.size!==t.size)return!1;const e=this.sortedSet.getIterator(),n=t.sortedSet.getIterator();for(;e.hasNext();){const t=e.getNext().key,s=n.getNext().key;if(!t.isEqual(s))return!1}return!0}toString(){const t=[];return this.forEach((e=>{t.push(e.toString())})),0===t.length?"DocumentSet ()":"DocumentSet (\n  "+t.join("  \n")+"\n)"}copy(t,e){const n=new qh;return n.comparator=this.comparator,n.keyedMap=t,n.sortedSet=e,n}}
-/**
+     */
+    /**
+     * DocumentSet is an immutable (copy-on-write) collection that holds documents
+     * in order specified by the provided comparator. We always add a document key
+     * comparator on top of what is provided to guarantee document equality based on
+     * the key.
+     */ class Lo {
+        /** The default ordering is by key if the comparator is omitted */
+        constructor(t) {
+            // We are adding document key comparator to the end as it's the only
+            // guaranteed unique property of a document.
+            this.comparator = t ? (e, n) => t(e, n) || Dt.comparator(e.key, n.key) : (t, e) => Dt.comparator(t.key, e.key), 
+            this.keyedMap = Pn(), this.sortedSet = new yn(this.comparator);
+        }
+        /**
+         * Returns an empty copy of the existing DocumentSet, using the same
+         * comparator.
+         */    static emptySet(t) {
+            return new Lo(t.comparator);
+        }
+        has(t) {
+            return null != this.keyedMap.get(t);
+        }
+        get(t) {
+            return this.keyedMap.get(t);
+        }
+        first() {
+            return this.sortedSet.minKey();
+        }
+        last() {
+            return this.sortedSet.maxKey();
+        }
+        isEmpty() {
+            return this.sortedSet.isEmpty();
+        }
+        /**
+         * Returns the index of the provided key in the document set, or -1 if the
+         * document key is not present in the set;
+         */    indexOf(t) {
+            const e = this.keyedMap.get(t);
+            return e ? this.sortedSet.indexOf(e) : -1;
+        }
+        get size() {
+            return this.sortedSet.size;
+        }
+        /** Iterates documents in order defined by "comparator" */    forEach(t) {
+            this.sortedSet.inorderTraversal(((e, n) => (t(e), !1)));
+        }
+        /** Inserts or updates a document with the same key */    add(t) {
+            // First remove the element if we have it.
+            const e = this.delete(t.key);
+            return e.copy(e.keyedMap.insert(t.key, t), e.sortedSet.insert(t, null));
+        }
+        /** Deletes a document with a given key */    delete(t) {
+            const e = this.get(t);
+            return e ? this.copy(this.keyedMap.remove(t), this.sortedSet.remove(e)) : this;
+        }
+        isEqual(t) {
+            if (!(t instanceof Lo)) return !1;
+            if (this.size !== t.size) return !1;
+            const e = this.sortedSet.getIterator(), n = t.sortedSet.getIterator();
+            for (;e.hasNext(); ) {
+                const t = e.getNext().key, s = n.getNext().key;
+                if (!t.isEqual(s)) return !1;
+            }
+            return !0;
+        }
+        toString() {
+            const t = [];
+            return this.forEach((e => {
+                t.push(e.toString());
+            })), 0 === t.length ? "DocumentSet ()" : "DocumentSet (\n  " + t.join("  \n") + "\n)";
+        }
+        copy(t, e) {
+            const n = new Lo;
+            return n.comparator = this.comparator, n.keyedMap = t, n.sortedSet = e, n;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1303,8 +10210,80 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Bh{constructor(){this.eo=new Ho(Ir.comparator)}track(t){const e=t.doc.key,n=this.eo.get(e);n?0!==t.type&&3===n.type?this.eo=this.eo.insert(e,t):3===t.type&&1!==n.type?this.eo=this.eo.insert(e,{type:n.type,doc:t.doc}):2===t.type&&2===n.type?this.eo=this.eo.insert(e,{type:2,doc:t.doc}):2===t.type&&0===n.type?this.eo=this.eo.insert(e,{type:0,doc:t.doc}):1===t.type&&0===n.type?this.eo=this.eo.remove(e):1===t.type&&2===n.type?this.eo=this.eo.insert(e,{type:1,doc:n.doc}):0===t.type&&1===n.type?this.eo=this.eo.insert(e,{type:2,doc:t.doc}):Bi():this.eo=this.eo.insert(e,t)}no(){const t=[];return this.eo.inorderTraversal(((e,n)=>{t.push(n)})),t}}class jh{constructor(t,e,n,s,i,r,o,a){this.query=t,this.docs=e,this.oldDocs=n,this.docChanges=s,this.mutatedKeys=i,this.fromCache=r,this.syncStateChanged=o,this.excludesMetadataChanges=a}static fromInitialDocuments(t,e,n,s){const i=[];return e.forEach((t=>{i.push({type:0,doc:t})})),new jh(t,e,qh.emptySet(e),i,n,s,!0,!1)}get hasPendingWrites(){return!this.mutatedKeys.isEmpty()}isEqual(t){if(!(this.fromCache===t.fromCache&&this.syncStateChanged===t.syncStateChanged&&this.mutatedKeys.isEqual(t.mutatedKeys)&&lo(this.query,t.query)&&this.docs.isEqual(t.docs)&&this.oldDocs.isEqual(t.oldDocs)))return!1;const e=this.docChanges,n=t.docChanges;if(e.length!==n.length)return!1;for(let t=0;t<e.length;t++)if(e[t].type!==n[t].type||!e[t].doc.isEqual(n[t].doc))return!1;return!0}}
-/**
+     */
+    /**
+     * DocumentChangeSet keeps track of a set of changes to docs in a query, merging
+     * duplicate events for the same doc.
+     */ class Bo {
+        constructor() {
+            this.eo = new yn(Dt.comparator);
+        }
+        track(t) {
+            const e = t.doc.key, n = this.eo.get(e);
+            n ? 
+            // Merge the new change with the existing change.
+            0 /* Added */ !== t.type && 3 /* Metadata */ === n.type ? this.eo = this.eo.insert(e, t) : 3 /* Metadata */ === t.type && 1 /* Removed */ !== n.type ? this.eo = this.eo.insert(e, {
+                type: n.type,
+                doc: t.doc
+            }) : 2 /* Modified */ === t.type && 2 /* Modified */ === n.type ? this.eo = this.eo.insert(e, {
+                type: 2 /* Modified */ ,
+                doc: t.doc
+            }) : 2 /* Modified */ === t.type && 0 /* Added */ === n.type ? this.eo = this.eo.insert(e, {
+                type: 0 /* Added */ ,
+                doc: t.doc
+            }) : 1 /* Removed */ === t.type && 0 /* Added */ === n.type ? this.eo = this.eo.remove(e) : 1 /* Removed */ === t.type && 2 /* Modified */ === n.type ? this.eo = this.eo.insert(e, {
+                type: 1 /* Removed */ ,
+                doc: n.doc
+            }) : 0 /* Added */ === t.type && 1 /* Removed */ === n.type ? this.eo = this.eo.insert(e, {
+                type: 2 /* Modified */ ,
+                doc: t.doc
+            }) : 
+            // This includes these cases, which don't make sense:
+            // Added->Added
+            // Removed->Removed
+            // Modified->Added
+            // Removed->Modified
+            // Metadata->Added
+            // Removed->Metadata
+            B() : this.eo = this.eo.insert(e, t);
+        }
+        no() {
+            const t = [];
+            return this.eo.inorderTraversal(((e, n) => {
+                t.push(n);
+            })), t;
+        }
+    }
+
+    class Uo {
+        constructor(t, e, n, s, i, r, o, c) {
+            this.query = t, this.docs = e, this.oldDocs = n, this.docChanges = s, this.mutatedKeys = i, 
+            this.fromCache = r, this.syncStateChanged = o, this.excludesMetadataChanges = c;
+        }
+        /** Returns a view snapshot as if all documents in the snapshot were added. */    static fromInitialDocuments(t, e, n, s) {
+            const i = [];
+            return e.forEach((t => {
+                i.push({
+                    type: 0 /* Added */ ,
+                    doc: t
+                });
+            })), new Uo(t, e, Lo.emptySet(e), i, n, s, 
+            /* syncStateChanged= */ !0, 
+            /* excludesMetadataChanges= */ !1);
+        }
+        get hasPendingWrites() {
+            return !this.mutatedKeys.isEmpty();
+        }
+        isEqual(t) {
+            if (!(this.fromCache === t.fromCache && this.syncStateChanged === t.syncStateChanged && this.mutatedKeys.isEqual(t.mutatedKeys) && ve(this.query, t.query) && this.docs.isEqual(t.docs) && this.oldDocs.isEqual(t.oldDocs))) return !1;
+            const e = this.docChanges, n = t.docChanges;
+            if (e.length !== n.length) return !1;
+            for (let t = 0; t < e.length; t++) if (e[t].type !== n[t].type || !e[t].doc.isEqual(n[t].doc)) return !1;
+            return !0;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1319,8 +10298,152 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Hh{constructor(){this.so=void 0,this.listeners=[]}}class zh{constructor(){this.queries=new Ha((t=>fo(t)),lo),this.onlineState="Unknown",this.io=new Set}}function Kh(t,e){const n=Hi(t);let s=!1;for(const t of e){const e=t.query,i=n.queries.get(e);if(i){for(const e of i.listeners)e.oo(t)&&(s=!0);i.so=t}}s&&Wh(n)}function Gh(t,e,n){const s=Hi(t),i=s.queries.get(e);if(i)for(const t of i.listeners)t.onError(n);s.queries.delete(e)}function Wh(t){t.io.forEach((t=>{t.next()}))}class Yh{constructor(t,e,n){this.query=t,this.co=e,this.ao=!1,this.uo=null,this.onlineState="Unknown",this.options=n||{}}oo(t){if(!this.options.includeMetadataChanges){const e=[];for(const n of t.docChanges)3!==n.type&&e.push(n);t=new jh(t.query,t.docs,t.oldDocs,e,t.mutatedKeys,t.fromCache,t.syncStateChanged,!0)}let e=!1;return this.ao?this.ho(t)&&(this.co.next(t),e=!0):this.lo(t,this.onlineState)&&(this.fo(t),e=!0),this.uo=t,e}onError(t){this.co.error(t)}ro(t){this.onlineState=t;let e=!1;return this.uo&&!this.ao&&this.lo(this.uo,t)&&(this.fo(this.uo),e=!0),e}lo(t,e){if(!t.fromCache)return!0;const n="Offline"!==e;return!(this.options.wo&&n||t.docs.isEmpty()&&"Offline"!==e)}ho(t){if(t.docChanges.length>0)return!0;const e=this.uo&&this.uo.hasPendingWrites!==t.hasPendingWrites;return!(!t.syncStateChanged&&!e)&&!0===this.options.includeMetadataChanges}fo(t){t=jh.fromInitialDocuments(t.query,t.docs,t.mutatedKeys,t.fromCache),this.ao=!0,this.co.next(t)}}
-/**
+     */
+    /**
+     * Holds the listeners and the last received ViewSnapshot for a query being
+     * tracked by EventManager.
+     */ class qo {
+        constructor() {
+            this.so = void 0, this.listeners = [];
+        }
+    }
+
+    class Ko {
+        constructor() {
+            this.queries = new zi((t => Ve(t)), ve), this.onlineState = "Unknown" /* Unknown */ , 
+            this.io = new Set;
+        }
+    }
+
+    async function jo(t, e) {
+        const n = K(t), s = e.query;
+        let i = !1, r = n.queries.get(s);
+        if (r || (i = !0, r = new qo), i) try {
+            r.so = await n.onListen(s);
+        } catch (t) {
+            const n = Fo(t, `Initialization of query '${Se(e.query)}' failed`);
+            return void e.onError(n);
+        }
+        if (n.queries.set(s, r), r.listeners.push(e), 
+        // Run global snapshot listeners if a consistent snapshot has been emitted.
+        e.ro(n.onlineState), r.so) {
+            e.oo(r.so) && zo(n);
+        }
+    }
+
+    async function Qo(t, e) {
+        const n = K(t), s = e.query;
+        let i = !1;
+        const r = n.queries.get(s);
+        if (r) {
+            const t = r.listeners.indexOf(e);
+            t >= 0 && (r.listeners.splice(t, 1), i = 0 === r.listeners.length);
+        }
+        if (i) return n.queries.delete(s), n.onUnlisten(s);
+    }
+
+    function Wo(t, e) {
+        const n = K(t);
+        let s = !1;
+        for (const t of e) {
+            const e = t.query, i = n.queries.get(e);
+            if (i) {
+                for (const e of i.listeners) e.oo(t) && (s = !0);
+                i.so = t;
+            }
+        }
+        s && zo(n);
+    }
+
+    function Go(t, e, n) {
+        const s = K(t), i = s.queries.get(e);
+        if (i) for (const t of i.listeners) t.onError(n);
+        // Remove all listeners. NOTE: We don't need to call syncEngine.unlisten()
+        // after an error.
+            s.queries.delete(e);
+    }
+
+    // Call all global snapshot listeners that have been set.
+    function zo(t) {
+        t.io.forEach((t => {
+            t.next();
+        }));
+    }
+
+    /**
+     * QueryListener takes a series of internal view snapshots and determines
+     * when to raise the event.
+     *
+     * It uses an Observer to dispatch events.
+     */ class Ho {
+        constructor(t, e, n) {
+            this.query = t, this.co = e, 
+            /**
+             * Initial snapshots (e.g. from cache) may not be propagated to the wrapped
+             * observer. This flag is set to true once we've actually raised an event.
+             */
+            this.ao = !1, this.uo = null, this.onlineState = "Unknown" /* Unknown */ , this.options = n || {};
+        }
+        /**
+         * Applies the new ViewSnapshot to this listener, raising a user-facing event
+         * if applicable (depending on what changed, whether the user has opted into
+         * metadata-only changes, etc.). Returns true if a user-facing event was
+         * indeed raised.
+         */    oo(t) {
+            if (!this.options.includeMetadataChanges) {
+                // Remove the metadata only changes.
+                const e = [];
+                for (const n of t.docChanges) 3 /* Metadata */ !== n.type && e.push(n);
+                t = new Uo(t.query, t.docs, t.oldDocs, e, t.mutatedKeys, t.fromCache, t.syncStateChanged, 
+                /* excludesMetadataChanges= */ !0);
+            }
+            let e = !1;
+            return this.ao ? this.ho(t) && (this.co.next(t), e = !0) : this.lo(t, this.onlineState) && (this.fo(t), 
+            e = !0), this.uo = t, e;
+        }
+        onError(t) {
+            this.co.error(t);
+        }
+        /** Returns whether a snapshot was raised. */    ro(t) {
+            this.onlineState = t;
+            let e = !1;
+            return this.uo && !this.ao && this.lo(this.uo, t) && (this.fo(this.uo), e = !0), 
+            e;
+        }
+        lo(t, e) {
+            // Always raise the first event when we're synced
+            if (!t.fromCache) return !0;
+            // NOTE: We consider OnlineState.Unknown as online (it should become Offline
+            // or Online if we wait long enough).
+                    const n = "Offline" /* Offline */ !== e;
+            // Don't raise the event if we're online, aren't synced yet (checked
+            // above) and are waiting for a sync.
+                    return (!this.options.wo || !n) && (!t.docs.isEmpty() || "Offline" /* Offline */ === e);
+            // Raise data from cache if we have any documents or we are offline
+            }
+        ho(t) {
+            // We don't need to handle includeDocumentMetadataChanges here because
+            // the Metadata only changes have already been stripped out if needed.
+            // At this point the only changes we will see are the ones we should
+            // propagate.
+            if (t.docChanges.length > 0) return !0;
+            const e = this.uo && this.uo.hasPendingWrites !== t.hasPendingWrites;
+            return !(!t.syncStateChanged && !e) && !0 === this.options.includeMetadataChanges;
+            // Generally we should have hit one of the cases above, but it's possible
+            // to get here if there were only metadata docChanges and they got
+            // stripped out.
+            }
+        fo(t) {
+            t = Uo.fromInitialDocuments(t.query, t.docs, t.mutatedKeys, t.fromCache), this.ao = !0, 
+            this.co.next(t);
+        }
+    }
+
+    /**
+     * Returns a `LoadBundleTaskProgress` representing the progress that the loading
+     * has succeeded.
+     */
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1335,8 +10458,162 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class Qh{constructor(t){this.key=t}}class Xh{constructor(t){this.key=t}}class Jh{constructor(t,e){this.query=t,this.To=e,this.Eo=null,this.current=!1,this.Io=ta(),this.mutatedKeys=ta(),this.Ao=mo(t),this.Ro=new qh(this.Ao)}get bo(){return this.To}Po(t,e){const n=e?e.vo:new Bh,s=e?e.Ro:this.Ro;let i=e?e.mutatedKeys:this.mutatedKeys,r=s,o=!1;const a=ao(this.query)&&s.size===this.query.limit?s.last():null,h=ho(this.query)&&s.size===this.query.limit?s.first():null;if(t.inorderTraversal(((t,e)=>{const c=s.get(t),u=go(this.query,e)?e:null,l=!!c&&this.mutatedKeys.has(c.key),d=!!u&&(u.hasLocalMutations||this.mutatedKeys.has(u.key)&&u.hasCommittedMutations);let f=!1;c&&u?c.data.isEqual(u.data)?l!==d&&(n.track({type:3,doc:u}),f=!0):this.Vo(c,u)||(n.track({type:2,doc:u}),f=!0,(a&&this.Ao(u,a)>0||h&&this.Ao(u,h)<0)&&(o=!0)):!c&&u?(n.track({type:0,doc:u}),f=!0):c&&!u&&(n.track({type:1,doc:c}),f=!0,(a||h)&&(o=!0)),f&&(u?(r=r.add(u),i=d?i.add(t):i.delete(t)):(r=r.delete(t),i=i.delete(t)))})),ao(this.query)||ho(this.query))for(;r.size>this.query.limit;){const t=ao(this.query)?r.last():r.first();r=r.delete(t.key),i=i.delete(t.key),n.track({type:1,doc:t})}return{Ro:r,vo:n,Bn:o,mutatedKeys:i}}Vo(t,e){return t.hasLocalMutations&&e.hasCommittedMutations&&!e.hasLocalMutations}applyChanges(t,e,n){const s=this.Ro;this.Ro=t.Ro,this.mutatedKeys=t.mutatedKeys;const i=t.vo.no();i.sort(((t,e)=>function(t,e){const n=t=>{switch(t){case 0:return 1;case 2:case 3:return 2;case 1:return 0;default:return Bi()}};return n(t)-n(e)}
-/**
+     */
+    class tc {
+        constructor(t) {
+            this.key = t;
+        }
+    }
+
+    class ec {
+        constructor(t) {
+            this.key = t;
+        }
+    }
+
+    /**
+     * View is responsible for computing the final merged truth of what docs are in
+     * a query. It gets notified of local and remote changes to docs, and applies
+     * the query filters and limits to determine the most correct possible results.
+     */ class nc {
+        constructor(t, 
+        /** Documents included in the remote target */
+        e) {
+            this.query = t, this.To = e, this.Eo = null, 
+            /**
+             * A flag whether the view is current with the backend. A view is considered
+             * current after it has seen the current flag from the backend and did not
+             * lose consistency within the watch stream (e.g. because of an existence
+             * filter mismatch).
+             */
+            this.current = !1, 
+            /** Documents in the view but not in the remote target */
+            this.Io = Dn(), 
+            /** Document Keys that have local changes */
+            this.mutatedKeys = Dn(), this.Ao = Ce(t), this.Ro = new Lo(this.Ao);
+        }
+        /**
+         * The set of remote documents that the server has told us belongs to the target associated with
+         * this view.
+         */    get bo() {
+            return this.To;
+        }
+        /**
+         * Iterates over a set of doc changes, applies the query limit, and computes
+         * what the new results should be, what the changes were, and whether we may
+         * need to go back to the local cache for more results. Does not make any
+         * changes to the view.
+         * @param docChanges - The doc changes to apply to this view.
+         * @param previousChanges - If this is being called with a refill, then start
+         *        with this set of docs and changes instead of the current view.
+         * @returns a new set of docs, changes, and refill flag.
+         */    Po(t, e) {
+            const n = e ? e.vo : new Bo, s = e ? e.Ro : this.Ro;
+            let i = e ? e.mutatedKeys : this.mutatedKeys, r = s, o = !1;
+            // Track the last doc in a (full) limit. This is necessary, because some
+            // update (a delete, or an update moving a doc past the old limit) might
+            // mean there is some other document in the local cache that either should
+            // come (1) between the old last limit doc and the new last document, in the
+            // case of updates, or (2) after the new last document, in the case of
+            // deletes. So we keep this doc at the old limit to compare the updates to.
+            // Note that this should never get used in a refill (when previousChanges is
+            // set), because there will only be adds -- no deletes or updates.
+            const c = pe(this.query) && s.size === this.query.limit ? s.last() : null, a = Te(this.query) && s.size === this.query.limit ? s.first() : null;
+            // Drop documents out to meet limit/limitToLast requirement.
+            if (t.inorderTraversal(((t, e) => {
+                const u = s.get(t), h = De(this.query, e) ? e : null, l = !!u && this.mutatedKeys.has(u.key), f = !!h && (h.hasLocalMutations || 
+                // We only consider committed mutations for documents that were
+                // mutated during the lifetime of the view.
+                this.mutatedKeys.has(h.key) && h.hasCommittedMutations);
+                let d = !1;
+                // Calculate change
+                            if (u && h) {
+                    u.data.isEqual(h.data) ? l !== f && (n.track({
+                        type: 3 /* Metadata */ ,
+                        doc: h
+                    }), d = !0) : this.Vo(u, h) || (n.track({
+                        type: 2 /* Modified */ ,
+                        doc: h
+                    }), d = !0, (c && this.Ao(h, c) > 0 || a && this.Ao(h, a) < 0) && (
+                    // This doc moved from inside the limit to outside the limit.
+                    // That means there may be some other doc in the local cache
+                    // that should be included instead.
+                    o = !0));
+                } else !u && h ? (n.track({
+                    type: 0 /* Added */ ,
+                    doc: h
+                }), d = !0) : u && !h && (n.track({
+                    type: 1 /* Removed */ ,
+                    doc: u
+                }), d = !0, (c || a) && (
+                // A doc was removed from a full limit query. We'll need to
+                // requery from the local cache to see if we know about some other
+                // doc that should be in the results.
+                o = !0));
+                d && (h ? (r = r.add(h), i = f ? i.add(t) : i.delete(t)) : (r = r.delete(t), i = i.delete(t)));
+            })), pe(this.query) || Te(this.query)) for (;r.size > this.query.limit; ) {
+                const t = pe(this.query) ? r.last() : r.first();
+                r = r.delete(t.key), i = i.delete(t.key), n.track({
+                    type: 1 /* Removed */ ,
+                    doc: t
+                });
+            }
+            return {
+                Ro: r,
+                vo: n,
+                Bn: o,
+                mutatedKeys: i
+            };
+        }
+        Vo(t, e) {
+            // We suppress the initial change event for documents that were modified as
+            // part of a write acknowledgment (e.g. when the value of a server transform
+            // is applied) as Watch will send us the same document again.
+            // By suppressing the event, we only raise two user visible events (one with
+            // `hasPendingWrites` and the final state of the document) instead of three
+            // (one with `hasPendingWrites`, the modified document with
+            // `hasPendingWrites` and the final state of the document).
+            return t.hasLocalMutations && e.hasCommittedMutations && !e.hasLocalMutations;
+        }
+        /**
+         * Updates the view with the given ViewDocumentChanges and optionally updates
+         * limbo docs and sync state from the provided target change.
+         * @param docChanges - The set of changes to make to the view's docs.
+         * @param updateLimboDocuments - Whether to update limbo documents based on
+         *        this change.
+         * @param targetChange - A target change to apply for computing limbo docs and
+         *        sync state.
+         * @returns A new ViewChange with the given docs, changes, and sync state.
+         */
+        // PORTING NOTE: The iOS/Android clients always compute limbo document changes.
+        applyChanges(t, e, n) {
+            const s = this.Ro;
+            this.Ro = t.Ro, this.mutatedKeys = t.mutatedKeys;
+            // Sort changes based on type and query comparator
+            const i = t.vo.no();
+            i.sort(((t, e) => function(t, e) {
+                const n = t => {
+                    switch (t) {
+                      case 0 /* Added */ :
+                        return 1;
+
+                      case 2 /* Modified */ :
+                      case 3 /* Metadata */ :
+                        // A metadata change is converted to a modified change at the public
+                        // api layer.  Since we sort by document key and then change type,
+                        // metadata and modified changes must be sorted equivalently.
+                        return 2;
+
+                      case 1 /* Removed */ :
+                        return 0;
+
+                      default:
+                        return B();
+                    }
+                };
+                return n(t) - n(e);
+            }
+            /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1351,8 +10628,676 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */(t.type,e.type)||this.Ao(t.doc,e.doc))),this.So(n);const r=e?this.Do():[],o=0===this.Io.size&&this.current?1:0,a=o!==this.Eo;return this.Eo=o,0!==i.length||a?{snapshot:new jh(this.query,t.Ro,s,i,t.mutatedKeys,0===o,a,!1),Co:r}:{Co:r}}ro(t){return this.current&&"Offline"===t?(this.current=!1,this.applyChanges({Ro:this.Ro,vo:new Bh,mutatedKeys:this.mutatedKeys,Bn:!1},!1)):{Co:[]}}No(t){return!this.To.has(t)&&!!this.Ro.has(t)&&!this.Ro.get(t).hasLocalMutations}So(t){t&&(t.addedDocuments.forEach((t=>this.To=this.To.add(t))),t.modifiedDocuments.forEach((t=>{})),t.removedDocuments.forEach((t=>this.To=this.To.delete(t))),this.current=t.current)}Do(){if(!this.current)return[];const t=this.Io;this.Io=ta(),this.Ro.forEach((t=>{this.No(t.key)&&(this.Io=this.Io.add(t.key))}));const e=[];return t.forEach((t=>{this.Io.has(t)||e.push(new Xh(t))})),this.Io.forEach((n=>{t.has(n)||e.push(new Qh(n))})),e}ko(t){this.To=t.zn,this.Io=ta();const e=this.Po(t.documents);return this.applyChanges(e,!0)}xo(){return jh.fromInitialDocuments(this.query,this.Ro,this.mutatedKeys,0===this.Eo)}}class Zh{constructor(t,e,n){this.query=t,this.targetId=e,this.view=n}}class tc{constructor(t){this.key=t,this.$o=!1}}class ec{constructor(t,e,n,s,i,r){this.localStore=t,this.remoteStore=e,this.eventManager=n,this.sharedClientState=s,this.currentUser=i,this.maxConcurrentLimboResolutions=r,this.Oo={},this.Mo=new Ha((t=>fo(t)),lo),this.Fo=new Map,this.Lo=new Set,this.Bo=new Ho(Ir.comparator),this.Uo=new Map,this.qo=new eh,this.Ko={},this.jo=new Map,this.Qo=Ba.re(),this.onlineState="Unknown",this.Wo=void 0}get isPrimaryClient(){return!0===this.Wo}}async function nc(t,e){const n=function(t){const e=Hi(t);return e.remoteStore.remoteSyncer.applyRemoteEvent=ic.bind(null,e),e.remoteStore.remoteSyncer.getRemoteKeysForTarget=pc.bind(null,e),e.remoteStore.remoteSyncer.rejectListen=oc.bind(null,e),e.Oo.br=Kh.bind(null,e.eventManager),e.Oo.zo=Gh.bind(null,e.eventManager),e}(t);let s,i;const r=n.Mo.get(e);if(r)s=r.targetId,n.sharedClientState.addLocalQueryTarget(s),i=r.view.xo();else{const t=await function(t,e){const n=Hi(t);return n.persistence.runTransaction("Allocate target","readwrite",(t=>{let s;return n.He.getTargetData(t,e).next((i=>i?(s=i,Oa.resolve(s)):n.He.allocateTargetId(t).next((i=>(s=new Va(e,i,0,t.currentSequenceNumber),n.He.addTargetData(t,s).next((()=>s)))))))})).then((t=>{const s=n.qn.get(t.targetId);return(null===s||t.snapshotVersion.compareTo(s.snapshotVersion)>0)&&(n.qn=n.qn.insert(t.targetId,t),n.Kn.set(e,t.targetId)),t}))}(n.localStore,uo(e)),r=n.sharedClientState.addLocalQueryTarget(t.targetId);s=t.targetId,i=await async function(t,e,n,s){t.Go=(e,n,s)=>async function(t,e,n,s){let i=e.view.Po(n);i.Bn&&(i=await Za(t.localStore,e.query,!1).then((({documents:t})=>e.view.Po(t,i))));const r=s&&s.targetChanges.get(e.targetId),o=e.view.applyChanges(i,t.isPrimaryClient,r);return cc(t,e.targetId,o.Co),o.snapshot}(t,e,n,s);const i=await Za(t.localStore,e,!0),r=new Jh(e,i.zn),o=r.Po(i.documents),a=ia.createSynthesizedTargetChangeForCurrentChange(n,s&&"Offline"!==t.onlineState),h=r.applyChanges(o,t.isPrimaryClient,a);cc(t,n,h.Co);const c=new Zh(e,n,r);return t.Mo.set(e,c),t.Fo.has(n)?t.Fo.get(n).push(e):t.Fo.set(n,[e]),h.snapshot}(n,e,s,"current"===r),n.isPrimaryClient&&Ah(n.remoteStore,t)}return i}async function sc(t,e){const n=Hi(t),s=n.Mo.get(e),i=n.Fo.get(s.targetId);if(i.length>1)return n.Fo.set(s.targetId,i.filter((t=>!lo(t,e)))),void n.Mo.delete(e);n.isPrimaryClient?(n.sharedClientState.removeLocalQueryTarget(s.targetId),n.sharedClientState.isActiveQueryTarget(s.targetId)||await Ja(n.localStore,s.targetId,!1).then((()=>{n.sharedClientState.clearQueryState(s.targetId),_h(n.remoteStore,s.targetId),ac(n,s.targetId)})).catch(ja)):(ac(n,s.targetId),await Ja(n.localStore,s.targetId,!0))}async function ic(t,e){const n=Hi(t);try{const t=await Xa(n.localStore,e);e.targetChanges.forEach(((t,e)=>{const s=n.Uo.get(e);s&&(ji(t.addedDocuments.size+t.modifiedDocuments.size+t.removedDocuments.size<=1),t.addedDocuments.size>0?s.$o=!0:t.modifiedDocuments.size>0?ji(s.$o):t.removedDocuments.size>0&&(ji(s.$o),s.$o=!1))})),await dc(n,t,e)}catch(t){await ja(t)}}function rc(t,e,n){const s=Hi(t);if(s.isPrimaryClient&&0===n||!s.isPrimaryClient&&1===n){const t=[];s.Mo.forEach(((n,s)=>{const i=s.view.ro(e);i.snapshot&&t.push(i.snapshot)})),function(t,e){const n=Hi(t);n.onlineState=e;let s=!1;n.queries.forEach(((t,n)=>{for(const t of n.listeners)t.ro(e)&&(s=!0)})),s&&Wh(n)}(s.eventManager,e),t.length&&s.Oo.br(t),s.onlineState=e,s.isPrimaryClient&&s.sharedClientState.setOnlineState(e)}}async function oc(t,e,n){const s=Hi(t);s.sharedClientState.updateQueryState(e,"rejected",n);const i=s.Uo.get(e),r=i&&i.key;if(r){let t=new Ho(Ir.comparator);t=t.insert(r,Fr.newNoDocument(r,or.min()));const n=ta().add(r),i=new sa(or.min(),new Map,new Go(sr),t,n);await ic(s,i),s.Bo=s.Bo.remove(r),s.Uo.delete(e),lc(s)}else await Ja(s.localStore,e,!1).then((()=>ac(s,e,n))).catch(ja)}function ac(t,e,n=null){t.sharedClientState.removeLocalQueryTarget(e);for(const s of t.Fo.get(e))t.Mo.delete(s),n&&t.Oo.zo(s,n);t.Fo.delete(e),t.isPrimaryClient&&t.qo.us(e).forEach((e=>{t.qo.containsKey(e)||hc(t,e)}))}function hc(t,e){t.Lo.delete(e.path.canonicalString());const n=t.Bo.get(e);null!==n&&(_h(t.remoteStore,n),t.Bo=t.Bo.remove(e),t.Uo.delete(n),lc(t))}function cc(t,e,n){for(const s of n)s instanceof Qh?(t.qo.addReference(s.key,e),uc(t,s)):s instanceof Xh?(Fi("SyncEngine","Document no longer in limbo: "+s.key),t.qo.removeReference(s.key,e),t.qo.containsKey(s.key)||hc(t,s.key)):Bi()}function uc(t,e){const n=e.key,s=n.path.canonicalString();t.Bo.get(n)||t.Lo.has(s)||(Fi("SyncEngine","New document in limbo: "+n),t.Lo.add(s),lc(t))}function lc(t){for(;t.Lo.size>0&&t.Bo.size<t.maxConcurrentLimboResolutions;){const e=t.Lo.values().next().value;t.Lo.delete(e);const n=new Ir(ur.fromString(e)),s=t.Qo.next();t.Uo.set(s,new tc(n)),t.Bo=t.Bo.insert(n,s),Ah(t.remoteStore,new Va(uo(oo(n.path)),s,2,er.I))}}async function dc(t,e,n){const s=Hi(t),i=[],r=[],o=[];s.Mo.isEmpty()||(s.Mo.forEach(((t,a)=>{o.push(s.Go(a,e,n).then((t=>{if(t){s.isPrimaryClient&&s.sharedClientState.updateQueryState(a.targetId,t.fromCache?"not-current":"current"),i.push(t);const e=Ka.$n(a.targetId,t);r.push(e)}})))})),await Promise.all(o),s.Oo.br(i),await async function(t,e){const n=Hi(t);try{await n.persistence.runTransaction("notifyLocalViewChanges","readwrite",(t=>Oa.forEach(e,(e=>Oa.forEach(e.kn,(s=>n.persistence.referenceDelegate.addReference(t,e.targetId,s))).next((()=>Oa.forEach(e.xn,(s=>n.persistence.referenceDelegate.removeReference(t,e.targetId,s)))))))))}catch(t){if(!Ma(t))throw t;Fi("LocalStore","Failed to update sequence numbers: "+t)}for(const t of e){const e=t.targetId;if(!t.fromCache){const t=n.qn.get(e),s=t.snapshotVersion,i=t.withLastLimboFreeSnapshotVersion(s);n.qn=n.qn.insert(e,i)}}}(s.localStore,r))}async function fc(t,e){const n=Hi(t);if(!n.currentUser.isEqual(e)){Fi("SyncEngine","User change. New user:",e.toKey());const t=await Ya(n.localStore,e);n.currentUser=e,function(t,e){t.jo.forEach((t=>{t.forEach((t=>{t.reject(new Ki(zi.CANCELLED,"'waitForPendingWrites' promise is rejected due to a user change."))}))})),t.jo.clear()}(n),n.sharedClientState.handleUserChange(e,t.removedBatchIds,t.addedBatchIds),await dc(n,t.Gn)}}function pc(t,e){const n=Hi(t),s=n.Uo.get(e);if(s&&s.$o)return ta().add(s.key);{let t=ta();const s=n.Fo.get(e);if(!s)return t;for(const e of s){const s=n.Mo.get(e);t=t.unionWith(s.view.bo)}return t}}class gc{constructor(){this.synchronizeTabs=!1}async initialize(t){this.k=vh(t.databaseInfo.databaseId),this.sharedClientState=this.Jo(t),this.persistence=this.Yo(t),await this.persistence.start(),this.gcScheduler=this.Xo(t),this.localStore=this.Zo(t)}Xo(t){return null}Zo(t){return function(t,e,n,s){return new Wa(t,e,n,s)}(this.persistence,new Ga,t.initialUser,this.k)}Yo(t){return new ah(ch.ks,this.k)}Jo(t){return new lh}async terminate(){this.gcScheduler&&this.gcScheduler.stop(),await this.sharedClientState.shutdown(),await this.persistence.shutdown()}}class mc{async initialize(t,e){this.localStore||(this.localStore=t.localStore,this.sharedClientState=t.sharedClientState,this.datastore=this.createDatastore(e),this.remoteStore=this.createRemoteStore(e),this.eventManager=this.createEventManager(e),this.syncEngine=this.createSyncEngine(e,!t.synchronizeTabs),this.sharedClientState.onlineStateHandler=t=>rc(this.syncEngine,t,1),this.remoteStore.remoteSyncer.handleCredentialChange=fc.bind(null,this.syncEngine),await async function(t,e){const n=Hi(t);e?(n.Gr.delete(2),await Sh(n)):e||(n.Gr.add(2),await Ch(n),n.Jr.set("Unknown"))}(this.remoteStore,this.syncEngine.isPrimaryClient))}createEventManager(t){return new zh}createDatastore(t){const e=vh(t.databaseInfo.databaseId),n=(s=t.databaseInfo,new mh(s));var s;return function(t,e,n,s){return new bh(t,e,n,s)}(t.authCredentials,t.appCheckCredentials,n,e)}createRemoteStore(t){return e=this.localStore,n=this.datastore,s=t.asyncQueue,i=t=>rc(this.syncEngine,t,0),r=fh.Pt()?new fh:new dh,new Ih(e,n,s,i,r);var e,n,s,i,r}createSyncEngine(t,e){return function(t,e,n,s,i,r,o){const a=new ec(t,e,n,s,i,r);return o&&(a.Wo=!0),a}(this.localStore,this.remoteStore,this.eventManager,this.sharedClientState,t.initialUser,t.maxConcurrentLimboResolutions,e)}terminate(){return async function(t){const e=Hi(t);Fi("RemoteStore","RemoteStore shutting down."),e.Gr.add(5),await Ch(e),e.Hr.shutdown(),e.Jr.set("Unknown")}(this.remoteStore)}}
-/**
+     */ (t.type, e.type) || this.Ao(t.doc, e.doc))), this.So(n);
+            const r = e ? this.Do() : [], o = 0 === this.Io.size && this.current ? 1 /* Synced */ : 0 /* Local */ , c = o !== this.Eo;
+            if (this.Eo = o, 0 !== i.length || c) {
+                return {
+                    snapshot: new Uo(this.query, t.Ro, s, i, t.mutatedKeys, 0 /* Local */ === o, c, 
+                    /* excludesMetadataChanges= */ !1),
+                    Co: r
+                };
+            }
+            // no changes
+            return {
+                Co: r
+            };
+        }
+        /**
+         * Applies an OnlineState change to the view, potentially generating a
+         * ViewChange if the view's syncState changes as a result.
+         */    ro(t) {
+            return this.current && "Offline" /* Offline */ === t ? (
+            // If we're offline, set `current` to false and then call applyChanges()
+            // to refresh our syncState and generate a ViewChange as appropriate. We
+            // are guaranteed to get a new TargetChange that sets `current` back to
+            // true once the client is back online.
+            this.current = !1, this.applyChanges({
+                Ro: this.Ro,
+                vo: new Bo,
+                mutatedKeys: this.mutatedKeys,
+                Bn: !1
+            }, 
+            /* updateLimboDocuments= */ !1)) : {
+                Co: []
+            };
+        }
+        /**
+         * Returns whether the doc for the given key should be in limbo.
+         */    No(t) {
+            // If the remote end says it's part of this query, it's not in limbo.
+            return !this.To.has(t) && (
+            // The local store doesn't think it's a result, so it shouldn't be in limbo.
+            !!this.Ro.has(t) && !this.Ro.get(t).hasLocalMutations);
+        }
+        /**
+         * Updates syncedDocuments, current, and limbo docs based on the given change.
+         * Returns the list of changes to which docs are in limbo.
+         */    So(t) {
+            t && (t.addedDocuments.forEach((t => this.To = this.To.add(t))), t.modifiedDocuments.forEach((t => {})), 
+            t.removedDocuments.forEach((t => this.To = this.To.delete(t))), this.current = t.current);
+        }
+        Do() {
+            // We can only determine limbo documents when we're in-sync with the server.
+            if (!this.current) return [];
+            // TODO(klimt): Do this incrementally so that it's not quadratic when
+            // updating many documents.
+                    const t = this.Io;
+            this.Io = Dn(), this.Ro.forEach((t => {
+                this.No(t.key) && (this.Io = this.Io.add(t.key));
+            }));
+            // Diff the new limbo docs with the old limbo docs.
+            const e = [];
+            return t.forEach((t => {
+                this.Io.has(t) || e.push(new ec(t));
+            })), this.Io.forEach((n => {
+                t.has(n) || e.push(new tc(n));
+            })), e;
+        }
+        /**
+         * Update the in-memory state of the current view with the state read from
+         * persistence.
+         *
+         * We update the query view whenever a client's primary status changes:
+         * - When a client transitions from primary to secondary, it can miss
+         *   LocalStorage updates and its query views may temporarily not be
+         *   synchronized with the state on disk.
+         * - For secondary to primary transitions, the client needs to update the list
+         *   of `syncedDocuments` since secondary clients update their query views
+         *   based purely on synthesized RemoteEvents.
+         *
+         * @param queryResult.documents - The documents that match the query according
+         * to the LocalStore.
+         * @param queryResult.remoteKeys - The keys of the documents that match the
+         * query according to the backend.
+         *
+         * @returns The ViewChange that resulted from this synchronization.
+         */
+        // PORTING NOTE: Multi-tab only.
+        ko(t) {
+            this.To = t.zn, this.Io = Dn();
+            const e = this.Po(t.documents);
+            return this.applyChanges(e, /*updateLimboDocuments=*/ !0);
+        }
+        /**
+         * Returns a view snapshot as if this query was just listened to. Contains
+         * a document add for every existing document and the `fromCache` and
+         * `hasPendingWrites` status of the already established view.
+         */
+        // PORTING NOTE: Multi-tab only.
+        xo() {
+            return Uo.fromInitialDocuments(this.query, this.Ro, this.mutatedKeys, 0 /* Local */ === this.Eo);
+        }
+    }
+
+    /**
+     * QueryView contains all of the data that SyncEngine needs to keep track of for
+     * a particular query.
+     */
+    class sc {
+        constructor(
+        /**
+         * The query itself.
+         */
+        t, 
+        /**
+         * The target number created by the client that is used in the watch
+         * stream to identify this query.
+         */
+        e, 
+        /**
+         * The view is responsible for computing the final merged truth of what
+         * docs are in the query. It gets notified of local and remote changes,
+         * and applies the query filters and limits to determine the most correct
+         * possible results.
+         */
+        n) {
+            this.query = t, this.targetId = e, this.view = n;
+        }
+    }
+
+    /** Tracks a limbo resolution. */ class ic {
+        constructor(t) {
+            this.key = t, 
+            /**
+             * Set to true once we've received a document. This is used in
+             * getRemoteKeysForTarget() and ultimately used by WatchChangeAggregator to
+             * decide whether it needs to manufacture a delete event for the target once
+             * the target is CURRENT.
+             */
+            this.$o = !1;
+        }
+    }
+
+    /**
+     * An implementation of `SyncEngine` coordinating with other parts of SDK.
+     *
+     * The parts of SyncEngine that act as a callback to RemoteStore need to be
+     * registered individually. This is done in `syncEngineWrite()` and
+     * `syncEngineListen()` (as well as `applyPrimaryState()`) as these methods
+     * serve as entry points to RemoteStore's functionality.
+     *
+     * Note: some field defined in this class might have public access level, but
+     * the class is not exported so they are only accessible from this module.
+     * This is useful to implement optional features (like bundles) in free
+     * functions, such that they are tree-shakeable.
+     */ class rc {
+        constructor(t, e, n, 
+        // PORTING NOTE: Manages state synchronization in multi-tab environments.
+        s, i, r) {
+            this.localStore = t, this.remoteStore = e, this.eventManager = n, this.sharedClientState = s, 
+            this.currentUser = i, this.maxConcurrentLimboResolutions = r, this.Oo = {}, this.Mo = new zi((t => Ve(t)), ve), 
+            this.Fo = new Map, 
+            /**
+             * The keys of documents that are in limbo for which we haven't yet started a
+             * limbo resolution query. The strings in this set are the result of calling
+             * `key.path.canonicalString()` where `key` is a `DocumentKey` object.
+             *
+             * The `Set` type was chosen because it provides efficient lookup and removal
+             * of arbitrary elements and it also maintains insertion order, providing the
+             * desired queue-like FIFO semantics.
+             */
+            this.Lo = new Set, 
+            /**
+             * Keeps track of the target ID for each document that is in limbo with an
+             * active target.
+             */
+            this.Bo = new yn(Dt.comparator), 
+            /**
+             * Keeps track of the information about an active limbo resolution for each
+             * active target ID that was started for the purpose of limbo resolution.
+             */
+            this.Uo = new Map, this.qo = new Sr, 
+            /** Stores user completion handlers, indexed by User and BatchId. */
+            this.Ko = {}, 
+            /** Stores user callbacks waiting for all pending writes to be acknowledged. */
+            this.jo = new Map, this.Qo = Oi.re(), this.onlineState = "Unknown" /* Unknown */ , 
+            // The primary state is set to `true` or `false` immediately after Firestore
+            // startup. In the interim, a client should only be considered primary if
+            // `isPrimary` is true.
+            this.Wo = void 0;
+        }
+        get isPrimaryClient() {
+            return !0 === this.Wo;
+        }
+    }
+
+    /**
+     * Initiates the new listen, resolves promise when listen enqueued to the
+     * server. All the subsequent view snapshots or errors are sent to the
+     * subscribed handlers. Returns the initial snapshot.
+     */
+    async function oc(t, e) {
+        const n = $c(t);
+        let s, i;
+        const r = n.Mo.get(e);
+        if (r) 
+        // PORTING NOTE: With Multi-Tab Web, it is possible that a query view
+        // already exists when EventManager calls us for the first time. This
+        // happens when the primary tab is already listening to this query on
+        // behalf of another tab and the user of the primary also starts listening
+        // to the query. EventManager will not have an assigned target ID in this
+        // case and calls `listen` to obtain this ID.
+        s = r.targetId, n.sharedClientState.addLocalQueryTarget(s), i = r.view.xo(); else {
+            const t = await Tr(n.localStore, be(e)), r = n.sharedClientState.addLocalQueryTarget(t.targetId);
+            s = t.targetId, i = await cc(n, e, s, "current" === r), n.isPrimaryClient && lo(n.remoteStore, t);
+        }
+        return i;
+    }
+
+    /**
+     * Registers a view for a previously unknown query and computes its initial
+     * snapshot.
+     */ async function cc(t, e, n, s) {
+        // PORTING NOTE: On Web only, we inject the code that registers new Limbo
+        // targets based on view changes. This allows us to only depend on Limbo
+        // changes when user code includes queries.
+        t.Go = (e, n, s) => async function(t, e, n, s) {
+            let i = e.view.Po(n);
+            i.Bn && (
+            // The query has a limit and some docs were removed, so we need
+            // to re-run the query against the local store to make sure we
+            // didn't lose any good docs that had been past the limit.
+            i = await Ir(t.localStore, e.query, 
+            /* usePreviousResults= */ !1).then((({documents: t}) => e.view.Po(t, i))));
+            const r = s && s.targetChanges.get(e.targetId), o = e.view.applyChanges(i, 
+            /* updateLimboDocuments= */ t.isPrimaryClient, r);
+            return Tc(t, e.targetId, o.Co), o.snapshot;
+        }(t, e, n, s);
+        const i = await Ir(t.localStore, e, 
+        /* usePreviousResults= */ !0), r = new nc(e, i.zn), o = r.Po(i.documents), c = xn.createSynthesizedTargetChangeForCurrentChange(n, s && "Offline" /* Offline */ !== t.onlineState), a = r.applyChanges(o, 
+        /* updateLimboDocuments= */ t.isPrimaryClient, c);
+        Tc(t, n, a.Co);
+        const u = new sc(e, n, r);
+        return t.Mo.set(e, u), t.Fo.has(n) ? t.Fo.get(n).push(e) : t.Fo.set(n, [ e ]), a.snapshot;
+    }
+
+    /** Stops listening to the query. */ async function ac(t, e) {
+        const n = K(t), s = n.Mo.get(e), i = n.Fo.get(s.targetId);
+        if (i.length > 1) return n.Fo.set(s.targetId, i.filter((t => !ve(t, e)))), void n.Mo.delete(e);
+        // No other queries are mapped to the target, clean up the query and the target.
+            if (n.isPrimaryClient) {
+            // We need to remove the local query target first to allow us to verify
+            // whether any other client is still interested in this target.
+            n.sharedClientState.removeLocalQueryTarget(s.targetId);
+            n.sharedClientState.isActiveQueryTarget(s.targetId) || await Er(n.localStore, s.targetId, 
+            /*keepPersistedTargetData=*/ !1).then((() => {
+                n.sharedClientState.clearQueryState(s.targetId), fo(n.remoteStore, s.targetId), 
+                yc(n, s.targetId);
+            })).catch(Ui);
+        } else yc(n, s.targetId), await Er(n.localStore, s.targetId, 
+        /*keepPersistedTargetData=*/ !0);
+    }
+
+    /**
+     * Initiates the write of local mutation batch which involves adding the
+     * writes to the mutation queue, notifying the remote store about new
+     * mutations and raising events for any changes this write caused.
+     *
+     * The promise returned by this call is resolved when the above steps
+     * have completed, *not* when the write was acked by the backend. The
+     * userCallback is resolved once the write was acked/rejected by the
+     * backend (or failed locally for any other reason).
+     */ async function uc(t, e, n) {
+        const s = Oc(t);
+        try {
+            const t = await function(t, e) {
+                const n = K(t), s = at.now(), i = e.reduce(((t, e) => t.add(e.key)), Dn());
+                let r;
+                return n.persistence.runTransaction("Locally write mutations", "readwrite", (t => n.Wn.vn(t, i).next((i => {
+                    r = i;
+                    // For non-idempotent mutations (such as `FieldValue.increment()`),
+                    // we record the base state in a separate patch mutation. This is
+                    // later used to guarantee consistent values and prevents flicker
+                    // even if the backend sends us an update that already includes our
+                    // transform.
+                    const o = [];
+                    for (const t of e) {
+                        const e = nn(t, r.get(t.key));
+                        null != e && 
+                        // NOTE: The base state should only be applied if there's some
+                        // existing document to override, so use a Precondition of
+                        // exists=true
+                        o.push(new cn(t.key, e, Wt(e.value.mapValue), Ye.exists(!0)));
+                    }
+                    return n.An.addMutationBatch(t, s, o, e);
+                })))).then((t => (t.applyToLocalDocumentSet(r), {
+                    batchId: t.batchId,
+                    changes: r
+                })));
+            }(s.localStore, e);
+            s.sharedClientState.addPendingMutation(t.batchId), function(t, e, n) {
+                let s = t.Ko[t.currentUser.toKey()];
+                s || (s = new yn(rt));
+                s = s.insert(e, n), t.Ko[t.currentUser.toKey()] = s;
+            }
+            /**
+     * Resolves or rejects the user callback for the given batch and then discards
+     * it.
+     */ (s, t.batchId, n), await Ac(s, t.changes), await bo(s.remoteStore);
+        } catch (t) {
+            // If we can't persist the mutation, we reject the user callback and
+            // don't send the mutation. The user can then retry the write.
+            const e = Fo(t, "Failed to persist write");
+            n.reject(e);
+        }
+    }
+
+    /**
+     * Applies one remote event to the sync engine, notifying any views of the
+     * changes, and releasing any pending mutation batches that would become
+     * visible because of the snapshot version the remote event contains.
+     */ async function hc(t, e) {
+        const n = K(t);
+        try {
+            const t = await gr(n.localStore, e);
+            // Update `receivedDocument` as appropriate for any limbo targets.
+                    e.targetChanges.forEach(((t, e) => {
+                const s = n.Uo.get(e);
+                s && (
+                // Since this is a limbo resolution lookup, it's for a single document
+                // and it could be added, modified, or removed, but not a combination.
+                U(t.addedDocuments.size + t.modifiedDocuments.size + t.removedDocuments.size <= 1), 
+                t.addedDocuments.size > 0 ? s.$o = !0 : t.modifiedDocuments.size > 0 ? U(s.$o) : t.removedDocuments.size > 0 && (U(s.$o), 
+                s.$o = !1));
+            })), await Ac(n, t, e);
+        } catch (t) {
+            await Ui(t);
+        }
+    }
+
+    /**
+     * Applies an OnlineState change to the sync engine and notifies any views of
+     * the change.
+     */ function lc(t, e, n) {
+        const s = K(t);
+        // If we are the secondary client, we explicitly ignore the remote store's
+        // online state (the local client may go offline, even though the primary
+        // tab remains online) and only apply the primary tab's online state from
+        // SharedClientState.
+            if (s.isPrimaryClient && 0 /* RemoteStore */ === n || !s.isPrimaryClient && 1 /* SharedClientState */ === n) {
+            const t = [];
+            s.Mo.forEach(((n, s) => {
+                const i = s.view.ro(e);
+                i.snapshot && t.push(i.snapshot);
+            })), function(t, e) {
+                const n = K(t);
+                n.onlineState = e;
+                let s = !1;
+                n.queries.forEach(((t, n) => {
+                    for (const t of n.listeners) 
+                    // Run global snapshot listeners if a consistent snapshot has been emitted.
+                    t.ro(e) && (s = !0);
+                })), s && zo(n);
+            }(s.eventManager, e), t.length && s.Oo.br(t), s.onlineState = e, s.isPrimaryClient && s.sharedClientState.setOnlineState(e);
+        }
+    }
+
+    /**
+     * Rejects the listen for the given targetID. This can be triggered by the
+     * backend for any active target.
+     *
+     * @param syncEngine - The sync engine implementation.
+     * @param targetId - The targetID corresponds to one previously initiated by the
+     * user as part of TargetData passed to listen() on RemoteStore.
+     * @param err - A description of the condition that has forced the rejection.
+     * Nearly always this will be an indication that the user is no longer
+     * authorized to see the data matching the target.
+     */ async function fc(t, e, n) {
+        const s = K(t);
+        // PORTING NOTE: Multi-tab only.
+            s.sharedClientState.updateQueryState(e, "rejected", n);
+        const i = s.Uo.get(e), r = i && i.key;
+        if (r) {
+            // TODO(klimt): We really only should do the following on permission
+            // denied errors, but we don't have the cause code here.
+            // It's a limbo doc. Create a synthetic event saying it was deleted.
+            // This is kind of a hack. Ideally, we would have a method in the local
+            // store to purge a document. However, it would be tricky to keep all of
+            // the local store's invariants with another method.
+            let t = new yn(Dt.comparator);
+            t = t.insert(r, Gt.newNoDocument(r, ut.min()));
+            const n = Dn().add(r), i = new kn(ut.min(), 
+            /* targetChanges= */ new Map, 
+            /* targetMismatches= */ new En(rt), t, n);
+            await hc(s, i), 
+            // Since this query failed, we won't want to manually unlisten to it.
+            // We only remove it from bookkeeping after we successfully applied the
+            // RemoteEvent. If `applyRemoteEvent()` throws, we want to re-listen to
+            // this query when the RemoteStore restarts the Watch stream, which should
+            // re-trigger the target failure.
+            s.Bo = s.Bo.remove(r), s.Uo.delete(e), Ic(s);
+        } else await Er(s.localStore, e, 
+        /* keepPersistedTargetData */ !1).then((() => yc(s, e, n))).catch(Ui);
+    }
+
+    async function dc(t, e) {
+        const n = K(t), s = e.batch.batchId;
+        try {
+            const t = await _r(n.localStore, e);
+            // The local store may or may not be able to apply the write result and
+            // raise events immediately (depending on whether the watcher is caught
+            // up), so we raise user callbacks first so that they consistently happen
+            // before listen events.
+                    gc(n, s, /*error=*/ null), mc(n, s), n.sharedClientState.updateMutationState(s, "acknowledged"), 
+            await Ac(n, t);
+        } catch (t) {
+            await Ui(t);
+        }
+    }
+
+    async function wc(t, e, n) {
+        const s = K(t);
+        try {
+            const t = await function(t, e) {
+                const n = K(t);
+                return n.persistence.runTransaction("Reject batch", "readwrite-primary", (t => {
+                    let s;
+                    return n.An.lookupMutationBatch(t, e).next((e => (U(null !== e), s = e.keys(), n.An.removeMutationBatch(t, e)))).next((() => n.An.performConsistencyCheck(t))).next((() => n.Wn.vn(t, s)));
+                }));
+            }
+            /**
+     * Returns the largest (latest) batch id in mutation queue that is pending
+     * server response.
+     *
+     * Returns `BATCHID_UNKNOWN` if the queue is empty.
+     */ (s.localStore, e);
+            // The local store may or may not be able to apply the write result and
+            // raise events immediately (depending on whether the watcher is caught up),
+            // so we raise user callbacks first so that they consistently happen before
+            // listen events.
+                    gc(s, e, n), mc(s, e), s.sharedClientState.updateMutationState(e, "rejected", n), 
+            await Ac(s, t);
+        } catch (n) {
+            await Ui(n);
+        }
+    }
+
+    /**
+     * Triggers the callbacks that are waiting for this batch id to get acknowledged by server,
+     * if there are any.
+     */ function mc(t, e) {
+        (t.jo.get(e) || []).forEach((t => {
+            t.resolve();
+        })), t.jo.delete(e);
+    }
+
+    /** Reject all outstanding callbacks waiting for pending writes to complete. */ function gc(t, e, n) {
+        const s = K(t);
+        let i = s.Ko[s.currentUser.toKey()];
+        // NOTE: Mutations restored from persistence won't have callbacks, so it's
+        // okay for there to be no callback for this ID.
+            if (i) {
+            const t = i.get(e);
+            t && (n ? t.reject(n) : t.resolve(), i = i.remove(e)), s.Ko[s.currentUser.toKey()] = i;
+        }
+    }
+
+    function yc(t, e, n = null) {
+        t.sharedClientState.removeLocalQueryTarget(e);
+        for (const s of t.Fo.get(e)) t.Mo.delete(s), n && t.Oo.zo(s, n);
+        if (t.Fo.delete(e), t.isPrimaryClient) {
+            t.qo.us(e).forEach((e => {
+                t.qo.containsKey(e) || 
+                // We removed the last reference for this key
+                pc(t, e);
+            }));
+        }
+    }
+
+    function pc(t, e) {
+        t.Lo.delete(e.path.canonicalString());
+        // It's possible that the target already got removed because the query failed. In that case,
+        // the key won't exist in `limboTargetsByKey`. Only do the cleanup if we still have the target.
+        const n = t.Bo.get(e);
+        null !== n && (fo(t.remoteStore, n), t.Bo = t.Bo.remove(e), t.Uo.delete(n), Ic(t));
+    }
+
+    function Tc(t, e, n) {
+        for (const s of n) if (s instanceof tc) t.qo.addReference(s.key, e), Ec(t, s); else if (s instanceof ec) {
+            O("SyncEngine", "Document no longer in limbo: " + s.key), t.qo.removeReference(s.key, e);
+            t.qo.containsKey(s.key) || 
+            // We removed the last reference for this key
+            pc(t, s.key);
+        } else B();
+    }
+
+    function Ec(t, e) {
+        const n = e.key, s = n.path.canonicalString();
+        t.Bo.get(n) || t.Lo.has(s) || (O("SyncEngine", "New document in limbo: " + n), t.Lo.add(s), 
+        Ic(t));
+    }
+
+    /**
+     * Starts listens for documents in limbo that are enqueued for resolution,
+     * subject to a maximum number of concurrent resolutions.
+     *
+     * Without bounding the number of concurrent resolutions, the server can fail
+     * with "resource exhausted" errors which can lead to pathological client
+     * behavior as seen in https://github.com/firebase/firebase-js-sdk/issues/2683.
+     */ function Ic(t) {
+        for (;t.Lo.size > 0 && t.Bo.size < t.maxConcurrentLimboResolutions; ) {
+            const e = t.Lo.values().next().value;
+            t.Lo.delete(e);
+            const n = new Dt(wt.fromString(e)), s = t.Qo.next();
+            t.Uo.set(s, new ic(n)), t.Bo = t.Bo.insert(n, s), lo(t.remoteStore, new ai(be(ye(n.path)), s, 2 /* LimboResolution */ , nt.I));
+        }
+    }
+
+    async function Ac(t, e, n) {
+        const s = K(t), i = [], r = [], o = [];
+        s.Mo.isEmpty() || (s.Mo.forEach(((t, c) => {
+            o.push(s.Go(c, e, n).then((t => {
+                if (t) {
+                    s.isPrimaryClient && s.sharedClientState.updateQueryState(c.targetId, t.fromCache ? "not-current" : "current"), 
+                    i.push(t);
+                    const e = hr.$n(c.targetId, t);
+                    r.push(e);
+                }
+            })));
+        })), await Promise.all(o), s.Oo.br(i), await async function(t, e) {
+            const n = K(t);
+            try {
+                await n.persistence.runTransaction("notifyLocalViewChanges", "readwrite", (t => zs.forEach(e, (e => zs.forEach(e.kn, (s => n.persistence.referenceDelegate.addReference(t, e.targetId, s))).next((() => zs.forEach(e.xn, (s => n.persistence.referenceDelegate.removeReference(t, e.targetId, s)))))))));
+            } catch (t) {
+                if (!Zs(t)) throw t;
+                // If `notifyLocalViewChanges` fails, we did not advance the sequence
+                // number for the documents that were included in this transaction.
+                // This might trigger them to be deleted earlier than they otherwise
+                // would have, but it should not invalidate the integrity of the data.
+                O("LocalStore", "Failed to update sequence numbers: " + t);
+            }
+            for (const t of e) {
+                const e = t.targetId;
+                if (!t.fromCache) {
+                    const t = n.qn.get(e), s = t.snapshotVersion, i = t.withLastLimboFreeSnapshotVersion(s);
+                    // Advance the last limbo free snapshot version
+                                    n.qn = n.qn.insert(e, i);
+                }
+            }
+        }(s.localStore, r));
+    }
+
+    async function Rc(t, e) {
+        const n = K(t);
+        if (!n.currentUser.isEqual(e)) {
+            O("SyncEngine", "User change. New user:", e.toKey());
+            const t = await wr(n.localStore, e);
+            n.currentUser = e, 
+            // Fails tasks waiting for pending writes requested by previous user.
+            function(t, e) {
+                t.jo.forEach((t => {
+                    t.forEach((t => {
+                        t.reject(new Q(j.CANCELLED, e));
+                    }));
+                })), t.jo.clear();
+            }(n, "'waitForPendingWrites' promise is rejected due to a user change."), 
+            // TODO(b/114226417): Consider calling this only in the primary tab.
+            n.sharedClientState.handleUserChange(e, t.removedBatchIds, t.addedBatchIds), await Ac(n, t.Gn);
+        }
+    }
+
+    function bc(t, e) {
+        const n = K(t), s = n.Uo.get(e);
+        if (s && s.$o) return Dn().add(s.key);
+        {
+            let t = Dn();
+            const s = n.Fo.get(e);
+            if (!s) return t;
+            for (const e of s) {
+                const s = n.Mo.get(e);
+                t = t.unionWith(s.view.bo);
+            }
+            return t;
+        }
+    }
+
+    function $c(t) {
+        const e = K(t);
+        return e.remoteStore.remoteSyncer.applyRemoteEvent = hc.bind(null, e), e.remoteStore.remoteSyncer.getRemoteKeysForTarget = bc.bind(null, e), 
+        e.remoteStore.remoteSyncer.rejectListen = fc.bind(null, e), e.Oo.br = Wo.bind(null, e.eventManager), 
+        e.Oo.zo = Go.bind(null, e.eventManager), e;
+    }
+
+    function Oc(t) {
+        const e = K(t);
+        return e.remoteStore.remoteSyncer.applySuccessfulWrite = dc.bind(null, e), e.remoteStore.remoteSyncer.rejectFailedWrite = wc.bind(null, e), 
+        e;
+    }
+
+    class Fc {
+        constructor() {
+            this.synchronizeTabs = !1;
+        }
+        async initialize(t) {
+            this.k = eo(t.databaseInfo.databaseId), this.sharedClientState = this.Jo(t), this.persistence = this.Yo(t), 
+            await this.persistence.start(), this.gcScheduler = this.Xo(t), this.localStore = this.Zo(t);
+        }
+        Xo(t) {
+            return null;
+        }
+        Zo(t) {
+            return dr(this.persistence, new lr, t.initialUser, this.k);
+        }
+        Yo(t) {
+            return new $r(Mr.ks, this.k);
+        }
+        Jo(t) {
+            return new Gr;
+        }
+        async terminate() {
+            this.gcScheduler && this.gcScheduler.stop(), await this.sharedClientState.shutdown(), 
+            await this.persistence.shutdown();
+        }
+    }
+
+    /**
+     * Initializes and wires the components that are needed to interface with the
+     * network.
+     */ class Uc {
+        async initialize(t, e) {
+            this.localStore || (this.localStore = t.localStore, this.sharedClientState = t.sharedClientState, 
+            this.datastore = this.createDatastore(e), this.remoteStore = this.createRemoteStore(e), 
+            this.eventManager = this.createEventManager(e), this.syncEngine = this.createSyncEngine(e, 
+            /* startAsPrimary=*/ !t.synchronizeTabs), this.sharedClientState.onlineStateHandler = t => lc(this.syncEngine, t, 1 /* SharedClientState */), 
+            this.remoteStore.remoteSyncer.handleCredentialChange = Rc.bind(null, this.syncEngine), 
+            await xo(this.remoteStore, this.syncEngine.isPrimaryClient));
+        }
+        createEventManager(t) {
+            return new Ko;
+        }
+        createDatastore(t) {
+            const e = eo(t.databaseInfo.databaseId), n = (s = t.databaseInfo, new Xr(s));
+            var s;
+            /** Return the Platform-specific connectivity monitor. */        return function(t, e, n, s) {
+                return new oo(t, e, n, s);
+            }(t.authCredentials, t.appCheckCredentials, n, e);
+        }
+        createRemoteStore(t) {
+            return e = this.localStore, n = this.datastore, s = t.asyncQueue, i = t => lc(this.syncEngine, t, 0 /* RemoteStore */), 
+            r = Hr.Pt() ? new Hr : new zr, new ao(e, n, s, i, r);
+            var e, n, s, i, r;
+            /** Re-enables the network. Idempotent. */    }
+        createSyncEngine(t, e) {
+            return function(t, e, n, 
+            // PORTING NOTE: Manages state synchronization in multi-tab environments.
+            s, i, r, o) {
+                const c = new rc(t, e, n, s, i, r);
+                return o && (c.Wo = !0), c;
+            }(this.localStore, this.remoteStore, this.eventManager, this.sharedClientState, t.initialUser, t.maxConcurrentLimboResolutions, e);
+        }
+        terminate() {
+            return async function(t) {
+                const e = K(t);
+                O("RemoteStore", "RemoteStore shutting down."), e.Gr.add(5 /* Shutdown */), await ho(e), 
+                e.Hr.shutdown(), 
+                // Set the OnlineState to Unknown (rather than Offline) to avoid potentially
+                // triggering spurious listener events with cached data, etc.
+                e.Jr.set("Unknown" /* Unknown */);
+            }(this.remoteStore);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1368,7 +11313,10 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-/**
+    /**
+     * On web, a `ReadableStream` is wrapped around by a `ByteStreamReader`.
+     */
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1383,8 +11331,38 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class yc{constructor(t){this.observer=t,this.muted=!1}next(t){this.observer.next&&this.ec(this.observer.next,t)}error(t){this.observer.error?this.ec(this.observer.error,t):console.error("Uncaught Error in snapshot listener:",t)}nc(){this.muted=!0}ec(t,e){this.muted||setTimeout((()=>{this.muted||t(e)}),0)}}
-/**
+     */
+    /*
+     * A wrapper implementation of Observer<T> that will dispatch events
+     * asynchronously. To allow immediate silencing, a mute call is added which
+     * causes events scheduled to no longer be raised.
+     */
+    class Kc {
+        constructor(t) {
+            this.observer = t, 
+            /**
+             * When set to true, will not raise future events. Necessary to deal with
+             * async detachment of listener.
+             */
+            this.muted = !1;
+        }
+        next(t) {
+            this.observer.next && this.ec(this.observer.next, t);
+        }
+        error(t) {
+            this.observer.error ? this.ec(this.observer.error, t) : console.error("Uncaught Error in snapshot listener:", t);
+        }
+        nc() {
+            this.muted = !0;
+        }
+        ec(t, e) {
+            this.muted || setTimeout((() => {
+                this.muted || t(e);
+            }), 0);
+        }
+    }
+
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1399,8 +11377,185 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */class vc{constructor(t,e,n,s){this.authCredentials=t,this.appCheckCredentials=e,this.asyncQueue=n,this.databaseInfo=s,this.user=Oi.UNAUTHENTICATED,this.clientId=class{static A(){const t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",e=Math.floor(256/t.length)*t.length;let n="";for(;n.length<20;){const s=nr(40);for(let i=0;i<s.length;++i)n.length<20&&s[i]<e&&(n+=t.charAt(s[i]%t.length))}return n}}.A(),this.authCredentialListener=()=>Promise.resolve(),this.authCredentials.start(n,(async t=>{Fi("FirestoreClient","Received user=",t.uid),await this.authCredentialListener(t),this.user=t})),this.appCheckCredentials.start(n,(()=>Promise.resolve()))}async getConfiguration(){return{asyncQueue:this.asyncQueue,databaseInfo:this.databaseInfo,clientId:this.clientId,authCredentials:this.authCredentials,appCheckCredentials:this.appCheckCredentials,initialUser:this.user,maxConcurrentLimboResolutions:100}}setCredentialChangeListener(t){this.authCredentialListener=t}verifyNotTerminated(){if(this.asyncQueue.isShuttingDown)throw new Ki(zi.FAILED_PRECONDITION,"The client has already been terminated.")}terminate(){this.asyncQueue.enterRestrictedMode();const t=new Gi;return this.asyncQueue.enqueueAndForgetEvenWhileRestricted((async()=>{try{this.onlineComponents&&await this.onlineComponents.terminate(),this.offlineComponents&&await this.offlineComponents.terminate(),this.authCredentials.shutdown(),this.appCheckCredentials.shutdown(),t.resolve()}catch(e){const n=$h(e,"Failed to shutdown persistence");t.reject(n)}})),t.promise}}async function wc(t,e){t.asyncQueue.verifyOperationInProgress();const n=await async function(t){return t.offlineComponents||(Fi("FirestoreClient","Using default OfflineComponentProvider"),await async function(t,e){t.asyncQueue.verifyOperationInProgress(),Fi("FirestoreClient","Initializing OfflineComponentProvider");const n=await t.getConfiguration();await e.initialize(n);let s=n.initialUser;t.setCredentialChangeListener((async t=>{s.isEqual(t)||(await Ya(e.localStore,t),s=t)})),e.persistence.setDatabaseDeletedListener((()=>t.terminate())),t.offlineComponents=e}(t,new gc)),t.offlineComponents}(t);Fi("FirestoreClient","Initializing OnlineComponentProvider");const s=await t.getConfiguration();await e.initialize(n,s),t.setCredentialChangeListener((t=>async function(t,e){const n=Hi(t);n.asyncQueue.verifyOperationInProgress(),Fi("RemoteStore","RemoteStore received new credentials");const s=Lh(n);n.Gr.add(3),await Ch(n),s&&n.Jr.set("Unknown"),await n.remoteSyncer.handleCredentialChange(e),n.Gr.delete(3),await Sh(n)}(e.remoteStore,t))),t.onlineComponents=e}async function Ec(t){const e=await async function(t){return t.onlineComponents||(Fi("FirestoreClient","Using default OnlineComponentProvider"),await wc(t,new mc)),t.onlineComponents}(t),n=e.eventManager;return n.onListen=nc.bind(null,e.syncEngine),n.onUnlisten=sc.bind(null,e.syncEngine),n}function bc(t,e,n={}){const s=new Gi;return t.asyncQueue.enqueueAndForget((async()=>function(t,e,n,s,i){const r=new yc({next:n=>{e.enqueueAndForget((()=>async function(t,e){const n=Hi(t),s=e.query;let i=!1;const r=n.queries.get(s);if(r){const t=r.listeners.indexOf(e);t>=0&&(r.listeners.splice(t,1),i=0===r.listeners.length)}if(i)return n.queries.delete(s),n.onUnlisten(s)}(t,o))),n.fromCache&&"server"===s.source?i.reject(new Ki(zi.UNAVAILABLE,'Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to "server" to retrieve the cached documents.)')):i.resolve(n)},error:t=>i.reject(t)}),o=new Yh(n,r,{includeMetadataChanges:!0,wo:!0});return async function(t,e){const n=Hi(t),s=e.query;let i=!1,r=n.queries.get(s);if(r||(i=!0,r=new Hh),i)try{r.so=await n.onListen(s)}catch(t){const n=$h(t,`Initialization of query '${po(e.query)}' failed`);return void e.onError(n)}n.queries.set(s,r),r.listeners.push(e),e.ro(n.onlineState),r.so&&e.oo(r.so)&&Wh(n)}(t,o)}(await Ec(t),t.asyncQueue,e,n,s))),s.promise}class Tc{constructor(t,e,n,s,i,r,o,a){this.databaseId=t,this.appId=e,this.persistenceKey=n,this.host=s,this.ssl=i,this.forceLongPolling=r,this.autoDetectLongPolling=o,this.useFetchStreams=a}}class Ic{constructor(t,e){this.projectId=t,this.database=e||"(default)"}get isDefaultDatabase(){return"(default)"===this.database}isEqual(t){return t instanceof Ic&&t.projectId===this.projectId&&t.database===this.database}}
-/**
+     */
+    /**
+     * FirestoreClient is a top-level class that constructs and owns all of the
+     * pieces of the client SDK architecture. It is responsible for creating the
+     * async queue that is shared by all of the other components in the system.
+     */
+    class Gc {
+        constructor(t, e, 
+        /**
+         * Asynchronous queue responsible for all of our internal processing. When
+         * we get incoming work from the user (via public API) or the network
+         * (incoming GRPC messages), we should always schedule onto this queue.
+         * This ensures all of our work is properly serialized (e.g. we don't
+         * start processing a new operation while the previous one is waiting for
+         * an async I/O to complete).
+         */
+        n, s) {
+            this.authCredentials = t, this.appCheckCredentials = e, this.asyncQueue = n, this.databaseInfo = s, 
+            this.user = C.UNAUTHENTICATED, this.clientId = it.A(), this.authCredentialListener = () => Promise.resolve(), 
+            this.authCredentials.start(n, (async t => {
+                O("FirestoreClient", "Received user=", t.uid), await this.authCredentialListener(t), 
+                this.user = t;
+            })), 
+            // Register an empty credentials change listener to activate token refresh.
+            this.appCheckCredentials.start(n, (() => Promise.resolve()));
+        }
+        async getConfiguration() {
+            return {
+                asyncQueue: this.asyncQueue,
+                databaseInfo: this.databaseInfo,
+                clientId: this.clientId,
+                authCredentials: this.authCredentials,
+                appCheckCredentials: this.appCheckCredentials,
+                initialUser: this.user,
+                maxConcurrentLimboResolutions: 100
+            };
+        }
+        setCredentialChangeListener(t) {
+            this.authCredentialListener = t;
+        }
+        /**
+         * Checks that the client has not been terminated. Ensures that other methods on
+         * this class cannot be called after the client is terminated.
+         */    verifyNotTerminated() {
+            if (this.asyncQueue.isShuttingDown) throw new Q(j.FAILED_PRECONDITION, "The client has already been terminated.");
+        }
+        terminate() {
+            this.asyncQueue.enterRestrictedMode();
+            const t = new W;
+            return this.asyncQueue.enqueueAndForgetEvenWhileRestricted((async () => {
+                try {
+                    this.onlineComponents && await this.onlineComponents.terminate(), this.offlineComponents && await this.offlineComponents.terminate(), 
+                    // The credentials provider must be terminated after shutting down the
+                    // RemoteStore as it will prevent the RemoteStore from retrieving auth
+                    // tokens.
+                    this.authCredentials.shutdown(), this.appCheckCredentials.shutdown(), t.resolve();
+                } catch (e) {
+                    const n = Fo(e, "Failed to shutdown persistence");
+                    t.reject(n);
+                }
+            })), t.promise;
+        }
+    }
+
+    async function zc(t, e) {
+        t.asyncQueue.verifyOperationInProgress(), O("FirestoreClient", "Initializing OfflineComponentProvider");
+        const n = await t.getConfiguration();
+        await e.initialize(n);
+        let s = n.initialUser;
+        t.setCredentialChangeListener((async t => {
+            s.isEqual(t) || (await wr(e.localStore, t), s = t);
+        })), 
+        // When a user calls clearPersistence() in one client, all other clients
+        // need to be terminated to allow the delete to succeed.
+        e.persistence.setDatabaseDeletedListener((() => t.terminate())), t.offlineComponents = e;
+    }
+
+    async function Hc(t, e) {
+        t.asyncQueue.verifyOperationInProgress();
+        const n = await Jc(t);
+        O("FirestoreClient", "Initializing OnlineComponentProvider");
+        const s = await t.getConfiguration();
+        await e.initialize(n, s), 
+        // The CredentialChangeListener of the online component provider takes
+        // precedence over the offline component provider.
+        t.setCredentialChangeListener((t => async function(t, e) {
+            const n = K(t);
+            n.asyncQueue.verifyOperationInProgress(), O("RemoteStore", "RemoteStore received new credentials");
+            const s = yo(n);
+            // Tear down and re-create our network streams. This will ensure we get a
+            // fresh auth token for the new user and re-fill the write pipeline with
+            // new mutations from the LocalStore (since mutations are per-user).
+                    n.Gr.add(3 /* CredentialChange */), await ho(n), s && 
+            // Don't set the network status to Unknown if we are offline.
+            n.Jr.set("Unknown" /* Unknown */), await n.remoteSyncer.handleCredentialChange(e), 
+            n.Gr.delete(3 /* CredentialChange */), await uo(n);
+        }(e.remoteStore, t))), t.onlineComponents = e;
+    }
+
+    async function Jc(t) {
+        return t.offlineComponents || (O("FirestoreClient", "Using default OfflineComponentProvider"), 
+        await zc(t, new Fc)), t.offlineComponents;
+    }
+
+    async function Yc(t) {
+        return t.onlineComponents || (O("FirestoreClient", "Using default OnlineComponentProvider"), 
+        await Hc(t, new Uc)), t.onlineComponents;
+    }
+
+    function ea(t) {
+        return Yc(t).then((t => t.syncEngine));
+    }
+
+    async function na(t) {
+        const e = await Yc(t), n = e.eventManager;
+        return n.onListen = oc.bind(null, e.syncEngine), n.onUnlisten = ac.bind(null, e.syncEngine), 
+        n;
+    }
+
+    function aa(t, e, n = {}) {
+        const s = new W;
+        return t.asyncQueue.enqueueAndForget((async () => function(t, e, n, s, i) {
+            const r = new Kc({
+                next: n => {
+                    // Remove query first before passing event to user to avoid
+                    // user actions affecting the now stale query.
+                    e.enqueueAndForget((() => Qo(t, o))), n.fromCache && "server" === s.source ? i.reject(new Q(j.UNAVAILABLE, 'Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to "server" to retrieve the cached documents.)')) : i.resolve(n);
+                },
+                error: t => i.reject(t)
+            }), o = new Ho(n, r, {
+                includeMetadataChanges: !0,
+                wo: !0
+            });
+            return jo(t, o);
+        }(await na(t), t.asyncQueue, e, n, s))), s.promise;
+    }
+
+    class da {
+        /**
+         * Constructs a DatabaseInfo using the provided host, databaseId and
+         * persistenceKey.
+         *
+         * @param databaseId - The database to use.
+         * @param appId - The Firebase App Id.
+         * @param persistenceKey - A unique identifier for this Firestore's local
+         * storage (used in conjunction with the databaseId).
+         * @param host - The Firestore backend host to connect to.
+         * @param ssl - Whether to use SSL when connecting.
+         * @param forceLongPolling - Whether to use the forceLongPolling option
+         * when using WebChannel as the network transport.
+         * @param autoDetectLongPolling - Whether to use the detectBufferingProxy
+         * option when using WebChannel as the network transport.
+         * @param useFetchStreams Whether to use the Fetch API instead of
+         * XMLHTTPRequest
+         */
+        constructor(t, e, n, s, i, r, o, c) {
+            this.databaseId = t, this.appId = e, this.persistenceKey = n, this.host = s, this.ssl = i, 
+            this.forceLongPolling = r, this.autoDetectLongPolling = o, this.useFetchStreams = c;
+        }
+    }
+
+    /** The default database name for a project. */
+    /**
+     * Represents the database ID a Firestore client is associated with.
+     * @internal
+     */
+    class wa {
+        constructor(t, e) {
+            this.projectId = t, this.database = e || "(default)";
+        }
+        get isDefaultDatabase() {
+            return "(default)" === this.database;
+        }
+        isEqual(t) {
+            return t instanceof wa && t.projectId === this.projectId && t.database === this.database;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1415,8 +11570,13 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */const Sc=new Map;
-/**
+     */ const _a = new Map;
+
+    /**
+     * An instance map that ensures only one Datastore exists per Firestore
+     * instance.
+     */
+    /**
      * @license
      * Copyright 2017 Google LLC
      *
@@ -1431,88 +11591,83 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */function Cc(t){if(Ir.isDocumentKey(t))throw new Ki(zi.INVALID_ARGUMENT,`Invalid collection reference. Collection references must have an odd number of segments, but ${t} has ${t.length}.`)}function Ac(t,e){if("_delegate"in t&&(t=t._delegate),!(t instanceof e)){if(e.name===t.constructor.name)throw new Ki(zi.INVALID_ARGUMENT,"Type does not match the expected instance. Did you pass a reference from a different Firestore SDK?");{const n=function(t){if(void 0===t)return"undefined";if(null===t)return"null";if("string"==typeof t)return t.length>20&&(t=`${t.substring(0,20)}...`),JSON.stringify(t);if("number"==typeof t||"boolean"==typeof t)return""+t;if("object"==typeof t){if(t instanceof Array)return"an array";{const e=function(t){return t.constructor?t.constructor.name:null}(t);return e?`a custom ${e} object`:"an object"}}return"function"==typeof t?"a function":Bi()}(t);throw new Ki(zi.INVALID_ARGUMENT,`Expected type '${e.name}', but it was: ${n}`)}}return t}
-/**
-     * @license
-     * Copyright 2020 Google LLC
+     */
+    function ma(t, e, n) {
+        if (!n) throw new Q(j.INVALID_ARGUMENT, `Function ${t}() cannot be called with an empty ${e}.`);
+    }
+
+    /**
+     * Validates that two boolean options are not set at the same time.
+     * @internal
+     */ function ga(t, e, n, s) {
+        if (!0 === e && !0 === s) throw new Q(j.INVALID_ARGUMENT, `${t} and ${n} cannot be used together.`);
+    }
+
+    /**
+     * Validates that `path` refers to a document (indicated by the fact it contains
+     * an even numbers of segments).
+     */ function ya(t) {
+        if (!Dt.isDocumentKey(t)) throw new Q(j.INVALID_ARGUMENT, `Invalid document reference. Document references must have an even number of segments, but ${t} has ${t.length}.`);
+    }
+
+    /**
+     * Validates that `path` refers to a collection (indicated by the fact it
+     * contains an odd numbers of segments).
+     */ function pa(t) {
+        if (Dt.isDocumentKey(t)) throw new Q(j.INVALID_ARGUMENT, `Invalid collection reference. Collection references must have an odd number of segments, but ${t} has ${t.length}.`);
+    }
+
+    /**
+     * Returns true if it's a non-null object without a custom prototype
+     * (i.e. excludes Array, Date, etc.).
+     */
+    /** Returns a string describing the type / value of the provided input. */
+    function Ta(t) {
+        if (void 0 === t) return "undefined";
+        if (null === t) return "null";
+        if ("string" == typeof t) return t.length > 20 && (t = `${t.substring(0, 20)}...`), 
+        JSON.stringify(t);
+        if ("number" == typeof t || "boolean" == typeof t) return "" + t;
+        if ("object" == typeof t) {
+            if (t instanceof Array) return "an array";
+            {
+                const e = 
+                /** try to get the constructor name for an object. */
+                function(t) {
+                    if (t.constructor) return t.constructor.name;
+                    return null;
+                }
+                /**
+     * Casts `obj` to `T`, optionally unwrapping Compat types to expose the
+     * underlying instance. Throws if  `obj` is not an instance of `T`.
      *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class _c{constructor(t){var e;if(void 0===t.host){if(void 0!==t.ssl)throw new Ki(zi.INVALID_ARGUMENT,"Can't provide ssl option if host option is not set");this.host="firestore.googleapis.com",this.ssl=!0}else this.host=t.host,this.ssl=null===(e=t.ssl)||void 0===e||e;if(this.credentials=t.credentials,this.ignoreUndefinedProperties=!!t.ignoreUndefinedProperties,void 0===t.cacheSizeBytes)this.cacheSizeBytes=41943040;else{if(-1!==t.cacheSizeBytes&&t.cacheSizeBytes<1048576)throw new Ki(zi.INVALID_ARGUMENT,"cacheSizeBytes must be at least 1048576");this.cacheSizeBytes=t.cacheSizeBytes}this.experimentalForceLongPolling=!!t.experimentalForceLongPolling,this.experimentalAutoDetectLongPolling=!!t.experimentalAutoDetectLongPolling,this.useFetchStreams=!!t.useFetchStreams,function(t,e,n,s){if(!0===e&&!0===s)throw new Ki(zi.INVALID_ARGUMENT,`${t} and ${n} cannot be used together.`)}("experimentalForceLongPolling",t.experimentalForceLongPolling,"experimentalAutoDetectLongPolling",t.experimentalAutoDetectLongPolling)}isEqual(t){return this.host===t.host&&this.ssl===t.ssl&&this.credentials===t.credentials&&this.cacheSizeBytes===t.cacheSizeBytes&&this.experimentalForceLongPolling===t.experimentalForceLongPolling&&this.experimentalAutoDetectLongPolling===t.experimentalAutoDetectLongPolling&&this.ignoreUndefinedProperties===t.ignoreUndefinedProperties&&this.useFetchStreams===t.useFetchStreams}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Nc{constructor(t,e,n){this._authCredentials=e,this._appCheckCredentials=n,this.type="firestore-lite",this._persistenceKey="(lite)",this._settings=new _c({}),this._settingsFrozen=!1,t instanceof Ic?this._databaseId=t:(this._app=t,this._databaseId=function(t){if(!Object.prototype.hasOwnProperty.apply(t.options,["projectId"]))throw new Ki(zi.INVALID_ARGUMENT,'"projectId" not provided in firebase.initializeApp.');return new Ic(t.options.projectId)}(t))}get app(){if(!this._app)throw new Ki(zi.FAILED_PRECONDITION,"Firestore was not initialized using the Firebase SDK. 'app' is not available");return this._app}get _initialized(){return this._settingsFrozen}get _terminated(){return void 0!==this._terminateTask}_setSettings(t){if(this._settingsFrozen)throw new Ki(zi.FAILED_PRECONDITION,"Firestore has already been started and its settings can no longer be changed. You can only modify settings before calling any other methods on a Firestore object.");this._settings=new _c(t),void 0!==t.credentials&&(this._authCredentials=function(t){if(!t)return new Yi;switch(t.type){case"gapi":const e=t.client;return ji(!("object"!=typeof e||null===e||!e.auth||!e.auth.getAuthHeaderValueForFirstParty)),new Ji(e,t.sessionIndex||"0",t.iamToken||null);case"provider":return t.client;default:throw new Ki(zi.INVALID_ARGUMENT,"makeAuthCredentialsProvider failed due to invalid credential type")}}(t.credentials))}_getSettings(){return this._settings}_freezeSettings(){return this._settingsFrozen=!0,this._settings}_delete(){return this._terminateTask||(this._terminateTask=this._terminate()),this._terminateTask}toJSON(){return{app:this._app,databaseId:this._databaseId,settings:this._settings}}_terminate(){return function(t){const e=Sc.get(t);e&&(Fi("ComponentProvider","Removing Datastore"),Sc.delete(t),e.terminate())}(this),Promise.resolve()}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Dc{constructor(t,e,n){this.converter=e,this._key=n,this.type="document",this.firestore=t}get _path(){return this._key.path}get id(){return this._key.path.lastSegment()}get path(){return this._key.path.canonicalString()}get parent(){return new Rc(this.firestore,this.converter,this._key.path.popLast())}withConverter(t){return new Dc(this.firestore,t,this._key)}}class kc{constructor(t,e,n){this.converter=e,this._query=n,this.type="query",this.firestore=t}withConverter(t){return new kc(this.firestore,t,this._query)}}class Rc extends kc{constructor(t,e,n){super(t,e,oo(n)),this._path=n,this.type="collection"}get id(){return this._query.path.lastSegment()}get path(){return this._query.path.canonicalString()}get parent(){const t=this._path.popLast();return t.isEmpty()?null:new Dc(this.firestore,null,new Ir(t))}withConverter(t){return new Rc(this.firestore,t,this._path)}}function Lc(t,e,...n){if(t=(s=t)&&s._delegate?s._delegate:s,function(t,e,n){if(!n)throw new Ki(zi.INVALID_ARGUMENT,`Function ${t}() cannot be called with an empty ${e}.`)}("collection","path",e),t instanceof Nc){const s=ur.fromString(e,...n);return Cc(s),new Rc(t,null,s)}var s;{if(!(t instanceof Dc||t instanceof Rc))throw new Ki(zi.INVALID_ARGUMENT,"Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");const s=t._path.child(ur.fromString(e,...n));return Cc(s),new Rc(t.firestore,null,s)}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class xc{constructor(){this.mc=Promise.resolve(),this.gc=[],this.yc=!1,this.Tc=[],this.Ec=null,this.Ic=!1,this.Ac=!1,this.Rc=[],this.ur=new wh(this,"async_queue_retry"),this.bc=()=>{const t=yh();t&&Fi("AsyncQueue","Visibility state changed to "+t.visibilityState),this.ur.er()};const t=yh();t&&"function"==typeof t.addEventListener&&t.addEventListener("visibilitychange",this.bc)}get isShuttingDown(){return this.yc}enqueueAndForget(t){this.enqueue(t)}enqueueAndForgetEvenWhileRestricted(t){this.Pc(),this.vc(t)}enterRestrictedMode(t){if(!this.yc){this.yc=!0,this.Ac=t||!1;const e=yh();e&&"function"==typeof e.removeEventListener&&e.removeEventListener("visibilitychange",this.bc)}}enqueue(t){if(this.Pc(),this.yc)return new Promise((()=>{}));const e=new Gi;return this.vc((()=>this.yc&&this.Ac?Promise.resolve():(t().then(e.resolve,e.reject),e.promise))).then((()=>e.promise))}enqueueRetryable(t){this.enqueueAndForget((()=>(this.gc.push(t),this.Vc())))}async Vc(){if(0!==this.gc.length){try{await this.gc[0](),this.gc.shift(),this.ur.reset()}catch(t){if(!Ma(t))throw t;Fi("AsyncQueue","Operation failed with retryable error: "+t)}this.gc.length>0&&this.ur.Zi((()=>this.Vc()))}}vc(t){const e=this.mc.then((()=>(this.Ic=!0,t().catch((t=>{this.Ec=t,this.Ic=!1;const e=function(t){let e=t.message||"";return t.stack&&(e=t.stack.includes(t.message)?t.stack:t.message+"\n"+t.stack),e}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */(t);throw Ui("INTERNAL UNHANDLED ERROR: ",e),t})).then((t=>(this.Ic=!1,t))))));return this.mc=e,e}enqueueAfterDelay(t,e,n){this.Pc(),this.Rc.indexOf(t)>-1&&(e=0);const s=Uh.createAndSchedule(this,t,e,n,(t=>this.Sc(t)));return this.Tc.push(s),s}Pc(){this.Ec&&Bi()}verifyOperationInProgress(){}async Dc(){let t;do{t=this.mc,await t}while(t!==this.mc)}Cc(t){for(const e of this.Tc)if(e.timerId===t)return!0;return!1}Nc(t){return this.Dc().then((()=>{this.Tc.sort(((t,e)=>t.targetTimeMs-e.targetTimeMs));for(const e of this.Tc)if(e.skipDelay(),"all"!==t&&e.timerId===t)break;return this.Dc()}))}kc(t){this.Rc.push(t)}Sc(t){const e=this.Tc.indexOf(t);this.Tc.splice(e,1)}}class Oc extends Nc{constructor(t,e,n){super(t,e,n),this.type="firestore",this._queue=new xc,this._persistenceKey="name"in t?t.name:"[DEFAULT]"}_terminate(){return this._firestoreClient||Pc(this),this._firestoreClient.terminate()}}function Mc(t=function(t="[DEFAULT]"){const e=gt.get(t);if(!e)throw wt.create("no-app",{appName:t});return e}()){return function(t,e){return t.container.getProvider(e)}(t,"firestore").getImmediate()}function Pc(t){var e;const n=t._freezeSettings(),s=function(t,e,n,s){return new Tc(t,e,n,s.host,s.ssl,s.experimentalForceLongPolling,s.experimentalAutoDetectLongPolling,s.useFetchStreams)}(t._databaseId,(null===(e=t._app)||void 0===e?void 0:e.options.appId)||"",t._persistenceKey,n);t._firestoreClient=new vc(t._authCredentials,t._appCheckCredentials,t._queue,s)}
-/**
+     * This cast is used in the Lite and Full SDK to verify instance types for
+     * arguments passed to the public API.
+     * @internal
+     */ (t);
+                return e ? `a custom ${e} object` : "an object";
+            }
+        }
+        return "function" == typeof t ? "a function" : B();
+    }
+
+    function Ea(t, 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    e) {
+        if ("_delegate" in t && (
+        // Unwrap Compat types
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        t = t._delegate), !(t instanceof e)) {
+            if (e.name === t.constructor.name) throw new Q(j.INVALID_ARGUMENT, "Type does not match the expected instance. Did you pass a reference from a different Firestore SDK?");
+            {
+                const n = Ta(t);
+                throw new Q(j.INVALID_ARGUMENT, `Expected type '${e.name}', but it was: ${n}`);
+            }
+        }
+        return t;
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1528,103 +11683,33 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Vc{constructor(...t){for(let e=0;e<t.length;++e)if(0===t[e].length)throw new Ki(zi.INVALID_ARGUMENT,"Invalid field name at argument $(i + 1). Field names must not be empty.");this._internalPath=new dr(t)}isEqual(t){return this._internalPath.isEqual(t._internalPath)}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Fc{constructor(t){this._byteString=t}static fromBase64String(t){try{return new Fc(fr.fromBase64String(t))}catch(t){throw new Ki(zi.INVALID_ARGUMENT,"Failed to construct data from Base64 string: "+t)}}static fromUint8Array(t){return new Fc(fr.fromUint8Array(t))}toBase64(){return this._byteString.toBase64()}toUint8Array(){return this._byteString.toUint8Array()}toString(){return"Bytes(base64: "+this.toBase64()+")"}isEqual(t){return this._byteString.isEqual(t._byteString)}}
-/**
-     * @license
-     * Copyright 2017 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Uc{constructor(t,e){if(!isFinite(t)||t<-90||t>90)throw new Ki(zi.INVALID_ARGUMENT,"Latitude must be a number between -90 and 90, but was: "+t);if(!isFinite(e)||e<-180||e>180)throw new Ki(zi.INVALID_ARGUMENT,"Longitude must be a number between -180 and 180, but was: "+e);this._lat=t,this._long=e}get latitude(){return this._lat}get longitude(){return this._long}isEqual(t){return this._lat===t._lat&&this._long===t._long}toJSON(){return{latitude:this._lat,longitude:this._long}}_compareTo(t){return sr(this._lat,t._lat)||sr(this._long,t._long)}}const $c=new RegExp("[~\\*/\\[\\]]");function qc(t,e,n,s,i){const r=s&&!s.isEmpty(),o=void 0!==i;let a=`Function ${e}() called with invalid data`;n&&(a+=" (via `toFirestore()`)"),a+=". ";let h="";return(r||o)&&(h+=" (found",r&&(h+=` in field ${s}`),o&&(h+=` in document ${i}`),h+=")"),new Ki(zi.INVALID_ARGUMENT,a+t+h)
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */}class Bc{constructor(t,e,n,s,i){this._firestore=t,this._userDataWriter=e,this._key=n,this._document=s,this._converter=i}get id(){return this._key.path.lastSegment()}get ref(){return new Dc(this._firestore,this._converter,this._key)}exists(){return null!==this._document}data(){if(this._document){if(this._converter){const t=new jc(this._firestore,this._userDataWriter,this._key,this._document,null);return this._converter.fromFirestore(t)}return this._userDataWriter.convertValue(this._document.data.value)}}get(t){if(this._document){const e=this._document.data.field(Hc("DocumentSnapshot.get",t));if(null!==e)return this._userDataWriter.convertValue(e)}}}class jc extends Bc{data(){return super.data()}}function Hc(t,e){return"string"==typeof e?function(t,e,n){if(e.search($c)>=0)throw qc(`Invalid field path (${e}). Paths must not contain '~', '*', '/', '[', or ']'`,t,!1,void 0,n);try{return new Vc(...e.split("."))._internalPath}catch(s){throw qc(`Invalid field path (${e}). Paths must not be empty, begin with '.', end with '.', or contain '..'`,t,!1,void 0,n)}}(t,e):e instanceof Vc?e._internalPath:e._delegate._internalPath}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class zc{constructor(t,e){this.hasPendingWrites=t,this.fromCache=e}isEqual(t){return this.hasPendingWrites===t.hasPendingWrites&&this.fromCache===t.fromCache}}class Kc extends Bc{constructor(t,e,n,s,i,r){super(t,e,n,s,r),this._firestore=t,this._firestoreImpl=t,this.metadata=i}exists(){return super.exists()}data(t={}){if(this._document){if(this._converter){const e=new Gc(this._firestore,this._userDataWriter,this._key,this._document,this.metadata,null);return this._converter.fromFirestore(e,t)}return this._userDataWriter.convertValue(this._document.data.value,t.serverTimestamps)}}get(t,e={}){if(this._document){const n=this._document.data.field(Hc("DocumentSnapshot.get",t));if(null!==n)return this._userDataWriter.convertValue(n,e.serverTimestamps)}}}class Gc extends Kc{data(t={}){return super.data(t)}}class Wc{constructor(t,e,n,s){this._firestore=t,this._userDataWriter=e,this._snapshot=s,this.metadata=new zc(s.hasPendingWrites,s.fromCache),this.query=n}get docs(){const t=[];return this.forEach((e=>t.push(e))),t}get size(){return this._snapshot.docs.size}get empty(){return 0===this.size}forEach(t,e){this._snapshot.docs.forEach((n=>{t.call(e,new Gc(this._firestore,this._userDataWriter,n.key,n,new zc(this._snapshot.mutatedKeys.has(n.key),this._snapshot.fromCache),this.query.converter))}))}docChanges(t={}){const e=!!t.includeMetadataChanges;if(e&&this._snapshot.excludesMetadataChanges)throw new Ki(zi.INVALID_ARGUMENT,"To include metadata changes with your document changes, you must also pass { includeMetadataChanges:true } to onSnapshot().");return this._cachedChanges&&this._cachedChangesIncludeMetadataChanges===e||(this._cachedChanges=function(t,e){if(t._snapshot.oldDocs.isEmpty()){let e=0;return t._snapshot.docChanges.map((n=>({type:"added",doc:new Gc(t._firestore,t._userDataWriter,n.doc.key,n.doc,new zc(t._snapshot.mutatedKeys.has(n.doc.key),t._snapshot.fromCache),t.query.converter),oldIndex:-1,newIndex:e++})))}{let n=t._snapshot.oldDocs;return t._snapshot.docChanges.filter((t=>e||3!==t.type)).map((e=>{const s=new Gc(t._firestore,t._userDataWriter,e.doc.key,e.doc,new zc(t._snapshot.mutatedKeys.has(e.doc.key),t._snapshot.fromCache),t.query.converter);let i=-1,r=-1;return 0!==e.type&&(i=n.indexOf(e.doc.key),n=n.delete(e.doc.key)),1!==e.type&&(n=n.add(e.doc),r=n.indexOf(e.doc.key)),{type:Yc(e.type),doc:s,oldIndex:i,newIndex:r}}))}}(this,e),this._cachedChangesIncludeMetadataChanges=e),this._cachedChanges}}function Yc(t){switch(t){case 0:return"added";case 2:case 3:return"modified";case 1:return"removed";default:return Bi()}}
-/**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */class Qc extends
-/**
+    // settings() defaults:
+    /**
+     * A concrete type describing all the values that can be applied via a
+     * user-supplied `FirestoreSettings` object. This is a separate type so that
+     * defaults can be supplied and the value can be checked for equality.
+     */
+    class Aa {
+        constructor(t) {
+            var e;
+            if (void 0 === t.host) {
+                if (void 0 !== t.ssl) throw new Q(j.INVALID_ARGUMENT, "Can't provide ssl option if host option is not set");
+                this.host = "firestore.googleapis.com", this.ssl = true;
+            } else this.host = t.host, this.ssl = null === (e = t.ssl) || void 0 === e || e;
+            if (this.credentials = t.credentials, this.ignoreUndefinedProperties = !!t.ignoreUndefinedProperties, 
+            void 0 === t.cacheSizeBytes) this.cacheSizeBytes = 41943040; else {
+                if (-1 !== t.cacheSizeBytes && t.cacheSizeBytes < 1048576) throw new Q(j.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
+                this.cacheSizeBytes = t.cacheSizeBytes;
+            }
+            this.experimentalForceLongPolling = !!t.experimentalForceLongPolling, this.experimentalAutoDetectLongPolling = !!t.experimentalAutoDetectLongPolling, 
+            this.useFetchStreams = !!t.useFetchStreams, ga("experimentalForceLongPolling", t.experimentalForceLongPolling, "experimentalAutoDetectLongPolling", t.experimentalAutoDetectLongPolling);
+        }
+        isEqual(t) {
+            return this.host === t.host && this.ssl === t.ssl && this.credentials === t.credentials && this.cacheSizeBytes === t.cacheSizeBytes && this.experimentalForceLongPolling === t.experimentalForceLongPolling && this.experimentalAutoDetectLongPolling === t.experimentalAutoDetectLongPolling && this.ignoreUndefinedProperties === t.ignoreUndefinedProperties && this.useFetchStreams === t.useFetchStreams;
+        }
+    }
+
+    /**
      * @license
      * Copyright 2020 Google LLC
      *
@@ -1640,5 +11725,3383 @@ class za{constructor(t,e,n){this.Je=t,this.An=e,this.Jt=n}Rn(t,e){return this.An
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-class{convertValue(t,e="none"){switch(Sr(t)){case 0:return null;case 1:return t.booleanValue;case 2:return mr(t.integerValue||t.doubleValue);case 3:return this.convertTimestamp(t.timestampValue);case 4:return this.convertServerTimestamp(t,e);case 5:return t.stringValue;case 6:return this.convertBytes(yr(t.bytesValue));case 7:return this.convertReference(t.referenceValue);case 8:return this.convertGeoPoint(t.geoPointValue);case 9:return this.convertArray(t.arrayValue,e);case 10:return this.convertObject(t.mapValue,e);default:throw Bi()}}convertObject(t,e){const n={};return hr(t.fields,((t,s)=>{n[t]=this.convertValue(s,e)})),n}convertGeoPoint(t){return new Uc(mr(t.latitude),mr(t.longitude))}convertArray(t,e){return(t.values||[]).map((t=>this.convertValue(t,e)))}convertServerTimestamp(t,e){switch(e){case"previous":const n=wr(t);return null==n?null:this.convertValue(n,e);case"estimate":return this.convertTimestamp(Er(t));default:return null}}convertTimestamp(t){const e=gr(t);return new rr(e.seconds,e.nanos)}convertDocumentKey(t,e){const n=ur.fromString(t);ji(xa(n));const s=new Ic(n.get(1),n.get(3)),i=new Ir(n.popFirst(5));return s.isEqual(e)||Ui(`Document ${i} contains a document reference within a different database (${s.projectId}/${s.database}) which is not supported. It will be treated as a reference in the current database (${e.projectId}/${e.database}) instead.`),i}}{constructor(t){super(),this.firestore=t}convertBytes(t){return new Fc(t)}convertReference(t){const e=this.convertDocumentKey(t,this.firestore._databaseId);return new Dc(this.firestore,null,e)}}function Xc(t){t=Ac(t,kc);const e=Ac(t.firestore,Oc),n=function(t){return t._firestoreClient||Pc(t),t._firestoreClient.verifyNotTerminated(),t._firestoreClient}(e),s=new Qc(e);return function(t){if(ho(t)&&0===t.explicitOrderBy.length)throw new Ki(zi.UNIMPLEMENTED,"limitToLast() queries require specifying at least one orderBy() clause")}(t._query),bc(n,t._query).then((n=>new Wc(e,s,t,n)))}function Jc(t,e,n){const s=t.slice();return s[2]=e[n],s}function Zc(t){let e,n,s,i,r=t[0][t[2]]+"";return{c(){e=u("span"),n=u("b"),s=l(r),i=d()},m(t,r){a(t,e,r),o(e,n),o(n,s),o(e,i)},p(t,e){3&e&&r!==(r=t[0][t[2]]+"")&&function(t,e){e=""+e,t.wholeText!==e&&(t.data=e)}(s,r)},d(t){t&&h(e)}}}function tu(e){let n,s=e[1],i=[];for(let t=0;t<s.length;t+=1)i[t]=Zc(Jc(e,s,t));return{c(){for(let t=0;t<i.length;t+=1)i[t].c();n=l("")},m(t,e){for(let n=0;n<i.length;n+=1)i[n].m(t,e);a(t,n,e)},p(t,[e]){if(3&e){let r;for(s=t[1],r=0;r<s.length;r+=1){const o=Jc(t,s,r);i[r]?i[r].p(o,e):(i[r]=Zc(o),i[r].c(),i[r].m(n.parentNode,n))}for(;r<i.length;r+=1)i[r].d(1);i.length=s.length}},i:t,o:t,d(t){c(i,t),t&&h(n)}}}function eu(t,e,n){let{pubData:s}=e,{headings:i}=e;return t.$$set=t=>{"pubData"in t&&n(0,s=t.pubData),"headings"in t&&n(1,i=t.headings)},[s,i]}!function(t,e=!0){Mi="9.6.4",vt(new Z("firestore",((t,{options:n})=>{const s=t.getProvider("app").getImmediate(),i=new Oc(s,new Qi(t.getProvider("auth-internal")),new tr(t.getProvider("app-check-internal")));return n=Object.assign({useFetchStreams:e},n),i._setSettings(n),i}),"PUBLIC")),bt(xi,"3.4.3",t),bt(xi,"3.4.3","esm2017")}();class nu extends z{constructor(t){super(),H(this,t,eu,tu,r,{pubData:0,headings:1})}}function su(e){let n,i,r,c,l,v,w,E,b,T,I,S,C,A,N,D,k,R,L,x,O,M,P;return{c(){n=u("section"),i=u("div"),r=u("label"),r.textContent="Group size",c=d(),l=u("input"),v=d(),w=u("div"),E=u("label"),E.textContent="Food?",b=d(),T=u("select"),I=u("option"),I.textContent="Don't care",S=u("option"),S.textContent="Yes",C=u("option"),C.textContent="No",A=d(),N=u("div"),D=u("label"),D.textContent="Shows sport?",k=d(),R=u("select"),L=u("option"),L.textContent="Don't care",x=u("option"),x.textContent="Yes",O=u("option"),O.textContent="No",p(r,"for","max_group"),p(l,"type","number"),p(l,"id","max_group"),p(l,"class","filters__input"),p(i,"class","filters__section mr-4"),p(E,"for","food"),I.__value="both",I.value=I.__value,S.__value=!0,S.value=S.__value,C.__value=!1,C.value=C.__value,p(T,"name","food"),void 0===e[1]&&_((()=>e[4].call(T))),p(w,"class","filters__section mr-4"),p(D,"for","sport"),L.__value="both",L.value=L.__value,x.__value=!0,x.value=x.__value,O.__value=!1,O.value=O.__value,p(R,"name","food"),void 0===e[2]&&_((()=>e[5].call(R))),p(N,"class","filters__section mr-4"),p(n,"class","filters flex justify-center")},m(t,s){a(t,n,s),o(n,i),o(i,r),o(i,c),o(i,l),m(l,e[0]),o(n,v),o(n,w),o(w,E),o(w,b),o(w,T),o(T,I),o(T,S),o(T,C),y(T,e[1]),o(n,A),o(n,N),o(N,D),o(N,k),o(N,R),o(R,L),o(R,x),o(R,O),y(R,e[2]),M||(P=[f(l,"input",e[3]),f(T,"change",e[4]),f(R,"change",e[5])],M=!0)},p(t,[e]){1&e&&g(l.value)!==t[0]&&m(l,t[0]),2&e&&y(T,t[1]),4&e&&y(R,t[2])},i:t,o:t,d(t){t&&h(n),M=!1,s(P)}}}function iu(t,e,n){let{groupSize:s=5}=e,{food:i="both"}=e,{sport:r="both"}=e;return t.$$set=t=>{"groupSize"in t&&n(0,s=t.groupSize),"food"in t&&n(1,i=t.food),"sport"in t&&n(2,r=t.sport)},[s,i,r,function(){s=g(this.value),n(0,s)},function(){i=v(this),n(1,i)},function(){r=v(this),n(2,r)}]}class ru extends z{constructor(t){super(),H(this,t,iu,su,r,{groupSize:0,food:1,sport:2})}}function ou(t,e,n){const s=t.slice();return s[14]=e[n],s}function au(e){let n;return{c(){n=u("p"),n.textContent="Sorry there are no pubs that match your criteria"},m(t,e){a(t,n,e)},p:t,i:t,o:t,d(t){t&&h(n)}}}function hu(e){let n;return{c(){n=u("p"),n.textContent="Loading"},m(t,e){a(t,n,e)},p:t,i:t,o:t,d(t){t&&h(n)}}}function cu(t){let e,n,s,i,r,l,f,g,m,y,v,w,E,b,T,I,S,C,A=t[6],_=[];for(let e=0;e<A.length;e+=1)_[e]=uu(ou(t,A,e));const N=t=>F(_[t],1,1,(()=>{_[t]=null}));return{c(){e=u("div"),n=u("span"),n.textContent="Name",s=d(),i=u("span"),i.textContent="Group size",r=d(),l=u("span"),l.textContent="Food?",f=d(),g=u("span"),g.textContent="Sports?",m=d(),y=u("span"),y.textContent="Music?",v=d(),w=u("span"),w.textContent="Non-beer choice",E=d(),b=u("span"),b.textContent="Drink quality",T=d(),I=u("span"),I.textContent="Drink choice",S=d();for(let t=0;t<_.length;t+=1)_[t].c();p(n,"class","table__header"),p(i,"class","table__header"),p(l,"class","table__header"),p(g,"class","table__header"),p(y,"class","table__header"),p(w,"class","table__header"),p(b,"class","table__header"),p(I,"class","table__header"),p(e,"class","grid table"),p(e,"style",t[4])},m(t,h){a(t,e,h),o(e,n),o(e,s),o(e,i),o(e,r),o(e,l),o(e,f),o(e,g),o(e,m),o(e,y),o(e,v),o(e,w),o(e,E),o(e,b),o(e,T),o(e,I),o(e,S);for(let t=0;t<_.length;t+=1)_[t].m(e,null);C=!0},p(t,n){if(192&n){let s;for(A=t[6],s=0;s<A.length;s+=1){const i=ou(t,A,s);_[s]?(_[s].p(i,n),V(_[s],1)):(_[s]=uu(i),_[s].c(),V(_[s],1),_[s].m(e,null))}for(M(),s=A.length;s<_.length;s+=1)N(s);P()}(!C||16&n)&&p(e,"style",t[4])},i(t){if(!C){for(let t=0;t<A.length;t+=1)V(_[t]);C=!0}},o(t){_=_.filter(Boolean);for(let t=0;t<_.length;t+=1)F(_[t]);C=!1},d(t){t&&h(e),c(_,t)}}}function uu(t){let e,n;return e=new nu({props:{pubData:t[14],headings:t[7]}}),{c(){$(e.$$.fragment)},m(t,s){q(e,t,s),n=!0},p(t,n){const s={};64&n&&(s.pubData=t[14]),e.$set(s)},i(t){n||(V(e.$$.fragment,t),n=!0)},o(t){F(e.$$.fragment,t),n=!1},d(t){B(e,t)}}}function lu(t){let e,n,s,i,r,c,l,f,g,m,y,v;function w(e){t[10](e)}function E(e){t[11](e)}function b(e){t[12](e)}function I(e){t[13](e)}let S={};void 0!==t[3]&&(S.name=t[3]),void 0!==t[0]&&(S.groupSize=t[0]),void 0!==t[1]&&(S.food=t[1]),void 0!==t[2]&&(S.sport=t[2]),n=new ru({props:S}),T.push((()=>U(n,"name",w))),T.push((()=>U(n,"groupSize",E))),T.push((()=>U(n,"food",b))),T.push((()=>U(n,"sport",I)));const C=[cu,hu,au],A=[];function _(t,e){return 96&e&&(f=null),32&e&&(g=null),null==f&&(f=!!(t[6].length>0&&t[5]())),f?0:(null==g&&(g=!t[5]()),g?1:2)}return m=_(t,-1),y=A[m]=C[m](t),{c(){e=u("section"),$(n.$$.fragment),l=d(),y.c(),p(e,"class","pub-listings")},m(t,s){a(t,e,s),q(n,e,null),o(e,l),A[m].m(e,null),v=!0},p(t,[o]){const a={};!s&&8&o&&(s=!0,a.name=t[3],N((()=>s=!1))),!i&&1&o&&(i=!0,a.groupSize=t[0],N((()=>i=!1))),!r&&2&o&&(r=!0,a.food=t[1],N((()=>r=!1))),!c&&4&o&&(c=!0,a.sport=t[2],N((()=>c=!1))),n.$set(a);let h=m;m=_(t,o),m===h?A[m].p(t,o):(M(),F(A[h],1,1,(()=>{A[h]=null})),P(),y=A[m],y?y.p(t,o):(y=A[m]=C[m](t),y.c()),V(y,1),y.m(e,null))},i(t){v||(V(n.$$.fragment,t),V(y),v=!0)},o(t){F(n.$$.fragment,t),F(y),v=!1},d(t){t&&h(e),B(n),A[m].d()}}}function du(t,e,n){let s,i,r,o,a,h,c,u,{data:l}=e;return t.$$set=t=>{"data"in t&&n(8,l=t.data)},t.$$.update=()=>{263&t.$$.dirty&&n(6,s=l.filter((t=>(void 0===a||t.max_group>=a)&&(void 0===h||t.food===h||"both"===h)&&(void 0===c||t.sport===c||"both"===c)))),256&t.$$.dirty&&n(5,i=()=>{if(l.length>0)return n(9,u=Object.keys(l[0]).length-2),!0}),512&t.$$.dirty&&n(4,r=`grid-template-columns: repeat(${u}, 1fr);`)},[a,h,c,o,r,i,s,["name","max_group","food","sport","music","non_beer","drink_quality","drink_choice"],l,u,function(t){o=t,n(3,o)},function(t){a=t,n(0,a)},function(t){h=t,n(1,h)},function(t){c=t,n(2,c)}]}class fu extends z{constructor(t){super(),H(this,t,du,lu,r,{data:8})}}function pu(t){let e,n;return e=new fu({props:{data:t[0]}}),{c(){$(e.$$.fragment)},m(t,s){q(e,t,s),n=!0},p(t,n){const s={};1&n&&(s.data=t[0]),e.$set(s)},i(t){n||(V(e.$$.fragment,t),n=!0)},o(t){F(e.$$.fragment,t),n=!1},d(t){B(e,t)}}}function gu(e){let n,s,i,c,l,f=e[0],g=pu(e);return{c(){n=u("main"),s=u("div"),i=u("h1"),i.textContent="Edinburgh Pub Finder",c=d(),g.c(),p(i,"class","text-center text-5xl p-6"),p(s,"class","container mx-auto")},m(t,e){a(t,n,e),o(n,s),o(s,i),o(s,c),g.m(s,null),l=!0},p(e,[n]){1&n&&r(f,f=e[0])?(M(),F(g,1,1,t),P(),g=pu(e),g.c(),V(g),g.m(s,null)):g.p(e,n)},i(t){l||(V(g),l=!0)},o(t){F(g),l=!1},d(t){t&&h(n),g.d(t)}}}function mu(t,e,n){!function(t,e={}){"object"!=typeof e&&(e={name:e});const n=Object.assign({name:ft,automaticDataCollectionEnabled:!1},e),s=n.name;if("string"!=typeof s||!s)throw wt.create("bad-app-name",{appName:String(s)});const i=gt.get(s);if(i){if(X(t,i.options)&&X(n,i.config))return i;throw wt.create("duplicate-app",{appName:s})}const r=new nt(s);for(const t of mt.values())r.addComponent(t);const o=new Et(t,n,r);gt.set(s,o)}({apiKey:"AIzaSyD7IVKm4pg_IG3FIYjzqrjVVet7KocGKcM",authDomain:"edinburgh-pubs-24942.firebaseapp.com",projectId:"edinburgh-pubs-24942",storageBucket:"edinburgh-pubs-24942.appspot.com",messagingSenderId:"600769056466",appId:"1:600769056466:web:ae2e55b79a8c7661eea70b",measurementId:"G-HC10EHXZBN"});const s=Mc();let i=new Array;return(async()=>{const t=[];(await Xc(Lc(s,"Pubs"))).forEach((e=>{t.push(e.data())})),n(0,i=t)})(),[i]}return new class extends z{constructor(t){super(),H(this,t,mu,gu,r,{})}}({target:document.body})}();
+    /**
+     * The Cloud Firestore service interface.
+     *
+     * Do not call this constructor directly. Instead, use {@link getFirestore}.
+     */ class Ra {
+        /** @hideconstructor */
+        constructor(t, e, n) {
+            this._authCredentials = e, this._appCheckCredentials = n, 
+            /**
+             * Whether it's a Firestore or Firestore Lite instance.
+             */
+            this.type = "firestore-lite", this._persistenceKey = "(lite)", this._settings = new Aa({}), 
+            this._settingsFrozen = !1, t instanceof wa ? this._databaseId = t : (this._app = t, 
+            this._databaseId = function(t) {
+                if (!Object.prototype.hasOwnProperty.apply(t.options, [ "projectId" ])) throw new Q(j.INVALID_ARGUMENT, '"projectId" not provided in firebase.initializeApp.');
+                return new wa(t.options.projectId);
+            }
+            /**
+     * Modify this instance to communicate with the Cloud Firestore emulator.
+     *
+     * Note: This must be called before this instance has been used to do any
+     * operations.
+     *
+     * @param firestore - The `Firestore` instance to configure to connect to the
+     * emulator.
+     * @param host - the emulator host (ex: localhost).
+     * @param port - the emulator port (ex: 9000).
+     * @param options.mockUserToken - the mock auth token to use for unit testing
+     * Security Rules.
+     */ (t));
+        }
+        /**
+         * The {@link @firebase/app#FirebaseApp} associated with this `Firestore` service
+         * instance.
+         */    get app() {
+            if (!this._app) throw new Q(j.FAILED_PRECONDITION, "Firestore was not initialized using the Firebase SDK. 'app' is not available");
+            return this._app;
+        }
+        get _initialized() {
+            return this._settingsFrozen;
+        }
+        get _terminated() {
+            return void 0 !== this._terminateTask;
+        }
+        _setSettings(t) {
+            if (this._settingsFrozen) throw new Q(j.FAILED_PRECONDITION, "Firestore has already been started and its settings can no longer be changed. You can only modify settings before calling any other methods on a Firestore object.");
+            this._settings = new Aa(t), void 0 !== t.credentials && (this._authCredentials = function(t) {
+                if (!t) return new z;
+                switch (t.type) {
+                  case "gapi":
+                    const e = t.client;
+                    // Make sure this really is a Gapi client.
+                                    return U(!("object" != typeof e || null === e || !e.auth || !e.auth.getAuthHeaderValueForFirstParty)), 
+                    new X(e, t.sessionIndex || "0", t.iamToken || null);
+
+                  case "provider":
+                    return t.client;
+
+                  default:
+                    throw new Q(j.INVALID_ARGUMENT, "makeAuthCredentialsProvider failed due to invalid credential type");
+                }
+            }(t.credentials));
+        }
+        _getSettings() {
+            return this._settings;
+        }
+        _freezeSettings() {
+            return this._settingsFrozen = !0, this._settings;
+        }
+        _delete() {
+            return this._terminateTask || (this._terminateTask = this._terminate()), this._terminateTask;
+        }
+        /** Returns a JSON-serializable representation of this `Firestore` instance. */    toJSON() {
+            return {
+                app: this._app,
+                databaseId: this._databaseId,
+                settings: this._settings
+            };
+        }
+        /**
+         * Terminates all components used by this client. Subclasses can override
+         * this method to clean up their own dependencies, but must also call this
+         * method.
+         *
+         * Only ever called once.
+         */    _terminate() {
+            /**
+     * Removes all components associated with the provided instance. Must be called
+     * when the `Firestore` instance is terminated.
+     */
+            return function(t) {
+                const e = _a.get(t);
+                e && (O("ComponentProvider", "Removing Datastore"), _a.delete(t), e.terminate());
+            }(this), Promise.resolve();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A `DocumentReference` refers to a document location in a Firestore database
+     * and can be used to write, read, or listen to the location. The document at
+     * the referenced location may or may not exist.
+     */ class Pa {
+        /** @hideconstructor */
+        constructor(t, 
+        /**
+         * If provided, the `FirestoreDataConverter` associated with this instance.
+         */
+        e, n) {
+            this.converter = e, this._key = n, 
+            /** The type of this Firestore reference. */
+            this.type = "document", this.firestore = t;
+        }
+        get _path() {
+            return this._key.path;
+        }
+        /**
+         * The document's identifier within its collection.
+         */    get id() {
+            return this._key.path.lastSegment();
+        }
+        /**
+         * A string representing the path of the referenced document (relative
+         * to the root of the database).
+         */    get path() {
+            return this._key.path.canonicalString();
+        }
+        /**
+         * The collection this `DocumentReference` belongs to.
+         */    get parent() {
+            return new Va(this.firestore, this.converter, this._key.path.popLast());
+        }
+        withConverter(t) {
+            return new Pa(this.firestore, t, this._key);
+        }
+    }
+
+    /**
+     * A `Query` refers to a query which you can read or listen to. You can also
+     * construct refined `Query` objects by adding filters and ordering.
+     */ class va {
+        // This is the lite version of the Query class in the main SDK.
+        /** @hideconstructor protected */
+        constructor(t, 
+        /**
+         * If provided, the `FirestoreDataConverter` associated with this instance.
+         */
+        e, n) {
+            this.converter = e, this._query = n, 
+            /** The type of this Firestore reference. */
+            this.type = "query", this.firestore = t;
+        }
+        withConverter(t) {
+            return new va(this.firestore, t, this._query);
+        }
+    }
+
+    /**
+     * A `CollectionReference` object can be used for adding documents, getting
+     * document references, and querying for documents (using {@link query}).
+     */ class Va extends va {
+        /** @hideconstructor */
+        constructor(t, e, n) {
+            super(t, e, ye(n)), this._path = n, 
+            /** The type of this Firestore reference. */
+            this.type = "collection";
+        }
+        /** The collection's identifier. */    get id() {
+            return this._query.path.lastSegment();
+        }
+        /**
+         * A string representing the path of the referenced collection (relative
+         * to the root of the database).
+         */    get path() {
+            return this._query.path.canonicalString();
+        }
+        /**
+         * A reference to the containing `DocumentReference` if this is a
+         * subcollection. If this isn't a subcollection, the reference is null.
+         */    get parent() {
+            const t = this._path.popLast();
+            return t.isEmpty() ? null : new Pa(this.firestore, 
+            /* converter= */ null, new Dt(t));
+        }
+        withConverter(t) {
+            return new Va(this.firestore, t, this._path);
+        }
+    }
+
+    function Sa(t, e, ...n) {
+        if (t = getModularInstance(t), ma("collection", "path", e), t instanceof Ra) {
+            const s = wt.fromString(e, ...n);
+            return pa(s), new Va(t, /* converter= */ null, s);
+        }
+        {
+            if (!(t instanceof Pa || t instanceof Va)) throw new Q(j.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
+            const s = t._path.child(wt.fromString(e, ...n));
+            return pa(s), new Va(t.firestore, 
+            /* converter= */ null, s);
+        }
+    }
+
+    function Ca(t, e, ...n) {
+        if (t = getModularInstance(t), 
+        // We allow omission of 'pathString' but explicitly prohibit passing in both
+        // 'undefined' and 'null'.
+        1 === arguments.length && (e = it.A()), ma("doc", "path", e), t instanceof Ra) {
+            const s = wt.fromString(e, ...n);
+            return ya(s), new Pa(t, 
+            /* converter= */ null, new Dt(s));
+        }
+        {
+            if (!(t instanceof Pa || t instanceof Va)) throw new Q(j.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
+            const s = t._path.child(wt.fromString(e, ...n));
+            return ya(s), new Pa(t.firestore, t instanceof Va ? t.converter : null, new Dt(s));
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ class xa {
+        constructor() {
+            // The last promise in the queue.
+            this.mc = Promise.resolve(), 
+            // A list of retryable operations. Retryable operations are run in order and
+            // retried with backoff.
+            this.gc = [], 
+            // Is this AsyncQueue being shut down? Once it is set to true, it will not
+            // be changed again.
+            this.yc = !1, 
+            // Operations scheduled to be queued in the future. Operations are
+            // automatically removed after they are run or canceled.
+            this.Tc = [], 
+            // visible for testing
+            this.Ec = null, 
+            // Flag set while there's an outstanding AsyncQueue operation, used for
+            // assertion sanity-checks.
+            this.Ic = !1, 
+            // Enabled during shutdown on Safari to prevent future access to IndexedDB.
+            this.Ac = !1, 
+            // List of TimerIds to fast-forward delays for.
+            this.Rc = [], 
+            // Backoff timer used to schedule retries for retryable operations
+            this.ur = new no(this, "async_queue_retry" /* AsyncQueueRetry */), 
+            // Visibility handler that triggers an immediate retry of all retryable
+            // operations. Meant to speed up recovery when we regain file system access
+            // after page comes into foreground.
+            this.bc = () => {
+                const t = to();
+                t && O("AsyncQueue", "Visibility state changed to " + t.visibilityState), this.ur.er();
+            };
+            const t = to();
+            t && "function" == typeof t.addEventListener && t.addEventListener("visibilitychange", this.bc);
+        }
+        get isShuttingDown() {
+            return this.yc;
+        }
+        /**
+         * Adds a new operation to the queue without waiting for it to complete (i.e.
+         * we ignore the Promise result).
+         */    enqueueAndForget(t) {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this.enqueue(t);
+        }
+        enqueueAndForgetEvenWhileRestricted(t) {
+            this.Pc(), 
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this.vc(t);
+        }
+        enterRestrictedMode(t) {
+            if (!this.yc) {
+                this.yc = !0, this.Ac = t || !1;
+                const e = to();
+                e && "function" == typeof e.removeEventListener && e.removeEventListener("visibilitychange", this.bc);
+            }
+        }
+        enqueue(t) {
+            if (this.Pc(), this.yc) 
+            // Return a Promise which never resolves.
+            return new Promise((() => {}));
+            // Create a deferred Promise that we can return to the callee. This
+            // allows us to return a "hanging Promise" only to the callee and still
+            // advance the queue even when the operation is not run.
+                    const e = new W;
+            return this.vc((() => this.yc && this.Ac ? Promise.resolve() : (t().then(e.resolve, e.reject), 
+            e.promise))).then((() => e.promise));
+        }
+        enqueueRetryable(t) {
+            this.enqueueAndForget((() => (this.gc.push(t), this.Vc())));
+        }
+        /**
+         * Runs the next operation from the retryable queue. If the operation fails,
+         * reschedules with backoff.
+         */    async Vc() {
+            if (0 !== this.gc.length) {
+                try {
+                    await this.gc[0](), this.gc.shift(), this.ur.reset();
+                } catch (t) {
+                    if (!Zs(t)) throw t;
+     // Failure will be handled by AsyncQueue
+                                    O("AsyncQueue", "Operation failed with retryable error: " + t);
+                }
+                this.gc.length > 0 && 
+                // If there are additional operations, we re-schedule `retryNextOp()`.
+                // This is necessary to run retryable operations that failed during
+                // their initial attempt since we don't know whether they are already
+                // enqueued. If, for example, `op1`, `op2`, `op3` are enqueued and `op1`
+                // needs to  be re-run, we will run `op1`, `op1`, `op2` using the
+                // already enqueued calls to `retryNextOp()`. `op3()` will then run in the
+                // call scheduled here.
+                // Since `backoffAndRun()` cancels an existing backoff and schedules a
+                // new backoff on every call, there is only ever a single additional
+                // operation in the queue.
+                this.ur.Zi((() => this.Vc()));
+            }
+        }
+        vc(t) {
+            const e = this.mc.then((() => (this.Ic = !0, t().catch((t => {
+                this.Ec = t, this.Ic = !1;
+                const e = 
+                /**
+     * Chrome includes Error.message in Error.stack. Other browsers do not.
+     * This returns expected output of message + stack when available.
+     * @param error - Error or FirestoreError
+     */
+                function(t) {
+                    let e = t.message || "";
+                    t.stack && (e = t.stack.includes(t.message) ? t.stack : t.message + "\n" + t.stack);
+                    return e;
+                }
+                /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ (t);
+                // Re-throw the error so that this.tail becomes a rejected Promise and
+                // all further attempts to chain (via .then) will just short-circuit
+                // and return the rejected Promise.
+                throw M("INTERNAL UNHANDLED ERROR: ", e), t;
+            })).then((t => (this.Ic = !1, t))))));
+            return this.mc = e, e;
+        }
+        enqueueAfterDelay(t, e, n) {
+            this.Pc(), 
+            // Fast-forward delays for timerIds that have been overriden.
+            this.Rc.indexOf(t) > -1 && (e = 0);
+            const s = Mo.createAndSchedule(this, t, e, n, (t => this.Sc(t)));
+            return this.Tc.push(s), s;
+        }
+        Pc() {
+            this.Ec && B();
+        }
+        verifyOperationInProgress() {}
+        /**
+         * Waits until all currently queued tasks are finished executing. Delayed
+         * operations are not run.
+         */    async Dc() {
+            // Operations in the queue prior to draining may have enqueued additional
+            // operations. Keep draining the queue until the tail is no longer advanced,
+            // which indicates that no more new operations were enqueued and that all
+            // operations were executed.
+            let t;
+            do {
+                t = this.mc, await t;
+            } while (t !== this.mc);
+        }
+        /**
+         * For Tests: Determine if a delayed operation with a particular TimerId
+         * exists.
+         */    Cc(t) {
+            for (const e of this.Tc) if (e.timerId === t) return !0;
+            return !1;
+        }
+        /**
+         * For Tests: Runs some or all delayed operations early.
+         *
+         * @param lastTimerId - Delayed operations up to and including this TimerId
+         * will be drained. Pass TimerId.All to run all delayed operations.
+         * @returns a Promise that resolves once all operations have been run.
+         */    Nc(t) {
+            // Note that draining may generate more delayed ops, so we do that first.
+            return this.Dc().then((() => {
+                // Run ops in the same order they'd run if they ran naturally.
+                this.Tc.sort(((t, e) => t.targetTimeMs - e.targetTimeMs));
+                for (const e of this.Tc) if (e.skipDelay(), "all" /* All */ !== t && e.timerId === t) break;
+                return this.Dc();
+            }));
+        }
+        /**
+         * For Tests: Skip all subsequent delays for a timer id.
+         */    kc(t) {
+            this.Rc.push(t);
+        }
+        /** Called once a DelayedOperation is run or canceled. */    Sc(t) {
+            // NOTE: indexOf / slice are O(n), but delayedOperations is expected to be small.
+            const e = this.Tc.indexOf(t);
+            this.Tc.splice(e, 1);
+        }
+    }
+
+    /**
+     * The Cloud Firestore service interface.
+     *
+     * Do not call this constructor directly. Instead, use {@link getFirestore}.
+     */
+    class Fa extends Ra {
+        /** @hideconstructor */
+        constructor(t, e, n) {
+            super(t, e, n), 
+            /**
+             * Whether it's a {@link Firestore} or Firestore Lite instance.
+             */
+            this.type = "firestore", this._queue = new xa, this._persistenceKey = "name" in t ? t.name : "[DEFAULT]";
+        }
+        _terminate() {
+            return this._firestoreClient || 
+            // The client must be initialized to ensure that all subsequent API
+            // usage throws an exception.
+            qa(this), this._firestoreClient.terminate();
+        }
+    }
+
+    /**
+     * Returns the existing {@link Firestore} instance that is associated with the
+     * provided {@link @firebase/app#FirebaseApp}. If no instance exists, initializes a new
+     * instance with default settings.
+     *
+     * @param app - The {@link @firebase/app#FirebaseApp} instance that the returned {@link Firestore}
+     * instance is associated with.
+     * @returns The {@link Firestore} instance of the provided app.
+     */ function Ba(e = getApp()) {
+        return _getProvider(e, "firestore").getImmediate();
+    }
+
+    /**
+     * @internal
+     */ function Ua(t) {
+        return t._firestoreClient || qa(t), t._firestoreClient.verifyNotTerminated(), t._firestoreClient;
+    }
+
+    function qa(t) {
+        var e;
+        const n = t._freezeSettings(), s = function(t, e, n, s) {
+            return new da(t, e, n, s.host, s.ssl, s.experimentalForceLongPolling, s.experimentalAutoDetectLongPolling, s.useFetchStreams);
+        }(t._databaseId, (null === (e = t._app) || void 0 === e ? void 0 : e.options.appId) || "", t._persistenceKey, n);
+        t._firestoreClient = new Gc(t._authCredentials, t._appCheckCredentials, t._queue, s);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A `FieldPath` refers to a field in a document. The path may consist of a
+     * single field name (referring to a top-level field in the document), or a
+     * list of field names (referring to a nested field in the document).
+     *
+     * Create a `FieldPath` by providing field names. If more than one field
+     * name is provided, the path will point to a nested field in a document.
+     */
+    class tu {
+        /**
+         * Creates a `FieldPath` from the provided field names. If more than one field
+         * name is provided, the path will point to a nested field in a document.
+         *
+         * @param fieldNames - A list of field names.
+         */
+        constructor(...t) {
+            for (let e = 0; e < t.length; ++e) if (0 === t[e].length) throw new Q(j.INVALID_ARGUMENT, "Invalid field name at argument $(i + 1). Field names must not be empty.");
+            this._internalPath = new mt(t);
+        }
+        /**
+         * Returns true if this `FieldPath` is equal to the provided one.
+         *
+         * @param other - The `FieldPath` to compare against.
+         * @returns true if this `FieldPath` is equal to the provided one.
+         */    isEqual(t) {
+            return this._internalPath.isEqual(t._internalPath);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An immutable object representing an array of bytes.
+     */ class nu {
+        /** @hideconstructor */
+        constructor(t) {
+            this._byteString = t;
+        }
+        /**
+         * Creates a new `Bytes` object from the given Base64 string, converting it to
+         * bytes.
+         *
+         * @param base64 - The Base64 string used to create the `Bytes` object.
+         */    static fromBase64String(t) {
+            try {
+                return new nu(pt.fromBase64String(t));
+            } catch (t) {
+                throw new Q(j.INVALID_ARGUMENT, "Failed to construct data from Base64 string: " + t);
+            }
+        }
+        /**
+         * Creates a new `Bytes` object from the given Uint8Array.
+         *
+         * @param array - The Uint8Array used to create the `Bytes` object.
+         */    static fromUint8Array(t) {
+            return new nu(pt.fromUint8Array(t));
+        }
+        /**
+         * Returns the underlying bytes as a Base64-encoded string.
+         *
+         * @returns The Base64-encoded string created from the `Bytes` object.
+         */    toBase64() {
+            return this._byteString.toBase64();
+        }
+        /**
+         * Returns the underlying bytes in a new `Uint8Array`.
+         *
+         * @returns The Uint8Array created from the `Bytes` object.
+         */    toUint8Array() {
+            return this._byteString.toUint8Array();
+        }
+        /**
+         * Returns a string representation of the `Bytes` object.
+         *
+         * @returns A string representation of the `Bytes` object.
+         */    toString() {
+            return "Bytes(base64: " + this.toBase64() + ")";
+        }
+        /**
+         * Returns true if this `Bytes` object is equal to the provided one.
+         *
+         * @param other - The `Bytes` object to compare against.
+         * @returns true if this `Bytes` object is equal to the provided one.
+         */    isEqual(t) {
+            return this._byteString.isEqual(t._byteString);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Sentinel values that can be used when writing document fields with `set()`
+     * or `update()`.
+     */ class su {
+        /**
+         * @param _methodName - The public API endpoint that returns this class.
+         * @hideconstructor
+         */
+        constructor(t) {
+            this._methodName = t;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An immutable object representing a geographic location in Firestore. The
+     * location is represented as latitude/longitude pair.
+     *
+     * Latitude values are in the range of [-90, 90].
+     * Longitude values are in the range of [-180, 180].
+     */ class iu {
+        /**
+         * Creates a new immutable `GeoPoint` object with the provided latitude and
+         * longitude values.
+         * @param latitude - The latitude as number between -90 and 90.
+         * @param longitude - The longitude as number between -180 and 180.
+         */
+        constructor(t, e) {
+            if (!isFinite(t) || t < -90 || t > 90) throw new Q(j.INVALID_ARGUMENT, "Latitude must be a number between -90 and 90, but was: " + t);
+            if (!isFinite(e) || e < -180 || e > 180) throw new Q(j.INVALID_ARGUMENT, "Longitude must be a number between -180 and 180, but was: " + e);
+            this._lat = t, this._long = e;
+        }
+        /**
+         * The latitude of this `GeoPoint` instance.
+         */    get latitude() {
+            return this._lat;
+        }
+        /**
+         * The longitude of this `GeoPoint` instance.
+         */    get longitude() {
+            return this._long;
+        }
+        /**
+         * Returns true if this `GeoPoint` is equal to the provided one.
+         *
+         * @param other - The `GeoPoint` to compare against.
+         * @returns true if this `GeoPoint` is equal to the provided one.
+         */    isEqual(t) {
+            return this._lat === t._lat && this._long === t._long;
+        }
+        /** Returns a JSON-serializable representation of this GeoPoint. */    toJSON() {
+            return {
+                latitude: this._lat,
+                longitude: this._long
+            };
+        }
+        /**
+         * Actually private to JS consumers of our API, so this function is prefixed
+         * with an underscore.
+         */    _compareTo(t) {
+            return rt(this._lat, t._lat) || rt(this._long, t._long);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ const ru = /^__.*__$/;
+
+    /** The result of parsing document data (e.g. for a setData call). */ class ou {
+        constructor(t, e, n) {
+            this.data = t, this.fieldMask = e, this.fieldTransforms = n;
+        }
+        toMutation(t, e) {
+            return null !== this.fieldMask ? new cn(t, this.data, this.fieldMask, e, this.fieldTransforms) : new on(t, this.data, e, this.fieldTransforms);
+        }
+    }
+
+    function au(t) {
+        switch (t) {
+          case 0 /* Set */ :
+     // fall through
+                  case 2 /* MergeSet */ :
+     // fall through
+                  case 1 /* Update */ :
+            return !0;
+
+          case 3 /* Argument */ :
+          case 4 /* ArrayArgument */ :
+            return !1;
+
+          default:
+            throw B();
+        }
+    }
+
+    /** A "context" object passed around while parsing user data. */ class uu {
+        /**
+         * Initializes a ParseContext with the given source and path.
+         *
+         * @param settings - The settings for the parser.
+         * @param databaseId - The database ID of the Firestore instance.
+         * @param serializer - The serializer to use to generate the Value proto.
+         * @param ignoreUndefinedProperties - Whether to ignore undefined properties
+         * rather than throw.
+         * @param fieldTransforms - A mutable list of field transforms encountered
+         * while parsing the data.
+         * @param fieldMask - A mutable list of field paths encountered while parsing
+         * the data.
+         *
+         * TODO(b/34871131): We don't support array paths right now, so path can be
+         * null to indicate the context represents any location within an array (in
+         * which case certain features will not work and errors will be somewhat
+         * compromised).
+         */
+        constructor(t, e, n, s, i, r) {
+            this.settings = t, this.databaseId = e, this.k = n, this.ignoreUndefinedProperties = s, 
+            // Minor hack: If fieldTransforms is undefined, we assume this is an
+            // external call and we need to validate the entire path.
+            void 0 === i && this.xc(), this.fieldTransforms = i || [], this.fieldMask = r || [];
+        }
+        get path() {
+            return this.settings.path;
+        }
+        get $c() {
+            return this.settings.$c;
+        }
+        /** Returns a new context with the specified settings overwritten. */    Oc(t) {
+            return new uu(Object.assign(Object.assign({}, this.settings), t), this.databaseId, this.k, this.ignoreUndefinedProperties, this.fieldTransforms, this.fieldMask);
+        }
+        Mc(t) {
+            var e;
+            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Oc({
+                path: n,
+                Fc: !1
+            });
+            return s.Lc(t), s;
+        }
+        Bc(t) {
+            var e;
+            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Oc({
+                path: n,
+                Fc: !1
+            });
+            return s.xc(), s;
+        }
+        Uc(t) {
+            // TODO(b/34871131): We don't support array paths right now; so make path
+            // undefined.
+            return this.Oc({
+                path: void 0,
+                Fc: !0
+            });
+        }
+        qc(t) {
+            return Su(t, this.settings.methodName, this.settings.Kc || !1, this.path, this.settings.jc);
+        }
+        /** Returns 'true' if 'fieldPath' was traversed when creating this context. */    contains(t) {
+            return void 0 !== this.fieldMask.find((e => t.isPrefixOf(e))) || void 0 !== this.fieldTransforms.find((e => t.isPrefixOf(e.field)));
+        }
+        xc() {
+            // TODO(b/34871131): Remove null check once we have proper paths for fields
+            // within arrays.
+            if (this.path) for (let t = 0; t < this.path.length; t++) this.Lc(this.path.get(t));
+        }
+        Lc(t) {
+            if (0 === t.length) throw this.qc("Document fields must not be empty");
+            if (au(this.$c) && ru.test(t)) throw this.qc('Document fields cannot begin and end with "__"');
+        }
+    }
+
+    /**
+     * Helper for parsing raw user input (provided via the API) into internal model
+     * classes.
+     */ class hu {
+        constructor(t, e, n) {
+            this.databaseId = t, this.ignoreUndefinedProperties = e, this.k = n || eo(t);
+        }
+        /** Creates a new top-level parse context. */    Qc(t, e, n, s = !1) {
+            return new uu({
+                $c: t,
+                methodName: e,
+                jc: n,
+                path: mt.emptyPath(),
+                Fc: !1,
+                Kc: s
+            }, this.databaseId, this.k, this.ignoreUndefinedProperties);
+        }
+    }
+
+    function lu(t) {
+        const e = t._freezeSettings(), n = eo(t._databaseId);
+        return new hu(t._databaseId, !!e.ignoreUndefinedProperties, n);
+    }
+
+    /** Parse document data from a set() call. */ function fu(t, e, n, s, i, r = {}) {
+        const o = t.Qc(r.merge || r.mergeFields ? 2 /* MergeSet */ : 0 /* Set */ , e, n, i);
+        bu("Data must be an object, but it was:", o, s);
+        const c = Au(s, o);
+        let a, u;
+        if (r.merge) a = new gt(o.fieldMask), u = o.fieldTransforms; else if (r.mergeFields) {
+            const t = [];
+            for (const s of r.mergeFields) {
+                const i = Pu(e, s, n);
+                if (!o.contains(i)) throw new Q(j.INVALID_ARGUMENT, `Field '${i}' is specified in your field mask but missing from your input data.`);
+                Du(t, i) || t.push(i);
+            }
+            a = new gt(t), u = o.fieldTransforms.filter((t => a.covers(t.field)));
+        } else a = null, u = o.fieldTransforms;
+        return new ou(new Qt(c), a, u);
+    }
+
+    /**
+     * Parses user data to Protobuf Values.
+     *
+     * @param input - Data to be parsed.
+     * @param context - A context object representing the current path being parsed,
+     * the source of the data being parsed, etc.
+     * @returns The parsed value, or null if the value was a FieldValue sentinel
+     * that should not be included in the resulting parsed data.
+     */ function Iu(t, e) {
+        if (Ru(
+        // Unwrap the API type from the Compat SDK. This will return the API type
+        // from firestore-exp.
+        t = getModularInstance(t))) return bu("Unsupported field value:", e, t), Au(t, e);
+        if (t instanceof su) 
+        // FieldValues usually parse into transforms (except deleteField())
+        // in which case we do not want to include this field in our parsed data
+        // (as doing so will overwrite the field directly prior to the transform
+        // trying to transform it). So we don't add this location to
+        // context.fieldMask and we return null as our parsing result.
+        /**
+     * "Parses" the provided FieldValueImpl, adding any necessary transforms to
+     * context.fieldTransforms.
+     */
+        return function(t, e) {
+            // Sentinels are only supported with writes, and not within arrays.
+            if (!au(e.$c)) throw e.qc(`${t._methodName}() can only be used with update() and set()`);
+            if (!e.path) throw e.qc(`${t._methodName}() is not currently supported inside arrays`);
+            const n = t._toFieldTransform(e);
+            n && e.fieldTransforms.push(n);
+        }
+        /**
+     * Helper to parse a scalar value (i.e. not an Object, Array, or FieldValue)
+     *
+     * @returns The parsed value
+     */ (t, e), null;
+        if (void 0 === t && e.ignoreUndefinedProperties) 
+        // If the input is undefined it can never participate in the fieldMask, so
+        // don't handle this below. If `ignoreUndefinedProperties` is false,
+        // `parseScalarValue` will reject an undefined value.
+        return null;
+        if (
+        // If context.path is null we are inside an array and we don't support
+        // field mask paths more granular than the top-level array.
+        e.path && e.fieldMask.push(e.path), t instanceof Array) {
+            // TODO(b/34871131): Include the path containing the array in the error
+            // message.
+            // In the case of IN queries, the parsed data is an array (representing
+            // the set of values to be included for the IN query) that may directly
+            // contain additional arrays (each representing an individual field
+            // value), so we disable this validation.
+            if (e.settings.Fc && 4 /* ArrayArgument */ !== e.$c) throw e.qc("Nested arrays are not supported");
+            return function(t, e) {
+                const n = [];
+                let s = 0;
+                for (const i of t) {
+                    let t = Iu(i, e.Uc(s));
+                    null == t && (
+                    // Just include nulls in the array for fields being replaced with a
+                    // sentinel.
+                    t = {
+                        nullValue: "NULL_VALUE"
+                    }), n.push(t), s++;
+                }
+                return {
+                    arrayValue: {
+                        values: n
+                    }
+                };
+            }(t, e);
+        }
+        return function(t, e) {
+            if (null === (t = getModularInstance(t))) return {
+                nullValue: "NULL_VALUE"
+            };
+            if ("number" == typeof t) return $e(e.k, t);
+            if ("boolean" == typeof t) return {
+                booleanValue: t
+            };
+            if ("string" == typeof t) return {
+                stringValue: t
+            };
+            if (t instanceof Date) {
+                const n = at.fromDate(t);
+                return {
+                    timestampValue: Qn(e.k, n)
+                };
+            }
+            if (t instanceof at) {
+                // Firestore backend truncates precision down to microseconds. To ensure
+                // offline mode works the same with regards to truncation, perform the
+                // truncation immediately without waiting for the backend to do that.
+                const n = new at(t.seconds, 1e3 * Math.floor(t.nanoseconds / 1e3));
+                return {
+                    timestampValue: Qn(e.k, n)
+                };
+            }
+            if (t instanceof iu) return {
+                geoPointValue: {
+                    latitude: t.latitude,
+                    longitude: t.longitude
+                }
+            };
+            if (t instanceof nu) return {
+                bytesValue: Wn(e.k, t._byteString)
+            };
+            if (t instanceof Pa) {
+                const n = e.databaseId, s = t.firestore._databaseId;
+                if (!s.isEqual(n)) throw e.qc(`Document reference is for database ${s.projectId}/${s.database} but should be for database ${n.projectId}/${n.database}`);
+                return {
+                    referenceValue: Hn(t.firestore._databaseId || e.databaseId, t._key.path)
+                };
+            }
+            throw e.qc(`Unsupported field value: ${Ta(t)}`);
+        }
+        /**
+     * Checks whether an object looks like a JSON object that should be converted
+     * into a struct. Normal class/prototype instances are considered to look like
+     * JSON objects since they should be converted to a struct value. Arrays, Dates,
+     * GeoPoints, etc. are not considered to look like JSON objects since they map
+     * to specific FieldValue types other than ObjectValue.
+     */ (t, e);
+    }
+
+    function Au(t, e) {
+        const n = {};
+        return ft(t) ? 
+        // If we encounter an empty object, we explicitly add it to the update
+        // mask to ensure that the server creates a map entry.
+        e.path && e.path.length > 0 && e.fieldMask.push(e.path) : lt(t, ((t, s) => {
+            const i = Iu(s, e.Mc(t));
+            null != i && (n[t] = i);
+        })), {
+            mapValue: {
+                fields: n
+            }
+        };
+    }
+
+    function Ru(t) {
+        return !("object" != typeof t || null === t || t instanceof Array || t instanceof Date || t instanceof at || t instanceof iu || t instanceof nu || t instanceof Pa || t instanceof su);
+    }
+
+    function bu(t, e, n) {
+        if (!Ru(n) || !function(t) {
+            return "object" == typeof t && null !== t && (Object.getPrototypeOf(t) === Object.prototype || null === Object.getPrototypeOf(t));
+        }(n)) {
+            const s = Ta(n);
+            throw "an object" === s ? e.qc(t + " a custom object") : e.qc(t + " " + s);
+        }
+    }
+
+    /**
+     * Helper that calls fromDotSeparatedString() but wraps any error thrown.
+     */ function Pu(t, e, n) {
+        if ((
+        // If required, replace the FieldPath Compat class with with the firestore-exp
+        // FieldPath.
+        e = getModularInstance(e)) instanceof tu) return e._internalPath;
+        if ("string" == typeof e) return Vu(t, e);
+        throw Su("Field path arguments must be of type string or ", t, 
+        /* hasConverter= */ !1, 
+        /* path= */ void 0, n);
+    }
+
+    /**
+     * Matches any characters in a field path string that are reserved.
+     */ const vu = new RegExp("[~\\*/\\[\\]]");
+
+    /**
+     * Wraps fromDotSeparatedString with an error message about the method that
+     * was thrown.
+     * @param methodName - The publicly visible method name
+     * @param path - The dot-separated string form of a field path which will be
+     * split on dots.
+     * @param targetDoc - The document against which the field path will be
+     * evaluated.
+     */ function Vu(t, e, n) {
+        if (e.search(vu) >= 0) throw Su(`Invalid field path (${e}). Paths must not contain '~', '*', '/', '[', or ']'`, t, 
+        /* hasConverter= */ !1, 
+        /* path= */ void 0, n);
+        try {
+            return new tu(...e.split("."))._internalPath;
+        } catch (s) {
+            throw Su(`Invalid field path (${e}). Paths must not be empty, begin with '.', end with '.', or contain '..'`, t, 
+            /* hasConverter= */ !1, 
+            /* path= */ void 0, n);
+        }
+    }
+
+    function Su(t, e, n, s, i) {
+        const r = s && !s.isEmpty(), o = void 0 !== i;
+        let c = `Function ${e}() called with invalid data`;
+        n && (c += " (via `toFirestore()`)"), c += ". ";
+        let a = "";
+        return (r || o) && (a += " (found", r && (a += ` in field ${s}`), o && (a += ` in document ${i}`), 
+        a += ")"), new Q(j.INVALID_ARGUMENT, c + t + a);
+    }
+
+    /** Checks `haystack` if FieldPath `needle` is present. Runs in O(n). */ function Du(t, e) {
+        return t.some((t => t.isEqual(e)));
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A `DocumentSnapshot` contains data read from a document in your Firestore
+     * database. The data can be extracted with `.data()` or `.get(<field>)` to
+     * get a specific field.
+     *
+     * For a `DocumentSnapshot` that points to a non-existing document, any data
+     * access will return 'undefined'. You can use the `exists()` method to
+     * explicitly verify a document's existence.
+     */ class Cu {
+        // Note: This class is stripped down version of the DocumentSnapshot in
+        // the legacy SDK. The changes are:
+        // - No support for SnapshotMetadata.
+        // - No support for SnapshotOptions.
+        /** @hideconstructor protected */
+        constructor(t, e, n, s, i) {
+            this._firestore = t, this._userDataWriter = e, this._key = n, this._document = s, 
+            this._converter = i;
+        }
+        /** Property of the `DocumentSnapshot` that provides the document's ID. */    get id() {
+            return this._key.path.lastSegment();
+        }
+        /**
+         * The `DocumentReference` for the document included in the `DocumentSnapshot`.
+         */    get ref() {
+            return new Pa(this._firestore, this._converter, this._key);
+        }
+        /**
+         * Signals whether or not the document at the snapshot's location exists.
+         *
+         * @returns true if the document exists.
+         */    exists() {
+            return null !== this._document;
+        }
+        /**
+         * Retrieves all fields in the document as an `Object`. Returns `undefined` if
+         * the document doesn't exist.
+         *
+         * @returns An `Object` containing all fields in the document or `undefined`
+         * if the document doesn't exist.
+         */    data() {
+            if (this._document) {
+                if (this._converter) {
+                    // We only want to use the converter and create a new DocumentSnapshot
+                    // if a converter has been provided.
+                    const t = new Nu(this._firestore, this._userDataWriter, this._key, this._document, 
+                    /* converter= */ null);
+                    return this._converter.fromFirestore(t);
+                }
+                return this._userDataWriter.convertValue(this._document.data.value);
+            }
+        }
+        /**
+         * Retrieves the field specified by `fieldPath`. Returns `undefined` if the
+         * document or field doesn't exist.
+         *
+         * @param fieldPath - The path (for example 'foo' or 'foo.bar') to a specific
+         * field.
+         * @returns The data at the specified field location or undefined if no such
+         * field exists in the document.
+         */
+        // We are using `any` here to avoid an explicit cast by our users.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get(t) {
+            if (this._document) {
+                const e = this._document.data.field(ku("DocumentSnapshot.get", t));
+                if (null !== e) return this._userDataWriter.convertValue(e);
+            }
+        }
+    }
+
+    /**
+     * A `QueryDocumentSnapshot` contains data read from a document in your
+     * Firestore database as part of a query. The document is guaranteed to exist
+     * and its data can be extracted with `.data()` or `.get(<field>)` to get a
+     * specific field.
+     *
+     * A `QueryDocumentSnapshot` offers the same API surface as a
+     * `DocumentSnapshot`. Since query results contain only existing documents, the
+     * `exists` property will always be true and `data()` will never return
+     * 'undefined'.
+     */ class Nu extends Cu {
+        /**
+         * Retrieves all fields in the document as an `Object`.
+         *
+         * @override
+         * @returns An `Object` containing all fields in the document.
+         */
+        data() {
+            return super.data();
+        }
+    }
+
+    /**
+     * Helper that calls `fromDotSeparatedString()` but wraps any error thrown.
+     */ function ku(t, e) {
+        return "string" == typeof e ? Vu(t, e) : e instanceof tu ? e._internalPath : e._delegate._internalPath;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Metadata about a snapshot, describing the state of the snapshot.
+     */ class xu {
+        /** @hideconstructor */
+        constructor(t, e) {
+            this.hasPendingWrites = t, this.fromCache = e;
+        }
+        /**
+         * Returns true if this `SnapshotMetadata` is equal to the provided one.
+         *
+         * @param other - The `SnapshotMetadata` to compare against.
+         * @returns true if this `SnapshotMetadata` is equal to the provided one.
+         */    isEqual(t) {
+            return this.hasPendingWrites === t.hasPendingWrites && this.fromCache === t.fromCache;
+        }
+    }
+
+    /**
+     * A `DocumentSnapshot` contains data read from a document in your Firestore
+     * database. The data can be extracted with `.data()` or `.get(<field>)` to
+     * get a specific field.
+     *
+     * For a `DocumentSnapshot` that points to a non-existing document, any data
+     * access will return 'undefined'. You can use the `exists()` method to
+     * explicitly verify a document's existence.
+     */ class $u extends Cu {
+        /** @hideconstructor protected */
+        constructor(t, e, n, s, i, r) {
+            super(t, e, n, s, r), this._firestore = t, this._firestoreImpl = t, this.metadata = i;
+        }
+        /**
+         * Property of the `DocumentSnapshot` that signals whether or not the data
+         * exists. True if the document exists.
+         */    exists() {
+            return super.exists();
+        }
+        /**
+         * Retrieves all fields in the document as an `Object`. Returns `undefined` if
+         * the document doesn't exist.
+         *
+         * By default, `serverTimestamp()` values that have not yet been
+         * set to their final value will be returned as `null`. You can override
+         * this by passing an options object.
+         *
+         * @param options - An options object to configure how data is retrieved from
+         * the snapshot (for example the desired behavior for server timestamps that
+         * have not yet been set to their final value).
+         * @returns An `Object` containing all fields in the document or `undefined` if
+         * the document doesn't exist.
+         */    data(t = {}) {
+            if (this._document) {
+                if (this._converter) {
+                    // We only want to use the converter and create a new DocumentSnapshot
+                    // if a converter has been provided.
+                    const e = new Ou(this._firestore, this._userDataWriter, this._key, this._document, this.metadata, 
+                    /* converter= */ null);
+                    return this._converter.fromFirestore(e, t);
+                }
+                return this._userDataWriter.convertValue(this._document.data.value, t.serverTimestamps);
+            }
+        }
+        /**
+         * Retrieves the field specified by `fieldPath`. Returns `undefined` if the
+         * document or field doesn't exist.
+         *
+         * By default, a `serverTimestamp()` that has not yet been set to
+         * its final value will be returned as `null`. You can override this by
+         * passing an options object.
+         *
+         * @param fieldPath - The path (for example 'foo' or 'foo.bar') to a specific
+         * field.
+         * @param options - An options object to configure how the field is retrieved
+         * from the snapshot (for example the desired behavior for server timestamps
+         * that have not yet been set to their final value).
+         * @returns The data at the specified field location or undefined if no such
+         * field exists in the document.
+         */
+        // We are using `any` here to avoid an explicit cast by our users.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get(t, e = {}) {
+            if (this._document) {
+                const n = this._document.data.field(ku("DocumentSnapshot.get", t));
+                if (null !== n) return this._userDataWriter.convertValue(n, e.serverTimestamps);
+            }
+        }
+    }
+
+    /**
+     * A `QueryDocumentSnapshot` contains data read from a document in your
+     * Firestore database as part of a query. The document is guaranteed to exist
+     * and its data can be extracted with `.data()` or `.get(<field>)` to get a
+     * specific field.
+     *
+     * A `QueryDocumentSnapshot` offers the same API surface as a
+     * `DocumentSnapshot`. Since query results contain only existing documents, the
+     * `exists` property will always be true and `data()` will never return
+     * 'undefined'.
+     */ class Ou extends $u {
+        /**
+         * Retrieves all fields in the document as an `Object`.
+         *
+         * By default, `serverTimestamp()` values that have not yet been
+         * set to their final value will be returned as `null`. You can override
+         * this by passing an options object.
+         *
+         * @override
+         * @param options - An options object to configure how data is retrieved from
+         * the snapshot (for example the desired behavior for server timestamps that
+         * have not yet been set to their final value).
+         * @returns An `Object` containing all fields in the document.
+         */
+        data(t = {}) {
+            return super.data(t);
+        }
+    }
+
+    /**
+     * A `QuerySnapshot` contains zero or more `DocumentSnapshot` objects
+     * representing the results of a query. The documents can be accessed as an
+     * array via the `docs` property or enumerated using the `forEach` method. The
+     * number of documents can be determined via the `empty` and `size`
+     * properties.
+     */ class Mu {
+        /** @hideconstructor */
+        constructor(t, e, n, s) {
+            this._firestore = t, this._userDataWriter = e, this._snapshot = s, this.metadata = new xu(s.hasPendingWrites, s.fromCache), 
+            this.query = n;
+        }
+        /** An array of all the documents in the `QuerySnapshot`. */    get docs() {
+            const t = [];
+            return this.forEach((e => t.push(e))), t;
+        }
+        /** The number of documents in the `QuerySnapshot`. */    get size() {
+            return this._snapshot.docs.size;
+        }
+        /** True if there are no documents in the `QuerySnapshot`. */    get empty() {
+            return 0 === this.size;
+        }
+        /**
+         * Enumerates all of the documents in the `QuerySnapshot`.
+         *
+         * @param callback - A callback to be called with a `QueryDocumentSnapshot` for
+         * each document in the snapshot.
+         * @param thisArg - The `this` binding for the callback.
+         */    forEach(t, e) {
+            this._snapshot.docs.forEach((n => {
+                t.call(e, new Ou(this._firestore, this._userDataWriter, n.key, n, new xu(this._snapshot.mutatedKeys.has(n.key), this._snapshot.fromCache), this.query.converter));
+            }));
+        }
+        /**
+         * Returns an array of the documents changes since the last snapshot. If this
+         * is the first snapshot, all documents will be in the list as 'added'
+         * changes.
+         *
+         * @param options - `SnapshotListenOptions` that control whether metadata-only
+         * changes (i.e. only `DocumentSnapshot.metadata` changed) should trigger
+         * snapshot events.
+         */    docChanges(t = {}) {
+            const e = !!t.includeMetadataChanges;
+            if (e && this._snapshot.excludesMetadataChanges) throw new Q(j.INVALID_ARGUMENT, "To include metadata changes with your document changes, you must also pass { includeMetadataChanges:true } to onSnapshot().");
+            return this._cachedChanges && this._cachedChangesIncludeMetadataChanges === e || (this._cachedChanges = 
+            /** Calculates the array of `DocumentChange`s for a given `ViewSnapshot`. */
+            function(t, e) {
+                if (t._snapshot.oldDocs.isEmpty()) {
+                    let e = 0;
+                    return t._snapshot.docChanges.map((n => ({
+                        type: "added",
+                        doc: new Ou(t._firestore, t._userDataWriter, n.doc.key, n.doc, new xu(t._snapshot.mutatedKeys.has(n.doc.key), t._snapshot.fromCache), t.query.converter),
+                        oldIndex: -1,
+                        newIndex: e++
+                    })));
+                }
+                {
+                    // A `DocumentSet` that is updated incrementally as changes are applied to use
+                    // to lookup the index of a document.
+                    let n = t._snapshot.oldDocs;
+                    return t._snapshot.docChanges.filter((t => e || 3 /* Metadata */ !== t.type)).map((e => {
+                        const s = new Ou(t._firestore, t._userDataWriter, e.doc.key, e.doc, new xu(t._snapshot.mutatedKeys.has(e.doc.key), t._snapshot.fromCache), t.query.converter);
+                        let i = -1, r = -1;
+                        return 0 /* Added */ !== e.type && (i = n.indexOf(e.doc.key), n = n.delete(e.doc.key)), 
+                        1 /* Removed */ !== e.type && (n = n.add(e.doc), r = n.indexOf(e.doc.key)), {
+                            type: Fu(e.type),
+                            doc: s,
+                            oldIndex: i,
+                            newIndex: r
+                        };
+                    }));
+                }
+            }(this, e), this._cachedChangesIncludeMetadataChanges = e), this._cachedChanges;
+        }
+    }
+
+    function Fu(t) {
+        switch (t) {
+          case 0 /* Added */ :
+            return "added";
+
+          case 2 /* Modified */ :
+          case 3 /* Metadata */ :
+            return "modified";
+
+          case 1 /* Removed */ :
+            return "removed";
+
+          default:
+            return B();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ function Bu(t) {
+        if (Te(t) && 0 === t.explicitOrderBy.length) throw new Q(j.UNIMPLEMENTED, "limitToLast() queries require specifying at least one orderBy() clause");
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Converts Firestore's internal types to the JavaScript types that we expose
+     * to the user.
+     *
+     * @internal
+     */ class oh {
+        convertValue(t, e = "none") {
+            switch (Ct(t)) {
+              case 0 /* NullValue */ :
+                return null;
+
+              case 1 /* BooleanValue */ :
+                return t.booleanValue;
+
+              case 2 /* NumberValue */ :
+                return It(t.integerValue || t.doubleValue);
+
+              case 3 /* TimestampValue */ :
+                return this.convertTimestamp(t.timestampValue);
+
+              case 4 /* ServerTimestampValue */ :
+                return this.convertServerTimestamp(t, e);
+
+              case 5 /* StringValue */ :
+                return t.stringValue;
+
+              case 6 /* BlobValue */ :
+                return this.convertBytes(At(t.bytesValue));
+
+              case 7 /* RefValue */ :
+                return this.convertReference(t.referenceValue);
+
+              case 8 /* GeoPointValue */ :
+                return this.convertGeoPoint(t.geoPointValue);
+
+              case 9 /* ArrayValue */ :
+                return this.convertArray(t.arrayValue, e);
+
+              case 10 /* ObjectValue */ :
+                return this.convertObject(t.mapValue, e);
+
+              default:
+                throw B();
+            }
+        }
+        convertObject(t, e) {
+            const n = {};
+            return lt(t.fields, ((t, s) => {
+                n[t] = this.convertValue(s, e);
+            })), n;
+        }
+        convertGeoPoint(t) {
+            return new iu(It(t.latitude), It(t.longitude));
+        }
+        convertArray(t, e) {
+            return (t.values || []).map((t => this.convertValue(t, e)));
+        }
+        convertServerTimestamp(t, e) {
+            switch (e) {
+              case "previous":
+                const n = bt(t);
+                return null == n ? null : this.convertValue(n, e);
+
+              case "estimate":
+                return this.convertTimestamp(Pt(t));
+
+              default:
+                return null;
+            }
+        }
+        convertTimestamp(t) {
+            const e = Et(t);
+            return new at(e.seconds, e.nanos);
+        }
+        convertDocumentKey(t, e) {
+            const n = wt.fromString(t);
+            U(Rs(n));
+            const s = new wa(n.get(1), n.get(3)), i = new Dt(n.popFirst(5));
+            return s.isEqual(e) || 
+            // TODO(b/64130202): Somehow support foreign references.
+            M(`Document ${i} contains a document reference within a different database (${s.projectId}/${s.database}) which is not supported. It will be treated as a reference in the current database (${e.projectId}/${e.database}) instead.`), 
+            i;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Converts custom model object of type T into `DocumentData` by applying the
+     * converter if it exists.
+     *
+     * This function is used when converting user objects to `DocumentData`
+     * because we want to provide the user with a more specific error message if
+     * their `set()` or fails due to invalid data originating from a `toFirestore()`
+     * call.
+     */ function ch(t, e, n) {
+        let s;
+        // Cast to `any` in order to satisfy the union type constraint on
+        // toFirestore().
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return s = t ? n && (n.merge || n.mergeFields) ? t.toFirestore(e, n) : t.toFirestore(e) : e, 
+        s;
+    }
+
+    class fh extends oh {
+        constructor(t) {
+            super(), this.firestore = t;
+        }
+        convertBytes(t) {
+            return new nu(t);
+        }
+        convertReference(t) {
+            const e = this.convertDocumentKey(t, this.firestore._databaseId);
+            return new Pa(this.firestore, /* converter= */ null, e);
+        }
+    }
+
+    /**
+     * Executes the query and returns the results as a `QuerySnapshot`.
+     *
+     * Note: `getDocs()` attempts to provide up-to-date data when possible by
+     * waiting for data from the server, but it may return cached data or fail if
+     * you are offline and the server cannot be reached. To specify this behavior,
+     * invoke {@link getDocsFromCache} or {@link getDocsFromServer}.
+     *
+     * @returns A `Promise` that will be resolved with the results of the query.
+     */ function _h(t) {
+        t = Ea(t, va);
+        const e = Ea(t.firestore, Fa), n = Ua(e), s = new fh(e);
+        return Bu(t._query), aa(n, t._query).then((n => new Mu(e, s, t, n)));
+    }
+
+    /**
+     * Add a new document to specified `CollectionReference` with the given data,
+     * assigning it a document ID automatically.
+     *
+     * @param reference - A reference to the collection to add this document to.
+     * @param data - An Object containing the data for the new document.
+     * @returns A `Promise` resolved with a `DocumentReference` pointing to the
+     * newly created document after it has been written to the backend (Note that it
+     * won't resolve while you're offline).
+     */ function Eh(t, e) {
+        const n = Ea(t.firestore, Fa), s = Ca(t), i = ch(t.converter, e);
+        return Rh(n, [ fu(lu(t.firestore), "addDoc", s._key, i, null !== t.converter, {}).toMutation(s._key, Ye.exists(!1)) ]).then((() => s));
+    }
+
+    /**
+     * Locally writes `mutations` on the async queue.
+     * @internal
+     */ function Rh(t, e) {
+        return function(t, e) {
+            const n = new W;
+            return t.asyncQueue.enqueueAndForget((async () => uc(await ea(t), e, n))), n.promise;
+        }(Ua(t), e);
+    }
+
+    /**
+     * Cloud Firestore
+     *
+     * @packageDocumentation
+     */ !function(t, e = !0) {
+        !function(t) {
+            N = t;
+        }(SDK_VERSION), _registerComponent(new Component("firestore", ((t, {options: n}) => {
+            const s = t.getProvider("app").getImmediate(), i = new Fa(s, new J(t.getProvider("auth-internal")), new tt(t.getProvider("app-check-internal")));
+            return n = Object.assign({
+                useFetchStreams: e
+            }, n), i._setSettings(n), i;
+        }), "PUBLIC")), registerVersion(D, "3.4.3", t), 
+        // BUILD_TARGET will be replaced by values like esm5, esm2017, cjs5, etc during the compilation
+        registerVersion(D, "3.4.3", "esm2017");
+    }();
+
+    /* src\components\PubListings\PubListing.svelte generated by Svelte v3.46.2 */
+
+    const { Object: Object_1$1 } = globals;
+    const file$3 = "src\\components\\PubListings\\PubListing.svelte";
+
+    function get_each_context$1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[3] = list[i][0];
+    	child_ctx[4] = list[i][1];
+    	return child_ctx;
+    }
+
+    function get_each_context_2(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[7] = list[i];
+    	child_ctx[9] = i;
+    	return child_ctx;
+    }
+
+    function get_each_context_1$1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[7] = list[i];
+    	child_ctx[9] = i;
+    	return child_ctx;
+    }
+
+    // (21:4) {#if id !== 'name'}
+    function create_if_block_4(ctx) {
+    	let span;
+    	let t_value = /*label*/ ctx[4] + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			span = element("span");
+    			t = text(t_value);
+    			attr_dev(span, "class", "md:hidden");
+    			add_location(span, file$3, 21, 8, 580);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, span, anchor);
+    			append_dev(span, t);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*headings*/ 2 && t_value !== (t_value = /*label*/ ctx[4] + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(span);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_4.name,
+    		type: "if",
+    		source: "(21:4) {#if id !== 'name'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (38:4) {:else}
+    function create_else_block$1(ctx) {
+    	let t_value = /*pubData*/ ctx[0][/*id*/ ctx[3]] + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*pubData, headings*/ 3 && t_value !== (t_value = /*pubData*/ ctx[0][/*id*/ ctx[3]] + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block$1.name,
+    		type: "else",
+    		source: "(38:4) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (36:36) 
+    function create_if_block_3(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("👎");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_3.name,
+    		type: "if",
+    		source: "(36:36) ",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (34:35) 
+    function create_if_block_2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("👍");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_2.name,
+    		type: "if",
+    		source: "(34:35) ",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (30:36) 
+    function create_if_block_1$1(ctx) {
+    	let each_1_anchor;
+
+    	let each_value_2 = {
+    		length: /*pubData*/ ctx[0][/*id*/ ctx[3]]
+    	};
+
+    	validate_each_argument(each_value_2);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value_2.length; i += 1) {
+    		each_blocks[i] = create_each_block_2(get_each_context_2(ctx, each_value_2, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*pubData, headings*/ 3) {
+    				const old_length = each_value_2.length;
+
+    				each_value_2 = {
+    					length: /*pubData*/ ctx[0][/*id*/ ctx[3]]
+    				};
+
+    				validate_each_argument(each_value_2);
+    				let i;
+
+    				for (i = old_length; i < each_value_2.length; i += 1) {
+    					const child_ctx = get_each_context_2(ctx, each_value_2, i);
+
+    					if (!each_blocks[i]) {
+    						each_blocks[i] = create_each_block_2(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (i = each_value_2.length; i < old_length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value_2.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$1.name,
+    		type: "if",
+    		source: "(30:36) ",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (26:4) {#if id === 'drink_quality'}
+    function create_if_block$1(ctx) {
+    	let each_1_anchor;
+
+    	let each_value_1 = {
+    		length: /*pubData*/ ctx[0][/*id*/ ctx[3]]
+    	};
+
+    	validate_each_argument(each_value_1);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks[i] = create_each_block_1$1(get_each_context_1$1(ctx, each_value_1, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*pubData, headings*/ 3) {
+    				const old_length = each_value_1.length;
+
+    				each_value_1 = {
+    					length: /*pubData*/ ctx[0][/*id*/ ctx[3]]
+    				};
+
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = old_length; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1$1(ctx, each_value_1, i);
+
+    					if (!each_blocks[i]) {
+    						each_blocks[i] = create_each_block_1$1(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (i = each_value_1.length; i < old_length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value_1.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$1.name,
+    		type: "if",
+    		source: "(26:4) {#if id === 'drink_quality'}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (31:8) {#each {length: pubData[id]} as _, i}
+    function create_each_block_2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("🍸");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_2.name,
+    		type: "each",
+    		source: "(31:8) {#each {length: pubData[id]} as _, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (27:8) {#each {length: pubData[id]} as _, i}
+    function create_each_block_1$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("🍺");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1$1.name,
+    		type: "each",
+    		source: "(27:8) {#each {length: pubData[id]} as _, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (19:0) {#each Object.entries(headings) as [id, label]}
+    function create_each_block$1(ctx) {
+    	let span;
+    	let t0;
+    	let t1;
+    	let span_class_value;
+    	let if_block0 = /*id*/ ctx[3] !== 'name' && create_if_block_4(ctx);
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*id*/ ctx[3] === 'drink_quality') return create_if_block$1;
+    		if (/*id*/ ctx[3] === 'drink_choice') return create_if_block_1$1;
+    		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === true) return create_if_block_2;
+    		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === false) return create_if_block_3;
+    		return create_else_block$1;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block1 = current_block_type(ctx);
+
+    	const block = {
+    		c: function create() {
+    			span = element("span");
+    			if (if_block0) if_block0.c();
+    			t0 = space();
+    			if_block1.c();
+    			t1 = space();
+    			attr_dev(span, "class", span_class_value = "" + (null_to_empty(/*labelClasses*/ ctx[2](/*id*/ ctx[3])) + " svelte-tc4qn1"));
+    			add_location(span, file$3, 19, 0, 512);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, span, anchor);
+    			if (if_block0) if_block0.m(span, null);
+    			append_dev(span, t0);
+    			if_block1.m(span, null);
+    			append_dev(span, t1);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*id*/ ctx[3] !== 'name') {
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+    				} else {
+    					if_block0 = create_if_block_4(ctx);
+    					if_block0.c();
+    					if_block0.m(span, t0);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block1) {
+    				if_block1.p(ctx, dirty);
+    			} else {
+    				if_block1.d(1);
+    				if_block1 = current_block_type(ctx);
+
+    				if (if_block1) {
+    					if_block1.c();
+    					if_block1.m(span, t1);
+    				}
+    			}
+
+    			if (dirty & /*labelClasses, headings*/ 6 && span_class_value !== (span_class_value = "" + (null_to_empty(/*labelClasses*/ ctx[2](/*id*/ ctx[3])) + " svelte-tc4qn1"))) {
+    				attr_dev(span, "class", span_class_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(span);
+    			if (if_block0) if_block0.d();
+    			if_block1.d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block$1.name,
+    		type: "each",
+    		source: "(19:0) {#each Object.entries(headings) as [id, label]}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$3(ctx) {
+    	let each_1_anchor;
+    	let each_value = Object.entries(/*headings*/ ctx[1]);
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*labelClasses, Object, headings, pubData*/ 7) {
+    				each_value = Object.entries(/*headings*/ ctx[1]);
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context$1(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block$1(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+    		},
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let labelClasses;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('PubListing', slots, []);
+    	let { pubData } = $$props;
+    	let { headings } = $$props;
+    	const writable_props = ['pubData', 'headings'];
+
+    	Object_1$1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<PubListing> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ('pubData' in $$props) $$invalidate(0, pubData = $$props.pubData);
+    		if ('headings' in $$props) $$invalidate(1, headings = $$props.headings);
+    	};
+
+    	$$self.$capture_state = () => ({ pubData, headings, labelClasses });
+
+    	$$self.$inject_state = $$props => {
+    		if ('pubData' in $$props) $$invalidate(0, pubData = $$props.pubData);
+    		if ('headings' in $$props) $$invalidate(1, headings = $$props.headings);
+    		if ('labelClasses' in $$props) $$invalidate(2, labelClasses = $$props.labelClasses);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$invalidate(2, labelClasses = id => {
+    		let base = 'flex flex-col md:flex-row justify-center md:justify-start items-center py-4 md:border-b-2';
+    		let extraClasses = '';
+
+    		if (id === 'name') {
+    			extraClasses = "border-b-2 w-full text-xl";
+    		} else {
+    			extraClasses = "w-1/2";
+    		}
+
+    		return `${base} ${extraClasses}`;
+    	});
+
+    	return [pubData, headings, labelClasses];
+    }
+
+    class PubListing extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { pubData: 0, headings: 1 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "PubListing",
+    			options,
+    			id: create_fragment$3.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*pubData*/ ctx[0] === undefined && !('pubData' in props)) {
+    			console.warn("<PubListing> was created without expected prop 'pubData'");
+    		}
+
+    		if (/*headings*/ ctx[1] === undefined && !('headings' in props)) {
+    			console.warn("<PubListing> was created without expected prop 'headings'");
+    		}
+    	}
+
+    	get pubData() {
+    		throw new Error("<PubListing>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set pubData(value) {
+    		throw new Error("<PubListing>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get headings() {
+    		throw new Error("<PubListing>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set headings(value) {
+    		throw new Error("<PubListing>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src\components\Filters\Filters.svelte generated by Svelte v3.46.2 */
+
+    const file$2 = "src\\components\\Filters\\Filters.svelte";
+
+    function create_fragment$2(ctx) {
+    	let section;
+    	let div0;
+    	let label0;
+    	let t1;
+    	let input;
+    	let t2;
+    	let div1;
+    	let label1;
+    	let t4;
+    	let select0;
+    	let option0;
+    	let option1;
+    	let option2;
+    	let t8;
+    	let div2;
+    	let label2;
+    	let t10;
+    	let select1;
+    	let option3;
+    	let option4;
+    	let option5;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			section = element("section");
+    			div0 = element("div");
+    			label0 = element("label");
+    			label0.textContent = "Group size";
+    			t1 = space();
+    			input = element("input");
+    			t2 = space();
+    			div1 = element("div");
+    			label1 = element("label");
+    			label1.textContent = "Food?";
+    			t4 = space();
+    			select0 = element("select");
+    			option0 = element("option");
+    			option0.textContent = "Don't care";
+    			option1 = element("option");
+    			option1.textContent = "Yes";
+    			option2 = element("option");
+    			option2.textContent = "No";
+    			t8 = space();
+    			div2 = element("div");
+    			label2 = element("label");
+    			label2.textContent = "Shows sport?";
+    			t10 = space();
+    			select1 = element("select");
+    			option3 = element("option");
+    			option3.textContent = "Don't care";
+    			option4 = element("option");
+    			option4.textContent = "Yes";
+    			option5 = element("option");
+    			option5.textContent = "No";
+    			attr_dev(label0, "for", "max_group");
+    			add_location(label0, file$2, 27, 8, 735);
+    			attr_dev(input, "type", "number");
+    			attr_dev(input, "id", "max_group");
+    			attr_dev(input, "class", "filters__input");
+    			add_location(input, file$2, 28, 8, 786);
+    			attr_dev(div0, "class", "filters__section mr-4");
+    			add_location(div0, file$2, 26, 4, 690);
+    			attr_dev(label1, "for", "food");
+    			add_location(label1, file$2, 32, 8, 935);
+    			option0.__value = 'both';
+    			option0.value = option0.__value;
+    			add_location(option0, file$2, 35, 12, 1030);
+    			option1.__value = true;
+    			option1.value = option1.__value;
+    			add_location(option1, file$2, 36, 12, 1088);
+    			option2.__value = false;
+    			option2.value = option2.__value;
+    			add_location(option2, file$2, 37, 12, 1137);
+    			attr_dev(select0, "name", "food");
+    			if (/*food*/ ctx[1] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[4].call(select0));
+    			add_location(select0, file$2, 34, 8, 978);
+    			attr_dev(div1, "class", "filters__section mr-4");
+    			add_location(div1, file$2, 31, 4, 890);
+    			attr_dev(label2, "for", "sport");
+    			add_location(label2, file$2, 42, 8, 1256);
+    			option3.__value = 'both';
+    			option3.value = option3.__value;
+    			add_location(option3, file$2, 45, 12, 1360);
+    			option4.__value = true;
+    			option4.value = option4.__value;
+    			add_location(option4, file$2, 46, 12, 1418);
+    			option5.__value = false;
+    			option5.value = option5.__value;
+    			add_location(option5, file$2, 47, 12, 1467);
+    			attr_dev(select1, "name", "food");
+    			if (/*sport*/ ctx[2] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[5].call(select1));
+    			add_location(select1, file$2, 44, 8, 1307);
+    			attr_dev(div2, "class", "filters__section mr-4");
+    			add_location(div2, file$2, 41, 4, 1211);
+    			attr_dev(section, "class", "filters flex justify-center hidden md:block");
+    			add_location(section, file$2, 20, 0, 433);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, section, anchor);
+    			append_dev(section, div0);
+    			append_dev(div0, label0);
+    			append_dev(div0, t1);
+    			append_dev(div0, input);
+    			set_input_value(input, /*groupSize*/ ctx[0]);
+    			append_dev(section, t2);
+    			append_dev(section, div1);
+    			append_dev(div1, label1);
+    			append_dev(div1, t4);
+    			append_dev(div1, select0);
+    			append_dev(select0, option0);
+    			append_dev(select0, option1);
+    			append_dev(select0, option2);
+    			select_option(select0, /*food*/ ctx[1]);
+    			append_dev(section, t8);
+    			append_dev(section, div2);
+    			append_dev(div2, label2);
+    			append_dev(div2, t10);
+    			append_dev(div2, select1);
+    			append_dev(select1, option3);
+    			append_dev(select1, option4);
+    			append_dev(select1, option5);
+    			select_option(select1, /*sport*/ ctx[2]);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input, "input", /*input_input_handler*/ ctx[3]),
+    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[4]),
+    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[5])
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*groupSize*/ 1 && to_number(input.value) !== /*groupSize*/ ctx[0]) {
+    				set_input_value(input, /*groupSize*/ ctx[0]);
+    			}
+
+    			if (dirty & /*food*/ 2) {
+    				select_option(select0, /*food*/ ctx[1]);
+    			}
+
+    			if (dirty & /*sport*/ 4) {
+    				select_option(select1, /*sport*/ ctx[2]);
+    			}
+    		},
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(section);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$2.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Filters', slots, []);
+    	let { groupSize = 5 } = $$props;
+    	let { food = 'both' } = $$props;
+    	let { sport = 'both' } = $$props;
+
+    	const toggleSport = () => {
+    		let status = '';
+
+    		if (sport === 'both') {
+    			status = true;
+    		} else if (sport === true) {
+    			status = false;
+    		} else {
+    			status = 'both';
+    		}
+
+    		$$invalidate(2, sport = status);
+    	};
+
+    	const writable_props = ['groupSize', 'food', 'sport'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Filters> was created with unknown prop '${key}'`);
+    	});
+
+    	function input_input_handler() {
+    		groupSize = to_number(this.value);
+    		$$invalidate(0, groupSize);
+    	}
+
+    	function select0_change_handler() {
+    		food = select_value(this);
+    		$$invalidate(1, food);
+    	}
+
+    	function select1_change_handler() {
+    		sport = select_value(this);
+    		$$invalidate(2, sport);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('groupSize' in $$props) $$invalidate(0, groupSize = $$props.groupSize);
+    		if ('food' in $$props) $$invalidate(1, food = $$props.food);
+    		if ('sport' in $$props) $$invalidate(2, sport = $$props.sport);
+    	};
+
+    	$$self.$capture_state = () => ({ groupSize, food, sport, toggleSport });
+
+    	$$self.$inject_state = $$props => {
+    		if ('groupSize' in $$props) $$invalidate(0, groupSize = $$props.groupSize);
+    		if ('food' in $$props) $$invalidate(1, food = $$props.food);
+    		if ('sport' in $$props) $$invalidate(2, sport = $$props.sport);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		groupSize,
+    		food,
+    		sport,
+    		input_input_handler,
+    		select0_change_handler,
+    		select1_change_handler
+    	];
+    }
+
+    class Filters extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { groupSize: 0, food: 1, sport: 2 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Filters",
+    			options,
+    			id: create_fragment$2.name
+    		});
+    	}
+
+    	get groupSize() {
+    		throw new Error("<Filters>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set groupSize(value) {
+    		throw new Error("<Filters>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get food() {
+    		throw new Error("<Filters>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set food(value) {
+    		throw new Error("<Filters>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get sport() {
+    		throw new Error("<Filters>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set sport(value) {
+    		throw new Error("<Filters>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src\components\PubListings\PubListings.svelte generated by Svelte v3.46.2 */
+
+    const { Object: Object_1 } = globals;
+    const file$1 = "src\\components\\PubListings\\PubListings.svelte";
+
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[14] = list[i];
+    	return child_ctx;
+    }
+
+    function get_each_context_1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[17] = list[i][0];
+    	child_ctx[18] = list[i][1];
+    	return child_ctx;
+    }
+
+    // (64:4) {:else}
+    function create_else_block(ctx) {
+    	let p;
+
+    	const block = {
+    		c: function create() {
+    			p = element("p");
+    			p.textContent = "Sorry there are no pubs that match your criteria";
+    			add_location(p, file$1, 64, 8, 1834);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p, anchor);
+    		},
+    		p: noop,
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block.name,
+    		type: "else",
+    		source: "(64:4) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (62:28) 
+    function create_if_block_1(ctx) {
+    	let p;
+
+    	const block = {
+    		c: function create() {
+    			p = element("p");
+    			p.textContent = "Loading";
+    			add_location(p, file$1, 62, 8, 1797);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p, anchor);
+    		},
+    		p: noop,
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1.name,
+    		type: "if",
+    		source: "(62:28) ",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (48:4) {#if filteredList.length > 0 && dataLoaded()}
+    function create_if_block(ctx) {
+    	let div;
+    	let t;
+    	let current;
+    	let each_value_1 = Object.entries(/*categories*/ ctx[7]);
+    	validate_each_argument(each_value_1);
+    	let each_blocks_1 = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks_1[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	}
+
+    	let each_value = /*filteredList*/ ctx[6];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+    		each_blocks[i] = null;
+    	});
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+
+    			for (let i = 0; i < each_blocks_1.length; i += 1) {
+    				each_blocks_1[i].c();
+    			}
+
+    			t = space();
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			attr_dev(div, "class", "flex flex-wrap md:grid mt-6");
+    			attr_dev(div, "style", /*gridTemplate*/ ctx[4]);
+    			add_location(div, file$1, 48, 8, 1290);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+
+    			for (let i = 0; i < each_blocks_1.length; i += 1) {
+    				each_blocks_1[i].m(div, null);
+    			}
+
+    			append_dev(div, t);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(div, null);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*Object, categories*/ 128) {
+    				each_value_1 = Object.entries(/*categories*/ ctx[7]);
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = 0; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+    					if (each_blocks_1[i]) {
+    						each_blocks_1[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks_1[i] = create_each_block_1(child_ctx);
+    						each_blocks_1[i].c();
+    						each_blocks_1[i].m(div, t);
+    					}
+    				}
+
+    				for (; i < each_blocks_1.length; i += 1) {
+    					each_blocks_1[i].d(1);
+    				}
+
+    				each_blocks_1.length = each_value_1.length;
+    			}
+
+    			if (dirty & /*filteredList, categories*/ 192) {
+    				each_value = /*filteredList*/ ctx[6];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    						transition_in(each_blocks[i], 1);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						transition_in(each_blocks[i], 1);
+    						each_blocks[i].m(div, null);
+    					}
+    				}
+
+    				group_outros();
+
+    				for (i = each_value.length; i < each_blocks.length; i += 1) {
+    					out(i);
+    				}
+
+    				check_outros();
+    			}
+
+    			if (!current || dirty & /*gridTemplate*/ 16) {
+    				attr_dev(div, "style", /*gridTemplate*/ ctx[4]);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+
+    			for (let i = 0; i < each_value.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			each_blocks = each_blocks.filter(Boolean);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			destroy_each(each_blocks_1, detaching);
+    			destroy_each(each_blocks, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(48:4) {#if filteredList.length > 0 && dataLoaded()}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (50:12) {#each Object.entries(categories) as [id, label]}
+    function create_each_block_1(ctx) {
+    	let span;
+    	let t_value = /*label*/ ctx[18] + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			span = element("span");
+    			t = text(t_value);
+    			attr_dev(span, "class", "table__header text-lg hidden md:block");
+    			add_location(span, file$1, 50, 16, 1435);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, span, anchor);
+    			append_dev(span, t);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(span);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1.name,
+    		type: "each",
+    		source: "(50:12) {#each Object.entries(categories) as [id, label]}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (55:12) {#each filteredList as item }
+    function create_each_block(ctx) {
+    	let publisting;
+    	let current;
+
+    	publisting = new PubListing({
+    			props: {
+    				pubData: /*item*/ ctx[14],
+    				headings: /*categories*/ ctx[7]
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(publisting.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(publisting, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const publisting_changes = {};
+    			if (dirty & /*filteredList*/ 64) publisting_changes.pubData = /*item*/ ctx[14];
+    			publisting.$set(publisting_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(publisting.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(publisting.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(publisting, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(55:12) {#each filteredList as item }",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$1(ctx) {
+    	let section;
+    	let filters;
+    	let updating_name;
+    	let updating_groupSize;
+    	let updating_food;
+    	let updating_sport;
+    	let t;
+    	let show_if;
+    	let show_if_1;
+    	let current_block_type_index;
+    	let if_block;
+    	let current;
+
+    	function filters_name_binding(value) {
+    		/*filters_name_binding*/ ctx[10](value);
+    	}
+
+    	function filters_groupSize_binding(value) {
+    		/*filters_groupSize_binding*/ ctx[11](value);
+    	}
+
+    	function filters_food_binding(value) {
+    		/*filters_food_binding*/ ctx[12](value);
+    	}
+
+    	function filters_sport_binding(value) {
+    		/*filters_sport_binding*/ ctx[13](value);
+    	}
+
+    	let filters_props = {};
+
+    	if (/*name*/ ctx[3] !== void 0) {
+    		filters_props.name = /*name*/ ctx[3];
+    	}
+
+    	if (/*groupSize*/ ctx[0] !== void 0) {
+    		filters_props.groupSize = /*groupSize*/ ctx[0];
+    	}
+
+    	if (/*food*/ ctx[1] !== void 0) {
+    		filters_props.food = /*food*/ ctx[1];
+    	}
+
+    	if (/*sport*/ ctx[2] !== void 0) {
+    		filters_props.sport = /*sport*/ ctx[2];
+    	}
+
+    	filters = new Filters({ props: filters_props, $$inline: true });
+    	binding_callbacks.push(() => bind(filters, 'name', filters_name_binding));
+    	binding_callbacks.push(() => bind(filters, 'groupSize', filters_groupSize_binding));
+    	binding_callbacks.push(() => bind(filters, 'food', filters_food_binding));
+    	binding_callbacks.push(() => bind(filters, 'sport', filters_sport_binding));
+    	const if_block_creators = [create_if_block, create_if_block_1, create_else_block];
+    	const if_blocks = [];
+
+    	function select_block_type(ctx, dirty) {
+    		if (dirty & /*filteredList, dataLoaded*/ 96) show_if = null;
+    		if (dirty & /*dataLoaded*/ 32) show_if_1 = null;
+    		if (show_if == null) show_if = !!(/*filteredList*/ ctx[6].length > 0 && /*dataLoaded*/ ctx[5]());
+    		if (show_if) return 0;
+    		if (show_if_1 == null) show_if_1 = !!!/*dataLoaded*/ ctx[5]();
+    		if (show_if_1) return 1;
+    		return 2;
+    	}
+
+    	current_block_type_index = select_block_type(ctx, -1);
+    	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+
+    	const block = {
+    		c: function create() {
+    			section = element("section");
+    			create_component(filters.$$.fragment);
+    			t = space();
+    			if_block.c();
+    			attr_dev(section, "class", "pub-listings");
+    			add_location(section, file$1, 39, 0, 1059);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, section, anchor);
+    			mount_component(filters, section, null);
+    			append_dev(section, t);
+    			if_blocks[current_block_type_index].m(section, null);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const filters_changes = {};
+
+    			if (!updating_name && dirty & /*name*/ 8) {
+    				updating_name = true;
+    				filters_changes.name = /*name*/ ctx[3];
+    				add_flush_callback(() => updating_name = false);
+    			}
+
+    			if (!updating_groupSize && dirty & /*groupSize*/ 1) {
+    				updating_groupSize = true;
+    				filters_changes.groupSize = /*groupSize*/ ctx[0];
+    				add_flush_callback(() => updating_groupSize = false);
+    			}
+
+    			if (!updating_food && dirty & /*food*/ 2) {
+    				updating_food = true;
+    				filters_changes.food = /*food*/ ctx[1];
+    				add_flush_callback(() => updating_food = false);
+    			}
+
+    			if (!updating_sport && dirty & /*sport*/ 4) {
+    				updating_sport = true;
+    				filters_changes.sport = /*sport*/ ctx[2];
+    				add_flush_callback(() => updating_sport = false);
+    			}
+
+    			filters.$set(filters_changes);
+    			let previous_block_index = current_block_type_index;
+    			current_block_type_index = select_block_type(ctx, dirty);
+
+    			if (current_block_type_index === previous_block_index) {
+    				if_blocks[current_block_type_index].p(ctx, dirty);
+    			} else {
+    				group_outros();
+
+    				transition_out(if_blocks[previous_block_index], 1, 1, () => {
+    					if_blocks[previous_block_index] = null;
+    				});
+
+    				check_outros();
+    				if_block = if_blocks[current_block_type_index];
+
+    				if (!if_block) {
+    					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+    					if_block.c();
+    				} else {
+    					if_block.p(ctx, dirty);
+    				}
+
+    				transition_in(if_block, 1);
+    				if_block.m(section, null);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(filters.$$.fragment, local);
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(filters.$$.fragment, local);
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(section);
+    			destroy_component(filters);
+    			if_blocks[current_block_type_index].d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$1.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$1($$self, $$props, $$invalidate) {
+    	let filteredList;
+    	let dataLoaded;
+    	let gridTemplate;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('PubListings', slots, []);
+    	let { data } = $$props;
+    	let name;
+    	let groupSize;
+    	let food;
+    	let sport;
+    	let headerCount;
+
+    	const categories = {
+    		name: 'Name',
+    		max_group: 'Max group size',
+    		food: 'Food?',
+    		sport: 'Sport?',
+    		music: 'Music',
+    		non_beer: 'Non-beer choice',
+    		drink_choice: 'Drink variety'
+    	};
+
+    	const writable_props = ['data'];
+
+    	Object_1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<PubListings> was created with unknown prop '${key}'`);
+    	});
+
+    	function filters_name_binding(value) {
+    		name = value;
+    		$$invalidate(3, name);
+    	}
+
+    	function filters_groupSize_binding(value) {
+    		groupSize = value;
+    		$$invalidate(0, groupSize);
+    	}
+
+    	function filters_food_binding(value) {
+    		food = value;
+    		$$invalidate(1, food);
+    	}
+
+    	function filters_sport_binding(value) {
+    		sport = value;
+    		$$invalidate(2, sport);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('data' in $$props) $$invalidate(8, data = $$props.data);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		data,
+    		PubListing,
+    		Filters,
+    		name,
+    		groupSize,
+    		food,
+    		sport,
+    		headerCount,
+    		categories,
+    		gridTemplate,
+    		dataLoaded,
+    		filteredList
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('data' in $$props) $$invalidate(8, data = $$props.data);
+    		if ('name' in $$props) $$invalidate(3, name = $$props.name);
+    		if ('groupSize' in $$props) $$invalidate(0, groupSize = $$props.groupSize);
+    		if ('food' in $$props) $$invalidate(1, food = $$props.food);
+    		if ('sport' in $$props) $$invalidate(2, sport = $$props.sport);
+    		if ('headerCount' in $$props) $$invalidate(9, headerCount = $$props.headerCount);
+    		if ('gridTemplate' in $$props) $$invalidate(4, gridTemplate = $$props.gridTemplate);
+    		if ('dataLoaded' in $$props) $$invalidate(5, dataLoaded = $$props.dataLoaded);
+    		if ('filteredList' in $$props) $$invalidate(6, filteredList = $$props.filteredList);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*data, groupSize, food, sport*/ 263) {
+    			$$invalidate(6, filteredList = data.filter(item => (typeof groupSize === 'undefined' || item.max_group >= groupSize) && (typeof food === 'undefined' || item.food === food || food === 'both') && (typeof sport === 'undefined' || item.sport === sport || sport === 'both')));
+    		}
+
+    		if ($$self.$$.dirty & /*data*/ 256) {
+    			$$invalidate(5, dataLoaded = () => {
+    				if (data.length > 0) {
+    					$$invalidate(9, headerCount = Object.keys(data[0]).length - 3);
+    					return true;
+    				}
+    			});
+    		}
+
+    		if ($$self.$$.dirty & /*headerCount*/ 512) {
+    			$$invalidate(4, gridTemplate = `grid-template-columns: repeat(${headerCount}, 1fr);`);
+    		}
+    	};
+
+    	return [
+    		groupSize,
+    		food,
+    		sport,
+    		name,
+    		gridTemplate,
+    		dataLoaded,
+    		filteredList,
+    		categories,
+    		data,
+    		headerCount,
+    		filters_name_binding,
+    		filters_groupSize_binding,
+    		filters_food_binding,
+    		filters_sport_binding
+    	];
+    }
+
+    class PubListings extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { data: 8 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "PubListings",
+    			options,
+    			id: create_fragment$1.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*data*/ ctx[8] === undefined && !('data' in props)) {
+    			console.warn("<PubListings> was created without expected prop 'data'");
+    		}
+    	}
+
+    	get data() {
+    		throw new Error("<PubListings>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set data(value) {
+    		throw new Error("<PubListings>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src\App.svelte generated by Svelte v3.46.2 */
+
+    const { console: console_1 } = globals;
+    const file = "src\\App.svelte";
+
+    // (51:8) {#key fullList}
+    function create_key_block(ctx) {
+    	let publistings;
+    	let current;
+
+    	publistings = new PubListings({
+    			props: { data: /*fullList*/ ctx[0] },
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(publistings.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(publistings, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const publistings_changes = {};
+    			if (dirty & /*fullList*/ 1) publistings_changes.data = /*fullList*/ ctx[0];
+    			publistings.$set(publistings_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(publistings.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(publistings.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(publistings, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_key_block.name,
+    		type: "key",
+    		source: "(51:8) {#key fullList}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment(ctx) {
+    	let main;
+    	let div;
+    	let h1;
+    	let t1;
+    	let previous_key = /*fullList*/ ctx[0];
+    	let current;
+    	let key_block = create_key_block(ctx);
+
+    	const block = {
+    		c: function create() {
+    			main = element("main");
+    			div = element("div");
+    			h1 = element("h1");
+    			h1.textContent = "Edinburgh Pub Finder";
+    			t1 = space();
+    			key_block.c();
+    			attr_dev(h1, "class", "text-center text-5xl p-6");
+    			add_location(h1, file, 48, 8, 1506);
+    			attr_dev(div, "class", "container mx-auto");
+    			add_location(div, file, 47, 1, 1465);
+    			add_location(main, file, 46, 0, 1456);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, main, anchor);
+    			append_dev(main, div);
+    			append_dev(div, h1);
+    			append_dev(div, t1);
+    			key_block.m(div, null);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*fullList*/ 1 && safe_not_equal(previous_key, previous_key = /*fullList*/ ctx[0])) {
+    				group_outros();
+    				transition_out(key_block, 1, 1, noop);
+    				check_outros();
+    				key_block = create_key_block(ctx);
+    				key_block.c();
+    				transition_in(key_block);
+    				key_block.m(div, null);
+    			} else {
+    				key_block.p(ctx, dirty);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(key_block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(key_block);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(main);
+    			key_block.d(detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('App', slots, []);
+
+    	const firebaseApp = initializeApp({
+    		apiKey: "AIzaSyD7IVKm4pg_IG3FIYjzqrjVVet7KocGKcM",
+    		authDomain: "edinburgh-pubs-24942.firebaseapp.com",
+    		projectId: "edinburgh-pubs-24942",
+    		storageBucket: "edinburgh-pubs-24942.appspot.com",
+    		messagingSenderId: "600769056466",
+    		appId: "1:600769056466:web:ae2e55b79a8c7661eea70b",
+    		measurementId: "G-HC10EHXZBN"
+    	});
+
+    	const db = Ba();
+    	let fullList = new Array();
+
+    	const readCollection = async () => {
+    		const allPubs = [];
+    		const querySnapshot = await _h(Sa(db, "Pubs"));
+
+    		querySnapshot.forEach(doc => {
+    			allPubs.push(doc.data());
+    		});
+
+    		$$invalidate(0, fullList = allPubs);
+    	};
+
+    	const push = async () => {
+    		try {
+    			const docRef = await Eh(Sa(db, "Pubs"), {
+    				name: "Bow Bar",
+    				atmosphere: 5,
+    				drink_choice: 5,
+    				max_group_size: 5
+    			});
+
+    			console.log("Document written with ID: ", docRef.id);
+    		} catch(e) {
+    			console.error("Error adding document: ", e);
+    		}
+    	};
+
+    	readCollection();
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$capture_state = () => ({
+    		initializeApp,
+    		getFirestore: Ba,
+    		collection: Sa,
+    		addDoc: Eh,
+    		getDocs: _h,
+    		PubListings,
+    		firebaseApp,
+    		db,
+    		fullList,
+    		readCollection,
+    		push
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('fullList' in $$props) $$invalidate(0, fullList = $$props.fullList);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [fullList];
+    }
+
+    class App extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance, create_fragment, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "App",
+    			options,
+    			id: create_fragment.name
+    		});
+    	}
+    }
+
+    const app = new App({
+    	target: document.body,
+    });
+
+    return app;
+
+})();
 //# sourceMappingURL=bundle.js.map
