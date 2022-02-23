@@ -1,30 +1,17 @@
 <script>
     export let pubData;
     export let headings;
-    
-    $: labelClasses = (id) => {
-        let base = 'flex flex-col md:flex-row justify-center md:justify-start items-center py-4 md:border-b-2';
-        let extraClasses = '';
-        if (id === 'name') {
-            extraClasses = "border-b-2 w-full text-xl"
-        } else {
-            extraClasses = "w-1/2 md:w-full"
-        }
-
-        return `${base} ${extraClasses}`;
-
-    }
 </script>
 
 {#each Object.entries(headings) as [id, label]}
-<span class="{labelClasses(id)}">
+<span class="listing {id === 'name' ? 'listing--name' : ''}">
     {#if id !== 'name'}
         <span class="md:hidden">
             {label}
         </span>
     {/if}
     
-    <span class="listing__value">
+    <span class="listing__value {id === 'max_group' ? 'listing__value--max-group' : ''}">
         {#if id === 'drink_quality'}
             {#each {length: pubData[id]} as _, i}
                 🍺
@@ -46,8 +33,39 @@
 
 <style type="scss">
     .listing {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 1.5rem 0;
+        width: 50%;
+
+        &--name {
+            border-bottom: 2px solid #d4d4d4;
+            width: 100%;
+            font-size: 1.25rem;
+        }
+
         &__value {
             font-size: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            flex-direction: flex-row;
+            justify-content: flex-start;
+            border-bottom: 2px solid #d4d4d4;
+            width: 100%;
+            align-items: flex-start;
+
+            &--name {
+                text-align: left;
+                padding-right: 1rem;
+            }
+            &__value {
+                &--max-group {
+                    text-align: center;
+                }
+            }
         }
     }
 </style>

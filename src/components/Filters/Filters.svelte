@@ -68,11 +68,16 @@
             padding: 0.4rem;
         }
 
-        @media (min-width: 756px) {
+        @media (min-width: 768px) {
             &__section {
                 text-align: left;
                 margin-bottom: 0;
                 margin-right: 2rem;
+
+                label {
+                    margin-bottom: 0.5rem;
+                    text-align: center;
+                }
             }
 
             &__input {

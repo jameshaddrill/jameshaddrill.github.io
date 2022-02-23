@@ -108,8 +108,8 @@
                 font-size: 2rem;
             }
 
-            &.auth-bar__login,
-            &.auth-bar__welcome {
+            &__login,
+            &__welcome {
                 font-size: 1rem;
             }
         }

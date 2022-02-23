@@ -60,9 +60,9 @@
             {/each}
         </div>
     {:else if !dataLoaded()}
-        <p>Loading</p>
+        <p class="pub-listings__info">Loading</p>
     {:else}
-        <p>Sorry there are no pubs that match your criteria</p>
+        <p class="pub-listings__info">Sorry there are no pubs that match your criteria <span class="pub-listings__errormoji">🍺</span></p>
     {/if}
 </section>
 
@@ -76,6 +76,19 @@
         &__header {
             font-size: 1.25rem;
             display: none;
+        }
+
+        &__info {
+            margin-top: 5rem;
+            font-size: 2.5rem;
+            text-align: center;
+            font-family: 'Roboto Serif', sans-serif;
+        }
+
+        &__errormoji {
+            font-size: 6rem;
+            display: block;
+            transform: rotate(180deg)
         }
 
         @media (min-width: 768px) {
