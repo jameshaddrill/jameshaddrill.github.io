@@ -1,6 +1,8 @@
 @import '_colours.scss';
 @import '_typography.scss';
 
-body {
+html, body {
     background: $dark_grey;
+    padding: 0;
 }
+

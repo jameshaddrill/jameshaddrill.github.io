@@ -23,25 +23,33 @@
             {label}
         </span>
     {/if}
-    {#if id === 'drink_quality'}
-        {#each {length: pubData[id]} as _, i}
-            🍺
-        {/each}
-    {:else if id === 'drink_choice'}
-        {#each {length: pubData[id]} as _, i}
-            🍸
-        {/each}
-    {:else if pubData[id] === true}
-        👍
-    {:else if pubData[id] === false}
-        👎
-    {:else}
-        {pubData[id]}
-    {/if}
+    
+    <span class="listing__value">
+        {#if id === 'drink_quality'}
+            {#each {length: pubData[id]} as _, i}
+                🍺
+            {/each}
+        {:else if id === 'drink_choice'}
+            {#each {length: pubData[id]} as _, i}
+                🍸
+            {/each}
+        {:else if pubData[id] === true}
+            👍
+        {:else if pubData[id] === false}
+            👎
+        {:else}
+            {pubData[id]}
+        {/if}
+    </span>
 </span>
 {/each}
 
 <style type="scss">
+    .listing {
+        &__value {
+            font-size: 1.25rem;
+        }
+    }
 </style>
 
 

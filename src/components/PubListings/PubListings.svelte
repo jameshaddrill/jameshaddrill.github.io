@@ -29,10 +29,10 @@
     const categories = {
         name: 'Name',
         max_group: 'Max group size',
-        food: 'Food?',
+        food: 'Food?', 
         sport: 'Sport?',
         music: 'Music',
-        non_beer: 'Non-beer choice',
+        drink_quality: 'Drink quality',
         drink_choice: 'Drink variety',
     }
 </script>
@@ -46,9 +46,9 @@
     />
 
     {#if filteredList.length > 0 && dataLoaded()}
-        <div class="flex flex-wrap md:grid mt-6" style="{gridTemplate}">
+        <div class="pub-listings__container" style="{gridTemplate}">
             {#each Object.entries(categories) as [id, label]}
-                <span class="table__header text-lg hidden md:block">{label}</span>
+                <span class="pub-listings__header">{label}</span>
             {/each}
            
             
@@ -67,5 +67,26 @@
 </section>
 
 <style type="scss">
+    .pub-listings {
+        &__container {
+            display: flex;
+            flex-wrap: wrap;
+        }
 
+        &__header {
+            font-size: 1.25rem;
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            &__container {
+                display: grid;
+                margin-top: 3rem;
+            }
+
+            &__header {
+                display: block;
+            }
+        }
+    }
 </style>

@@ -589,6 +589,18 @@ video {
   }
 }
 
+.absolute {
+  position: absolute;
+}
+
+.top-0 {
+  top: 0px;
+}
+
+.left-0 {
+  left: 0px;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -622,12 +634,20 @@ video {
   display: none;
 }
 
+.h-screen {
+  height: 100vh;
+}
+
 .w-1\/2 {
   width: 50%;
 }
 
 .w-full {
   width: 100%;
+}
+
+.w-screen {
+  width: 100vw;
 }
 
 @-webkit-keyframes spin {
@@ -841,3 +861,5 @@ video {
 @import "tailwindcss/spacing";
 
 @import "tailwindcss/typography";
+
+@import "tailwindcss/backgrounds";

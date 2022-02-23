@@ -3,7 +3,13 @@
 var app = (function () {
     'use strict';
 
-    function noop() { }
+    function noop$1() { }
+    function assign(tar, src) {
+        // @ts-ignore
+        for (const k in src)
+            tar[k] = src[k];
+        return tar;
+    }
     function add_location(element, file, line, column, char) {
         element.__svelte_meta = {
             loc: { file, line, column, char }
@@ -26,6 +32,55 @@ var app = (function () {
     }
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
+    }
+    function create_slot(definition, ctx, $$scope, fn) {
+        if (definition) {
+            const slot_ctx = get_slot_context(definition, ctx, $$scope, fn);
+            return definition[0](slot_ctx);
+        }
+    }
+    function get_slot_context(definition, ctx, $$scope, fn) {
+        return definition[1] && fn
+            ? assign($$scope.ctx.slice(), definition[1](fn(ctx)))
+            : $$scope.ctx;
+    }
+    function get_slot_changes(definition, $$scope, dirty, fn) {
+        if (definition[2] && fn) {
+            const lets = definition[2](fn(dirty));
+            if ($$scope.dirty === undefined) {
+                return lets;
+            }
+            if (typeof lets === 'object') {
+                const merged = [];
+                const len = Math.max($$scope.dirty.length, lets.length);
+                for (let i = 0; i < len; i += 1) {
+                    merged[i] = $$scope.dirty[i] | lets[i];
+                }
+                return merged;
+            }
+            return $$scope.dirty | lets;
+        }
+        return $$scope.dirty;
+    }
+    function update_slot_base(slot, slot_definition, ctx, $$scope, slot_changes, get_slot_context_fn) {
+        if (slot_changes) {
+            const slot_context = get_slot_context(slot_definition, ctx, $$scope, get_slot_context_fn);
+            slot.p(slot_context, slot_changes);
+        }
+    }
+    function get_all_dirty_from_scope($$scope) {
+        if ($$scope.ctx.length > 32) {
+            const dirty = [];
+            const length = $$scope.ctx.length / 32;
+            for (let i = 0; i < length; i++) {
+                dirty[i] = -1;
+            }
+            return dirty;
+        }
+        return -1;
+    }
+    function null_to_empty(value) {
+        return value == null ? '' : value;
     }
     function append(target, node) {
         target.appendChild(node);
@@ -96,6 +151,25 @@ var app = (function () {
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    function get_current_component() {
+        if (!current_component)
+            throw new Error('Function called outside component initialization');
+        return current_component;
+    }
+    function createEventDispatcher() {
+        const component = get_current_component();
+        return (type, detail) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail);
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+            }
+        };
     }
 
     const dirty_components = [];
@@ -283,7 +357,7 @@ var app = (function () {
             ctx: null,
             // state
             props,
-            update: noop,
+            update: noop$1,
             not_equal,
             bound: blank_object(),
             // lifecycle
@@ -342,7 +416,7 @@ var app = (function () {
     class SvelteComponent {
         $destroy() {
             destroy_component(this, 1);
-            this.$destroy = noop;
+            this.$destroy = noop$1;
         }
         $on(type, callback) {
             const callbacks = (this.$$.callbacks[type] || (this.$$.callbacks[type] = []));
@@ -456,6 +530,300 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const stringToByteArray$1 = function (str) {
+        // TODO(user): Use native implementations if/when available
+        const out = [];
+        let p = 0;
+        for (let i = 0; i < str.length; i++) {
+            let c = str.charCodeAt(i);
+            if (c < 128) {
+                out[p++] = c;
+            }
+            else if (c < 2048) {
+                out[p++] = (c >> 6) | 192;
+                out[p++] = (c & 63) | 128;
+            }
+            else if ((c & 0xfc00) === 0xd800 &&
+                i + 1 < str.length &&
+                (str.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+                // Surrogate Pair
+                c = 0x10000 + ((c & 0x03ff) << 10) + (str.charCodeAt(++i) & 0x03ff);
+                out[p++] = (c >> 18) | 240;
+                out[p++] = ((c >> 12) & 63) | 128;
+                out[p++] = ((c >> 6) & 63) | 128;
+                out[p++] = (c & 63) | 128;
+            }
+            else {
+                out[p++] = (c >> 12) | 224;
+                out[p++] = ((c >> 6) & 63) | 128;
+                out[p++] = (c & 63) | 128;
+            }
+        }
+        return out;
+    };
+    /**
+     * Turns an array of numbers into the string given by the concatenation of the
+     * characters to which the numbers correspond.
+     * @param bytes Array of numbers representing characters.
+     * @return Stringification of the array.
+     */
+    const byteArrayToString = function (bytes) {
+        // TODO(user): Use native implementations if/when available
+        const out = [];
+        let pos = 0, c = 0;
+        while (pos < bytes.length) {
+            const c1 = bytes[pos++];
+            if (c1 < 128) {
+                out[c++] = String.fromCharCode(c1);
+            }
+            else if (c1 > 191 && c1 < 224) {
+                const c2 = bytes[pos++];
+                out[c++] = String.fromCharCode(((c1 & 31) << 6) | (c2 & 63));
+            }
+            else if (c1 > 239 && c1 < 365) {
+                // Surrogate Pair
+                const c2 = bytes[pos++];
+                const c3 = bytes[pos++];
+                const c4 = bytes[pos++];
+                const u = (((c1 & 7) << 18) | ((c2 & 63) << 12) | ((c3 & 63) << 6) | (c4 & 63)) -
+                    0x10000;
+                out[c++] = String.fromCharCode(0xd800 + (u >> 10));
+                out[c++] = String.fromCharCode(0xdc00 + (u & 1023));
+            }
+            else {
+                const c2 = bytes[pos++];
+                const c3 = bytes[pos++];
+                out[c++] = String.fromCharCode(((c1 & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+            }
+        }
+        return out.join('');
+    };
+    // We define it as an object literal instead of a class because a class compiled down to es5 can't
+    // be treeshaked. https://github.com/rollup/rollup/issues/1691
+    // Static lookup maps, lazily populated by init_()
+    const base64 = {
+        /**
+         * Maps bytes to characters.
+         */
+        byteToCharMap_: null,
+        /**
+         * Maps characters to bytes.
+         */
+        charToByteMap_: null,
+        /**
+         * Maps bytes to websafe characters.
+         * @private
+         */
+        byteToCharMapWebSafe_: null,
+        /**
+         * Maps websafe characters to bytes.
+         * @private
+         */
+        charToByteMapWebSafe_: null,
+        /**
+         * Our default alphabet, shared between
+         * ENCODED_VALS and ENCODED_VALS_WEBSAFE
+         */
+        ENCODED_VALS_BASE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + '0123456789',
+        /**
+         * Our default alphabet. Value 64 (=) is special; it means "nothing."
+         */
+        get ENCODED_VALS() {
+            return this.ENCODED_VALS_BASE + '+/=';
+        },
+        /**
+         * Our websafe alphabet.
+         */
+        get ENCODED_VALS_WEBSAFE() {
+            return this.ENCODED_VALS_BASE + '-_.';
+        },
+        /**
+         * Whether this browser supports the atob and btoa functions. This extension
+         * started at Mozilla but is now implemented by many browsers. We use the
+         * ASSUME_* variables to avoid pulling in the full useragent detection library
+         * but still allowing the standard per-browser compilations.
+         *
+         */
+        HAS_NATIVE_SUPPORT: typeof atob === 'function',
+        /**
+         * Base64-encode an array of bytes.
+         *
+         * @param input An array of bytes (numbers with
+         *     value in [0, 255]) to encode.
+         * @param webSafe Boolean indicating we should use the
+         *     alternative alphabet.
+         * @return The base64 encoded string.
+         */
+        encodeByteArray(input, webSafe) {
+            if (!Array.isArray(input)) {
+                throw Error('encodeByteArray takes an array as a parameter');
+            }
+            this.init_();
+            const byteToCharMap = webSafe
+                ? this.byteToCharMapWebSafe_
+                : this.byteToCharMap_;
+            const output = [];
+            for (let i = 0; i < input.length; i += 3) {
+                const byte1 = input[i];
+                const haveByte2 = i + 1 < input.length;
+                const byte2 = haveByte2 ? input[i + 1] : 0;
+                const haveByte3 = i + 2 < input.length;
+                const byte3 = haveByte3 ? input[i + 2] : 0;
+                const outByte1 = byte1 >> 2;
+                const outByte2 = ((byte1 & 0x03) << 4) | (byte2 >> 4);
+                let outByte3 = ((byte2 & 0x0f) << 2) | (byte3 >> 6);
+                let outByte4 = byte3 & 0x3f;
+                if (!haveByte3) {
+                    outByte4 = 64;
+                    if (!haveByte2) {
+                        outByte3 = 64;
+                    }
+                }
+                output.push(byteToCharMap[outByte1], byteToCharMap[outByte2], byteToCharMap[outByte3], byteToCharMap[outByte4]);
+            }
+            return output.join('');
+        },
+        /**
+         * Base64-encode a string.
+         *
+         * @param input A string to encode.
+         * @param webSafe If true, we should use the
+         *     alternative alphabet.
+         * @return The base64 encoded string.
+         */
+        encodeString(input, webSafe) {
+            // Shortcut for Mozilla browsers that implement
+            // a native base64 encoder in the form of "btoa/atob"
+            if (this.HAS_NATIVE_SUPPORT && !webSafe) {
+                return btoa(input);
+            }
+            return this.encodeByteArray(stringToByteArray$1(input), webSafe);
+        },
+        /**
+         * Base64-decode a string.
+         *
+         * @param input to decode.
+         * @param webSafe True if we should use the
+         *     alternative alphabet.
+         * @return string representing the decoded value.
+         */
+        decodeString(input, webSafe) {
+            // Shortcut for Mozilla browsers that implement
+            // a native base64 encoder in the form of "btoa/atob"
+            if (this.HAS_NATIVE_SUPPORT && !webSafe) {
+                return atob(input);
+            }
+            return byteArrayToString(this.decodeStringToByteArray(input, webSafe));
+        },
+        /**
+         * Base64-decode a string.
+         *
+         * In base-64 decoding, groups of four characters are converted into three
+         * bytes.  If the encoder did not apply padding, the input length may not
+         * be a multiple of 4.
+         *
+         * In this case, the last group will have fewer than 4 characters, and
+         * padding will be inferred.  If the group has one or two characters, it decodes
+         * to one byte.  If the group has three characters, it decodes to two bytes.
+         *
+         * @param input Input to decode.
+         * @param webSafe True if we should use the web-safe alphabet.
+         * @return bytes representing the decoded value.
+         */
+        decodeStringToByteArray(input, webSafe) {
+            this.init_();
+            const charToByteMap = webSafe
+                ? this.charToByteMapWebSafe_
+                : this.charToByteMap_;
+            const output = [];
+            for (let i = 0; i < input.length;) {
+                const byte1 = charToByteMap[input.charAt(i++)];
+                const haveByte2 = i < input.length;
+                const byte2 = haveByte2 ? charToByteMap[input.charAt(i)] : 0;
+                ++i;
+                const haveByte3 = i < input.length;
+                const byte3 = haveByte3 ? charToByteMap[input.charAt(i)] : 64;
+                ++i;
+                const haveByte4 = i < input.length;
+                const byte4 = haveByte4 ? charToByteMap[input.charAt(i)] : 64;
+                ++i;
+                if (byte1 == null || byte2 == null || byte3 == null || byte4 == null) {
+                    throw Error();
+                }
+                const outByte1 = (byte1 << 2) | (byte2 >> 4);
+                output.push(outByte1);
+                if (byte3 !== 64) {
+                    const outByte2 = ((byte2 << 4) & 0xf0) | (byte3 >> 2);
+                    output.push(outByte2);
+                    if (byte4 !== 64) {
+                        const outByte3 = ((byte3 << 6) & 0xc0) | byte4;
+                        output.push(outByte3);
+                    }
+                }
+            }
+            return output;
+        },
+        /**
+         * Lazy static initialization function. Called before
+         * accessing any of the static map variables.
+         * @private
+         */
+        init_() {
+            if (!this.byteToCharMap_) {
+                this.byteToCharMap_ = {};
+                this.charToByteMap_ = {};
+                this.byteToCharMapWebSafe_ = {};
+                this.charToByteMapWebSafe_ = {};
+                // We want quick mappings back and forth, so we precompute two maps.
+                for (let i = 0; i < this.ENCODED_VALS.length; i++) {
+                    this.byteToCharMap_[i] = this.ENCODED_VALS.charAt(i);
+                    this.charToByteMap_[this.byteToCharMap_[i]] = i;
+                    this.byteToCharMapWebSafe_[i] = this.ENCODED_VALS_WEBSAFE.charAt(i);
+                    this.charToByteMapWebSafe_[this.byteToCharMapWebSafe_[i]] = i;
+                    // Be forgiving when decoding and correctly decode both encodings.
+                    if (i >= this.ENCODED_VALS_BASE.length) {
+                        this.charToByteMap_[this.ENCODED_VALS_WEBSAFE.charAt(i)] = i;
+                        this.charToByteMapWebSafe_[this.ENCODED_VALS.charAt(i)] = i;
+                    }
+                }
+            }
+        }
+    };
+    /**
+     * URL-safe base64 decoding
+     *
+     * NOTE: DO NOT use the global atob() function - it does NOT support the
+     * base64Url variant encoding.
+     *
+     * @param str To be decoded
+     * @return Decoded result, if possible
+     */
+    const base64Decode = function (str) {
+        try {
+            return base64.decodeString(str, true);
+        }
+        catch (e) {
+            console.error('base64Decode failed: ', e);
+        }
+        return null;
+    };
 
     /**
      * @license
@@ -689,6 +1057,14 @@ var app = (function () {
         });
     }
     const PATTERN = /\{\$([^}]+)}/g;
+    function isEmpty(obj) {
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                return false;
+            }
+        }
+        return true;
+    }
     /**
      * Deep equal two objects. Support Arrays and Objects.
      */
@@ -722,6 +1098,240 @@ var app = (function () {
     }
     function isObject(thing) {
         return thing !== null && typeof thing === 'object';
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Returns a querystring-formatted string (e.g. &arg=val&arg2=val2) from a
+     * params object (e.g. {arg: 'val', arg2: 'val2'})
+     * Note: You must prepend it with ? when adding it to a URL.
+     */
+    function querystring(querystringParams) {
+        const params = [];
+        for (const [key, value] of Object.entries(querystringParams)) {
+            if (Array.isArray(value)) {
+                value.forEach(arrayVal => {
+                    params.push(encodeURIComponent(key) + '=' + encodeURIComponent(arrayVal));
+                });
+            }
+            else {
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            }
+        }
+        return params.length ? '&' + params.join('&') : '';
+    }
+
+    /**
+     * Helper to make a Subscribe function (just like Promise helps make a
+     * Thenable).
+     *
+     * @param executor Function which can make calls to a single Observer
+     *     as a proxy.
+     * @param onNoObservers Callback when count of Observers goes to zero.
+     */
+    function createSubscribe(executor, onNoObservers) {
+        const proxy = new ObserverProxy(executor, onNoObservers);
+        return proxy.subscribe.bind(proxy);
+    }
+    /**
+     * Implement fan-out for any number of Observers attached via a subscribe
+     * function.
+     */
+    class ObserverProxy {
+        /**
+         * @param executor Function which can make calls to a single Observer
+         *     as a proxy.
+         * @param onNoObservers Callback when count of Observers goes to zero.
+         */
+        constructor(executor, onNoObservers) {
+            this.observers = [];
+            this.unsubscribes = [];
+            this.observerCount = 0;
+            // Micro-task scheduling by calling task.then().
+            this.task = Promise.resolve();
+            this.finalized = false;
+            this.onNoObservers = onNoObservers;
+            // Call the executor asynchronously so subscribers that are called
+            // synchronously after the creation of the subscribe function
+            // can still receive the very first value generated in the executor.
+            this.task
+                .then(() => {
+                executor(this);
+            })
+                .catch(e => {
+                this.error(e);
+            });
+        }
+        next(value) {
+            this.forEachObserver((observer) => {
+                observer.next(value);
+            });
+        }
+        error(error) {
+            this.forEachObserver((observer) => {
+                observer.error(error);
+            });
+            this.close(error);
+        }
+        complete() {
+            this.forEachObserver((observer) => {
+                observer.complete();
+            });
+            this.close();
+        }
+        /**
+         * Subscribe function that can be used to add an Observer to the fan-out list.
+         *
+         * - We require that no event is sent to a subscriber sychronously to their
+         *   call to subscribe().
+         */
+        subscribe(nextOrObserver, error, complete) {
+            let observer;
+            if (nextOrObserver === undefined &&
+                error === undefined &&
+                complete === undefined) {
+                throw new Error('Missing Observer.');
+            }
+            // Assemble an Observer object when passed as callback functions.
+            if (implementsAnyMethods(nextOrObserver, [
+                'next',
+                'error',
+                'complete'
+            ])) {
+                observer = nextOrObserver;
+            }
+            else {
+                observer = {
+                    next: nextOrObserver,
+                    error,
+                    complete
+                };
+            }
+            if (observer.next === undefined) {
+                observer.next = noop;
+            }
+            if (observer.error === undefined) {
+                observer.error = noop;
+            }
+            if (observer.complete === undefined) {
+                observer.complete = noop;
+            }
+            const unsub = this.unsubscribeOne.bind(this, this.observers.length);
+            // Attempt to subscribe to a terminated Observable - we
+            // just respond to the Observer with the final error or complete
+            // event.
+            if (this.finalized) {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                this.task.then(() => {
+                    try {
+                        if (this.finalError) {
+                            observer.error(this.finalError);
+                        }
+                        else {
+                            observer.complete();
+                        }
+                    }
+                    catch (e) {
+                        // nothing
+                    }
+                    return;
+                });
+            }
+            this.observers.push(observer);
+            return unsub;
+        }
+        // Unsubscribe is synchronous - we guarantee that no events are sent to
+        // any unsubscribed Observer.
+        unsubscribeOne(i) {
+            if (this.observers === undefined || this.observers[i] === undefined) {
+                return;
+            }
+            delete this.observers[i];
+            this.observerCount -= 1;
+            if (this.observerCount === 0 && this.onNoObservers !== undefined) {
+                this.onNoObservers(this);
+            }
+        }
+        forEachObserver(fn) {
+            if (this.finalized) {
+                // Already closed by previous event....just eat the additional values.
+                return;
+            }
+            // Since sendOne calls asynchronously - there is no chance that
+            // this.observers will become undefined.
+            for (let i = 0; i < this.observers.length; i++) {
+                this.sendOne(i, fn);
+            }
+        }
+        // Call the Observer via one of it's callback function. We are careful to
+        // confirm that the observe has not been unsubscribed since this asynchronous
+        // function had been queued.
+        sendOne(i, fn) {
+            // Execute the callback asynchronously
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this.task.then(() => {
+                if (this.observers !== undefined && this.observers[i] !== undefined) {
+                    try {
+                        fn(this.observers[i]);
+                    }
+                    catch (e) {
+                        // Ignore exceptions raised in Observers or missing methods of an
+                        // Observer.
+                        // Log error to console. b/31404806
+                        if (typeof console !== 'undefined' && console.error) {
+                            console.error(e);
+                        }
+                    }
+                }
+            });
+        }
+        close(err) {
+            if (this.finalized) {
+                return;
+            }
+            this.finalized = true;
+            if (err !== undefined) {
+                this.finalError = err;
+            }
+            // Proxy is no longer needed - garbage collect references
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this.task.then(() => {
+                this.observers = undefined;
+                this.onNoObservers = undefined;
+            });
+        }
+    }
+    /**
+     * Return true if the object passed in implements any of the named methods.
+     */
+    function implementsAnyMethods(obj, methods) {
+        if (typeof obj !== 'object' || obj === null) {
+            return false;
+        }
+        for (const method of methods) {
+            if (method in obj && typeof obj[method] === 'function') {
+                return true;
+            }
+        }
+        return false;
+    }
+    function noop() {
+        // do nothing
     }
 
     /**
@@ -1364,7 +1974,7 @@ var app = (function () {
     }
 
     const name$o = "@firebase/app";
-    const version$1 = "0.7.14";
+    const version$1$1 = "0.7.17";
 
     /**
      * @license
@@ -1428,10 +2038,10 @@ var app = (function () {
 
     const name$2 = "@firebase/firestore";
 
-    const name$1 = "@firebase/firestore-compat";
+    const name$1$1 = "@firebase/firestore-compat";
 
     const name$p = "firebase";
-    const version$2 = "9.6.4";
+    const version$2 = "9.6.7";
 
     /**
      * @license
@@ -1479,7 +2089,7 @@ var app = (function () {
         [name$4]: 'fire-gcs',
         [name$3]: 'fire-gcs-compat',
         [name$2]: 'fire-fst',
-        [name$1]: 'fire-fst-compat',
+        [name$1$1]: 'fire-fst-compat',
         'fire-js': 'fire-js',
         [name$p]: 'fire-js-all'
     };
@@ -1797,9 +2407,9 @@ var app = (function () {
     function registerCoreComponents(variant) {
         _registerComponent(new Component('platform-logger', container => new PlatformLoggerServiceImpl(container), "PRIVATE" /* PRIVATE */));
         // Register `app` package.
-        registerVersion(name$o, version$1, variant);
+        registerVersion(name$o, version$1$1, variant);
         // BUILD_TARGET will be replaced by values like esm5, esm2017, cjs5, etc during the compilation
-        registerVersion(name$o, version$1, 'esm2017');
+        registerVersion(name$o, version$1$1, 'esm2017');
         // Register platform SDK identifier (no version).
         registerVersion('fire-js', '');
     }
@@ -1812,8 +2422,8 @@ var app = (function () {
      */
     registerCoreComponents('');
 
-    var name = "firebase";
-    var version = "9.6.4";
+    var name$1 = "firebase";
+    var version$1 = "9.6.7";
 
     /**
      * @license
@@ -1831,7 +2441,7 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    registerVersion(name, version, 'app');
+    registerVersion(name$1, version$1, 'app');
 
     var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -1840,50 +2450,50 @@ var app = (function () {
      Copyright The Closure Library Authors.
      SPDX-License-Identifier: Apache-2.0
     */
-    var k$1,goog=goog||{},l=commonjsGlobal||self;function aa$1(){}function ba(a){var b=typeof a;b="object"!=b?b:a?Array.isArray(a)?"array":b:"null";return "array"==b||"object"==b&&"number"==typeof a.length}function p(a){var b=typeof a;return "object"==b&&null!=a||"function"==b}function da$1(a){return Object.prototype.hasOwnProperty.call(a,ea$1)&&a[ea$1]||(a[ea$1]=++fa)}var ea$1="closure_uid_"+(1E9*Math.random()>>>0),fa=0;function ha(a,b,c){return a.call.apply(a.bind,arguments)}
-    function ia(a,b,c){if(!a)throw Error();if(2<arguments.length){var d=Array.prototype.slice.call(arguments,2);return function(){var e=Array.prototype.slice.call(arguments);Array.prototype.unshift.apply(e,d);return a.apply(b,e)}}return function(){return a.apply(b,arguments)}}function q(a,b,c){Function.prototype.bind&&-1!=Function.prototype.bind.toString().indexOf("native code")?q=ha:q=ia;return q.apply(null,arguments)}
-    function ja(a,b){var c=Array.prototype.slice.call(arguments,1);return function(){var d=c.slice();d.push.apply(d,arguments);return a.apply(this,d)}}function t(a,b){function c(){}c.prototype=b.prototype;a.Z=b.prototype;a.prototype=new c;a.prototype.constructor=a;a.Vb=function(d,e,f){for(var h=Array(arguments.length-2),n=2;n<arguments.length;n++)h[n-2]=arguments[n];return b.prototype[e].apply(d,h)};}function v(){this.s=this.s;this.o=this.o;}var ka=0,la={};v.prototype.s=!1;v.prototype.na=function(){if(!this.s&&(this.s=!0,this.M(),0!=ka)){var a=da$1(this);delete la[a];}};v.prototype.M=function(){if(this.o)for(;this.o.length;)this.o.shift()();};const ma$1=Array.prototype.indexOf?function(a,b){return Array.prototype.indexOf.call(a,b,void 0)}:function(a,b){if("string"===typeof a)return "string"!==typeof b||1!=b.length?-1:a.indexOf(b,0);for(let c=0;c<a.length;c++)if(c in a&&a[c]===b)return c;return -1},na$1=Array.prototype.forEach?function(a,b,c){Array.prototype.forEach.call(a,b,c);}:function(a,b,c){const d=a.length,e="string"===typeof a?a.split(""):a;for(let f=0;f<d;f++)f in e&&b.call(c,e[f],f,a);};
-    function oa(a){a:{var b=pa$1;const c=a.length,d="string"===typeof a?a.split(""):a;for(let e=0;e<c;e++)if(e in d&&b.call(void 0,d[e],e,a)){b=e;break a}b=-1;}return 0>b?null:"string"===typeof a?a.charAt(b):a[b]}function qa$1(a){return Array.prototype.concat.apply([],arguments)}function ra(a){const b=a.length;if(0<b){const c=Array(b);for(let d=0;d<b;d++)c[d]=a[d];return c}return []}function sa(a){return /^[\s\xa0]*$/.test(a)}var ta=String.prototype.trim?function(a){return a.trim()}:function(a){return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(a)[1]};function w(a,b){return -1!=a.indexOf(b)}function ua(a,b){return a<b?-1:a>b?1:0}var x$1;a:{var va$1=l.navigator;if(va$1){var wa$1=va$1.userAgent;if(wa$1){x$1=wa$1;break a}}x$1="";}function xa$1(a,b,c){for(const d in a)b.call(c,a[d],d,a);}function ya$1(a){const b={};for(const c in a)b[c]=a[c];return b}var za="constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");function Aa$1(a,b){let c,d;for(let e=1;e<arguments.length;e++){d=arguments[e];for(c in d)a[c]=d[c];for(let f=0;f<za.length;f++)c=za[f],Object.prototype.hasOwnProperty.call(d,c)&&(a[c]=d[c]);}}function Ca$1(a){Ca$1[" "](a);return a}Ca$1[" "]=aa$1;function Fa$1(a){var b=Ga;return Object.prototype.hasOwnProperty.call(b,9)?b[9]:b[9]=a(9)}var Ha=w(x$1,"Opera"),y=w(x$1,"Trident")||w(x$1,"MSIE"),Ia=w(x$1,"Edge"),Ja=Ia||y,Ka=w(x$1,"Gecko")&&!(w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge"))&&!(w(x$1,"Trident")||w(x$1,"MSIE"))&&!w(x$1,"Edge"),La=w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge");function Ma(){var a=l.document;return a?a.documentMode:void 0}var Na;
-    a:{var Oa="",Pa$1=function(){var a=x$1;if(Ka)return /rv:([^\);]+)(\)|;)/.exec(a);if(Ia)return /Edge\/([\d\.]+)/.exec(a);if(y)return /\b(?:MSIE|rv)[: ]([^\);]+)(\)|;)/.exec(a);if(La)return /WebKit\/(\S+)/.exec(a);if(Ha)return /(?:Version)[ \/]?(\S+)/.exec(a)}();Pa$1&&(Oa=Pa$1?Pa$1[1]:"");if(y){var Qa=Ma();if(null!=Qa&&Qa>parseFloat(Oa)){Na=String(Qa);break a}}Na=Oa;}var Ga={};
-    function Ra$1(){return Fa$1(function(){let a=0;const b=ta(String(Na)).split("."),c=ta("9").split("."),d=Math.max(b.length,c.length);for(let h=0;0==a&&h<d;h++){var e=b[h]||"",f=c[h]||"";do{e=/(\d*)(\D*)(.*)/.exec(e)||["","","",""];f=/(\d*)(\D*)(.*)/.exec(f)||["","","",""];if(0==e[0].length&&0==f[0].length)break;a=ua(0==e[1].length?0:parseInt(e[1],10),0==f[1].length?0:parseInt(f[1],10))||ua(0==e[2].length,0==f[2].length)||ua(e[2],f[2]);e=e[3];f=f[3];}while(0==a)}return 0<=a})}var Sa$1;
-    if(l.document&&y){var Ta$1=Ma();Sa$1=Ta$1?Ta$1:parseInt(Na,10)||void 0;}else Sa$1=void 0;var Ua$1=Sa$1;var Va$1=function(){if(!l.addEventListener||!Object.defineProperty)return !1;var a=!1,b=Object.defineProperty({},"passive",{get:function(){a=!0;}});try{l.addEventListener("test",aa$1,b),l.removeEventListener("test",aa$1,b);}catch(c){}return a}();function z$1(a,b){this.type=a;this.g=this.target=b;this.defaultPrevented=!1;}z$1.prototype.h=function(){this.defaultPrevented=!0;};function A(a,b){z$1.call(this,a?a.type:"");this.relatedTarget=this.g=this.target=null;this.button=this.screenY=this.screenX=this.clientY=this.clientX=0;this.key="";this.metaKey=this.shiftKey=this.altKey=this.ctrlKey=!1;this.state=null;this.pointerId=0;this.pointerType="";this.i=null;if(a){var c=this.type=a.type,d=a.changedTouches&&a.changedTouches.length?a.changedTouches[0]:null;this.target=a.target||a.srcElement;this.g=b;if(b=a.relatedTarget){if(Ka){a:{try{Ca$1(b.nodeName);var e=!0;break a}catch(f){}e=
+    var k$1,goog=goog||{},l=commonjsGlobal||self;function aa(){}function ba(a){var b=typeof a;b="object"!=b?b:a?Array.isArray(a)?"array":b:"null";return "array"==b||"object"==b&&"number"==typeof a.length}function p(a){var b=typeof a;return "object"==b&&null!=a||"function"==b}function da$1(a){return Object.prototype.hasOwnProperty.call(a,ea$1)&&a[ea$1]||(a[ea$1]=++fa)}var ea$1="closure_uid_"+(1E9*Math.random()>>>0),fa=0;function ha(a,b,c){return a.call.apply(a.bind,arguments)}
+    function ia$1(a,b,c){if(!a)throw Error();if(2<arguments.length){var d=Array.prototype.slice.call(arguments,2);return function(){var e=Array.prototype.slice.call(arguments);Array.prototype.unshift.apply(e,d);return a.apply(b,e)}}return function(){return a.apply(b,arguments)}}function q(a,b,c){Function.prototype.bind&&-1!=Function.prototype.bind.toString().indexOf("native code")?q=ha:q=ia$1;return q.apply(null,arguments)}
+    function ja(a,b){var c=Array.prototype.slice.call(arguments,1);return function(){var d=c.slice();d.push.apply(d,arguments);return a.apply(this,d)}}function t(a,b){function c(){}c.prototype=b.prototype;a.Z=b.prototype;a.prototype=new c;a.prototype.constructor=a;a.Vb=function(d,e,f){for(var h=Array(arguments.length-2),n=2;n<arguments.length;n++)h[n-2]=arguments[n];return b.prototype[e].apply(d,h)};}function v(){this.s=this.s;this.o=this.o;}var ka=0,la$1={};v.prototype.s=!1;v.prototype.na=function(){if(!this.s&&(this.s=!0,this.M(),0!=ka)){var a=da$1(this);delete la$1[a];}};v.prototype.M=function(){if(this.o)for(;this.o.length;)this.o.shift()();};const ma=Array.prototype.indexOf?function(a,b){return Array.prototype.indexOf.call(a,b,void 0)}:function(a,b){if("string"===typeof a)return "string"!==typeof b||1!=b.length?-1:a.indexOf(b,0);for(let c=0;c<a.length;c++)if(c in a&&a[c]===b)return c;return -1},na$1=Array.prototype.forEach?function(a,b,c){Array.prototype.forEach.call(a,b,c);}:function(a,b,c){const d=a.length,e="string"===typeof a?a.split(""):a;for(let f=0;f<d;f++)f in e&&b.call(c,e[f],f,a);};
+    function oa(a){a:{var b=pa;const c=a.length,d="string"===typeof a?a.split(""):a;for(let e=0;e<c;e++)if(e in d&&b.call(void 0,d[e],e,a)){b=e;break a}b=-1;}return 0>b?null:"string"===typeof a?a.charAt(b):a[b]}function qa(a){return Array.prototype.concat.apply([],arguments)}function ra(a){const b=a.length;if(0<b){const c=Array(b);for(let d=0;d<b;d++)c[d]=a[d];return c}return []}function sa(a){return /^[\s\xa0]*$/.test(a)}var ta$1=String.prototype.trim?function(a){return a.trim()}:function(a){return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(a)[1]};function w(a,b){return -1!=a.indexOf(b)}function ua(a,b){return a<b?-1:a>b?1:0}var x$1;a:{var va$1=l.navigator;if(va$1){var wa$1=va$1.userAgent;if(wa$1){x$1=wa$1;break a}}x$1="";}function xa$1(a,b,c){for(const d in a)b.call(c,a[d],d,a);}function ya(a){const b={};for(const c in a)b[c]=a[c];return b}var za="constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");function Aa(a,b){let c,d;for(let e=1;e<arguments.length;e++){d=arguments[e];for(c in d)a[c]=d[c];for(let f=0;f<za.length;f++)c=za[f],Object.prototype.hasOwnProperty.call(d,c)&&(a[c]=d[c]);}}function Ca$1(a){Ca$1[" "](a);return a}Ca$1[" "]=aa;function Fa$1(a){var b=Ga;return Object.prototype.hasOwnProperty.call(b,9)?b[9]:b[9]=a(9)}var Ha$1=w(x$1,"Opera"),y=w(x$1,"Trident")||w(x$1,"MSIE"),Ia=w(x$1,"Edge"),Ja$1=Ia||y,Ka=w(x$1,"Gecko")&&!(w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge"))&&!(w(x$1,"Trident")||w(x$1,"MSIE"))&&!w(x$1,"Edge"),La=w(x$1.toLowerCase(),"webkit")&&!w(x$1,"Edge");function Ma$1(){var a=l.document;return a?a.documentMode:void 0}var Na$1;
+    a:{var Oa$1="",Pa=function(){var a=x$1;if(Ka)return /rv:([^\);]+)(\)|;)/.exec(a);if(Ia)return /Edge\/([\d\.]+)/.exec(a);if(y)return /\b(?:MSIE|rv)[: ]([^\);]+)(\)|;)/.exec(a);if(La)return /WebKit\/(\S+)/.exec(a);if(Ha$1)return /(?:Version)[ \/]?(\S+)/.exec(a)}();Pa&&(Oa$1=Pa?Pa[1]:"");if(y){var Qa=Ma$1();if(null!=Qa&&Qa>parseFloat(Oa$1)){Na$1=String(Qa);break a}}Na$1=Oa$1;}var Ga={};
+    function Ra(){return Fa$1(function(){let a=0;const b=ta$1(String(Na$1)).split("."),c=ta$1("9").split("."),d=Math.max(b.length,c.length);for(let h=0;0==a&&h<d;h++){var e=b[h]||"",f=c[h]||"";do{e=/(\d*)(\D*)(.*)/.exec(e)||["","","",""];f=/(\d*)(\D*)(.*)/.exec(f)||["","","",""];if(0==e[0].length&&0==f[0].length)break;a=ua(0==e[1].length?0:parseInt(e[1],10),0==f[1].length?0:parseInt(f[1],10))||ua(0==e[2].length,0==f[2].length)||ua(e[2],f[2]);e=e[3];f=f[3];}while(0==a)}return 0<=a})}var Sa$1;
+    if(l.document&&y){var Ta=Ma$1();Sa$1=Ta?Ta:parseInt(Na$1,10)||void 0;}else Sa$1=void 0;var Ua=Sa$1;var Va=function(){if(!l.addEventListener||!Object.defineProperty)return !1;var a=!1,b=Object.defineProperty({},"passive",{get:function(){a=!0;}});try{l.addEventListener("test",aa,b),l.removeEventListener("test",aa,b);}catch(c){}return a}();function z$1(a,b){this.type=a;this.g=this.target=b;this.defaultPrevented=!1;}z$1.prototype.h=function(){this.defaultPrevented=!0;};function A(a,b){z$1.call(this,a?a.type:"");this.relatedTarget=this.g=this.target=null;this.button=this.screenY=this.screenX=this.clientY=this.clientX=0;this.key="";this.metaKey=this.shiftKey=this.altKey=this.ctrlKey=!1;this.state=null;this.pointerId=0;this.pointerType="";this.i=null;if(a){var c=this.type=a.type,d=a.changedTouches&&a.changedTouches.length?a.changedTouches[0]:null;this.target=a.target||a.srcElement;this.g=b;if(b=a.relatedTarget){if(Ka){a:{try{Ca$1(b.nodeName);var e=!0;break a}catch(f){}e=
     !1;}e||(b=null);}}else "mouseover"==c?b=a.fromElement:"mouseout"==c&&(b=a.toElement);this.relatedTarget=b;d?(this.clientX=void 0!==d.clientX?d.clientX:d.pageX,this.clientY=void 0!==d.clientY?d.clientY:d.pageY,this.screenX=d.screenX||0,this.screenY=d.screenY||0):(this.clientX=void 0!==a.clientX?a.clientX:a.pageX,this.clientY=void 0!==a.clientY?a.clientY:a.pageY,this.screenX=a.screenX||0,this.screenY=a.screenY||0);this.button=a.button;this.key=a.key||"";this.ctrlKey=a.ctrlKey;this.altKey=a.altKey;this.shiftKey=
-    a.shiftKey;this.metaKey=a.metaKey;this.pointerId=a.pointerId||0;this.pointerType="string"===typeof a.pointerType?a.pointerType:Wa[a.pointerType]||"";this.state=a.state;this.i=a;a.defaultPrevented&&A.Z.h.call(this);}}t(A,z$1);var Wa={2:"touch",3:"pen",4:"mouse"};A.prototype.h=function(){A.Z.h.call(this);var a=this.i;a.preventDefault?a.preventDefault():a.returnValue=!1;};var B$1="closure_listenable_"+(1E6*Math.random()|0);var Xa=0;function Ya(a,b,c,d,e){this.listener=a;this.proxy=null;this.src=b;this.type=c;this.capture=!!d;this.ia=e;this.key=++Xa;this.ca=this.fa=!1;}function Za(a){a.ca=!0;a.listener=null;a.proxy=null;a.src=null;a.ia=null;}function $a(a){this.src=a;this.g={};this.h=0;}$a.prototype.add=function(a,b,c,d,e){var f=a.toString();a=this.g[f];a||(a=this.g[f]=[],this.h++);var h=ab(a,b,d,e);-1<h?(b=a[h],c||(b.fa=!1)):(b=new Ya(b,this.src,f,!!d,e),b.fa=c,a.push(b));return b};function bb(a,b){var c=b.type;if(c in a.g){var d=a.g[c],e=ma$1(d,b),f;(f=0<=e)&&Array.prototype.splice.call(d,e,1);f&&(Za(b),0==a.g[c].length&&(delete a.g[c],a.h--));}}
+    a.shiftKey;this.metaKey=a.metaKey;this.pointerId=a.pointerId||0;this.pointerType="string"===typeof a.pointerType?a.pointerType:Wa[a.pointerType]||"";this.state=a.state;this.i=a;a.defaultPrevented&&A.Z.h.call(this);}}t(A,z$1);var Wa={2:"touch",3:"pen",4:"mouse"};A.prototype.h=function(){A.Z.h.call(this);var a=this.i;a.preventDefault?a.preventDefault():a.returnValue=!1;};var B$1="closure_listenable_"+(1E6*Math.random()|0);var Xa$1=0;function Ya$1(a,b,c,d,e){this.listener=a;this.proxy=null;this.src=b;this.type=c;this.capture=!!d;this.ia=e;this.key=++Xa$1;this.ca=this.fa=!1;}function Za$1(a){a.ca=!0;a.listener=null;a.proxy=null;a.src=null;a.ia=null;}function $a$1(a){this.src=a;this.g={};this.h=0;}$a$1.prototype.add=function(a,b,c,d,e){var f=a.toString();a=this.g[f];a||(a=this.g[f]=[],this.h++);var h=ab(a,b,d,e);-1<h?(b=a[h],c||(b.fa=!1)):(b=new Ya$1(b,this.src,f,!!d,e),b.fa=c,a.push(b));return b};function bb(a,b){var c=b.type;if(c in a.g){var d=a.g[c],e=ma(d,b),f;(f=0<=e)&&Array.prototype.splice.call(d,e,1);f&&(Za$1(b),0==a.g[c].length&&(delete a.g[c],a.h--));}}
     function ab(a,b,c,d){for(var e=0;e<a.length;++e){var f=a[e];if(!f.ca&&f.listener==b&&f.capture==!!c&&f.ia==d)return e}return -1}var cb="closure_lm_"+(1E6*Math.random()|0),db={};function fb(a,b,c,d,e){if(d&&d.once)return gb(a,b,c,d,e);if(Array.isArray(b)){for(var f=0;f<b.length;f++)fb(a,b[f],c,d,e);return null}c=hb(c);return a&&a[B$1]?a.N(b,c,p(d)?!!d.capture:!!d,e):ib(a,b,c,!1,d,e)}
-    function ib(a,b,c,d,e,f){if(!b)throw Error("Invalid event type");var h=p(e)?!!e.capture:!!e,n=jb(a);n||(a[cb]=n=new $a(a));c=n.add(b,c,d,h,f);if(c.proxy)return c;d=kb();c.proxy=d;d.src=a;d.listener=c;if(a.addEventListener)Va$1||(e=h),void 0===e&&(e=!1),a.addEventListener(b.toString(),d,e);else if(a.attachEvent)a.attachEvent(lb(b.toString()),d);else if(a.addListener&&a.removeListener)a.addListener(d);else throw Error("addEventListener and attachEvent are unavailable.");return c}
+    function ib(a,b,c,d,e,f){if(!b)throw Error("Invalid event type");var h=p(e)?!!e.capture:!!e,n=jb(a);n||(a[cb]=n=new $a$1(a));c=n.add(b,c,d,h,f);if(c.proxy)return c;d=kb();c.proxy=d;d.src=a;d.listener=c;if(a.addEventListener)Va||(e=h),void 0===e&&(e=!1),a.addEventListener(b.toString(),d,e);else if(a.attachEvent)a.attachEvent(lb(b.toString()),d);else if(a.addListener&&a.removeListener)a.addListener(d);else throw Error("addEventListener and attachEvent are unavailable.");return c}
     function kb(){function a(c){return b.call(a.src,a.listener,c)}var b=mb;return a}function gb(a,b,c,d,e){if(Array.isArray(b)){for(var f=0;f<b.length;f++)gb(a,b[f],c,d,e);return null}c=hb(c);return a&&a[B$1]?a.O(b,c,p(d)?!!d.capture:!!d,e):ib(a,b,c,!0,d,e)}
-    function nb(a,b,c,d,e){if(Array.isArray(b))for(var f=0;f<b.length;f++)nb(a,b[f],c,d,e);else (d=p(d)?!!d.capture:!!d,c=hb(c),a&&a[B$1])?(a=a.i,b=String(b).toString(),b in a.g&&(f=a.g[b],c=ab(f,c,d,e),-1<c&&(Za(f[c]),Array.prototype.splice.call(f,c,1),0==f.length&&(delete a.g[b],a.h--)))):a&&(a=jb(a))&&(b=a.g[b.toString()],a=-1,b&&(a=ab(b,c,d,e)),(c=-1<a?b[a]:null)&&ob(c));}
-    function ob(a){if("number"!==typeof a&&a&&!a.ca){var b=a.src;if(b&&b[B$1])bb(b.i,a);else {var c=a.type,d=a.proxy;b.removeEventListener?b.removeEventListener(c,d,a.capture):b.detachEvent?b.detachEvent(lb(c),d):b.addListener&&b.removeListener&&b.removeListener(d);(c=jb(b))?(bb(c,a),0==c.h&&(c.src=null,b[cb]=null)):Za(a);}}}function lb(a){return a in db?db[a]:db[a]="on"+a}function mb(a,b){if(a.ca)a=!0;else {b=new A(b,this);var c=a.listener,d=a.ia||a.src;a.fa&&ob(a);a=c.call(d,b);}return a}
-    function jb(a){a=a[cb];return a instanceof $a?a:null}var pb="__closure_events_fn_"+(1E9*Math.random()>>>0);function hb(a){if("function"===typeof a)return a;a[pb]||(a[pb]=function(b){return a.handleEvent(b)});return a[pb]}function C$1(){v.call(this);this.i=new $a(this);this.P=this;this.I=null;}t(C$1,v);C$1.prototype[B$1]=!0;C$1.prototype.removeEventListener=function(a,b,c,d){nb(this,a,b,c,d);};
-    function D$1(a,b){var c,d=a.I;if(d)for(c=[];d;d=d.I)c.push(d);a=a.P;d=b.type||b;if("string"===typeof b)b=new z$1(b,a);else if(b instanceof z$1)b.target=b.target||a;else {var e=b;b=new z$1(d,a);Aa$1(b,e);}e=!0;if(c)for(var f=c.length-1;0<=f;f--){var h=b.g=c[f];e=qb(h,d,!0,b)&&e;}h=b.g=a;e=qb(h,d,!0,b)&&e;e=qb(h,d,!1,b)&&e;if(c)for(f=0;f<c.length;f++)h=b.g=c[f],e=qb(h,d,!1,b)&&e;}
-    C$1.prototype.M=function(){C$1.Z.M.call(this);if(this.i){var a=this.i,c;for(c in a.g){for(var d=a.g[c],e=0;e<d.length;e++)Za(d[e]);delete a.g[c];a.h--;}}this.I=null;};C$1.prototype.N=function(a,b,c,d){return this.i.add(String(a),b,!1,c,d)};C$1.prototype.O=function(a,b,c,d){return this.i.add(String(a),b,!0,c,d)};
+    function nb(a,b,c,d,e){if(Array.isArray(b))for(var f=0;f<b.length;f++)nb(a,b[f],c,d,e);else (d=p(d)?!!d.capture:!!d,c=hb(c),a&&a[B$1])?(a=a.i,b=String(b).toString(),b in a.g&&(f=a.g[b],c=ab(f,c,d,e),-1<c&&(Za$1(f[c]),Array.prototype.splice.call(f,c,1),0==f.length&&(delete a.g[b],a.h--)))):a&&(a=jb(a))&&(b=a.g[b.toString()],a=-1,b&&(a=ab(b,c,d,e)),(c=-1<a?b[a]:null)&&ob(c));}
+    function ob(a){if("number"!==typeof a&&a&&!a.ca){var b=a.src;if(b&&b[B$1])bb(b.i,a);else {var c=a.type,d=a.proxy;b.removeEventListener?b.removeEventListener(c,d,a.capture):b.detachEvent?b.detachEvent(lb(c),d):b.addListener&&b.removeListener&&b.removeListener(d);(c=jb(b))?(bb(c,a),0==c.h&&(c.src=null,b[cb]=null)):Za$1(a);}}}function lb(a){return a in db?db[a]:db[a]="on"+a}function mb(a,b){if(a.ca)a=!0;else {b=new A(b,this);var c=a.listener,d=a.ia||a.src;a.fa&&ob(a);a=c.call(d,b);}return a}
+    function jb(a){a=a[cb];return a instanceof $a$1?a:null}var pb="__closure_events_fn_"+(1E9*Math.random()>>>0);function hb(a){if("function"===typeof a)return a;a[pb]||(a[pb]=function(b){return a.handleEvent(b)});return a[pb]}function C$1(){v.call(this);this.i=new $a$1(this);this.P=this;this.I=null;}t(C$1,v);C$1.prototype[B$1]=!0;C$1.prototype.removeEventListener=function(a,b,c,d){nb(this,a,b,c,d);};
+    function D$1(a,b){var c,d=a.I;if(d)for(c=[];d;d=d.I)c.push(d);a=a.P;d=b.type||b;if("string"===typeof b)b=new z$1(b,a);else if(b instanceof z$1)b.target=b.target||a;else {var e=b;b=new z$1(d,a);Aa(b,e);}e=!0;if(c)for(var f=c.length-1;0<=f;f--){var h=b.g=c[f];e=qb(h,d,!0,b)&&e;}h=b.g=a;e=qb(h,d,!0,b)&&e;e=qb(h,d,!1,b)&&e;if(c)for(f=0;f<c.length;f++)h=b.g=c[f],e=qb(h,d,!1,b)&&e;}
+    C$1.prototype.M=function(){C$1.Z.M.call(this);if(this.i){var a=this.i,c;for(c in a.g){for(var d=a.g[c],e=0;e<d.length;e++)Za$1(d[e]);delete a.g[c];a.h--;}}this.I=null;};C$1.prototype.N=function(a,b,c,d){return this.i.add(String(a),b,!1,c,d)};C$1.prototype.O=function(a,b,c,d){return this.i.add(String(a),b,!0,c,d)};
     function qb(a,b,c,d){b=a.i.g[String(b)];if(!b)return !0;b=b.concat();for(var e=!0,f=0;f<b.length;++f){var h=b[f];if(h&&!h.ca&&h.capture==c){var n=h.listener,u=h.ia||h.src;h.fa&&bb(a.i,h);e=!1!==n.call(u,d)&&e;}}return e&&!d.defaultPrevented}var rb=l.JSON.stringify;function sb(){var a=tb;let b=null;a.g&&(b=a.g,a.g=a.g.next,a.g||(a.h=null),b.next=null);return b}class ub{constructor(){this.h=this.g=null;}add(a,b){const c=vb.get();c.set(a,b);this.h?this.h.next=c:this.g=c;this.h=c;}}var vb=new class{constructor(a,b){this.i=a;this.j=b;this.h=0;this.g=null;}get(){let a;0<this.h?(this.h--,a=this.g,this.g=a.next,a.next=null):a=this.i();return a}}(()=>new wb,a=>a.reset());
     class wb{constructor(){this.next=this.g=this.h=null;}set(a,b){this.h=a;this.g=b;this.next=null;}reset(){this.next=this.g=this.h=null;}}function yb(a){l.setTimeout(()=>{throw a;},0);}function zb(a,b){Ab||Bb();Cb||(Ab(),Cb=!0);tb.add(a,b);}var Ab;function Bb(){var a=l.Promise.resolve(void 0);Ab=function(){a.then(Db);};}var Cb=!1,tb=new ub;function Db(){for(var a;a=sb();){try{a.h.call(a.g);}catch(c){yb(c);}var b=vb;b.j(a);100>b.h&&(b.h++,a.next=b.g,b.g=a);}Cb=!1;}function Eb(a,b){C$1.call(this);this.h=a||1;this.g=b||l;this.j=q(this.kb,this);this.l=Date.now();}t(Eb,C$1);k$1=Eb.prototype;k$1.da=!1;k$1.S=null;k$1.kb=function(){if(this.da){var a=Date.now()-this.l;0<a&&a<.8*this.h?this.S=this.g.setTimeout(this.j,this.h-a):(this.S&&(this.g.clearTimeout(this.S),this.S=null),D$1(this,"tick"),this.da&&(Fb(this),this.start()));}};k$1.start=function(){this.da=!0;this.S||(this.S=this.g.setTimeout(this.j,this.h),this.l=Date.now());};
     function Fb(a){a.da=!1;a.S&&(a.g.clearTimeout(a.S),a.S=null);}k$1.M=function(){Eb.Z.M.call(this);Fb(this);delete this.g;};function Gb(a,b,c){if("function"===typeof a)c&&(a=q(a,c));else if(a&&"function"==typeof a.handleEvent)a=q(a.handleEvent,a);else throw Error("Invalid listener argument");return 2147483647<Number(b)?-1:l.setTimeout(a,b||0)}function Hb(a){a.g=Gb(()=>{a.g=null;a.i&&(a.i=!1,Hb(a));},a.j);const b=a.h;a.h=null;a.m.apply(null,b);}class Ib extends v{constructor(a,b){super();this.m=a;this.j=b;this.h=null;this.i=!1;this.g=null;}l(a){this.h=arguments;this.g?this.i=!0:Hb(this);}M(){super.M();this.g&&(l.clearTimeout(this.g),this.g=null,this.i=!1,this.h=null);}}function E(a){v.call(this);this.h=a;this.g={};}t(E,v);var Jb=[];function Kb(a,b,c,d){Array.isArray(c)||(c&&(Jb[0]=c.toString()),c=Jb);for(var e=0;e<c.length;e++){var f=fb(b,c[e],d||a.handleEvent,!1,a.h||a);if(!f)break;a.g[f.key]=f;}}function Lb(a){xa$1(a.g,function(b,c){this.g.hasOwnProperty(c)&&ob(b);},a);a.g={};}E.prototype.M=function(){E.Z.M.call(this);Lb(this);};E.prototype.handleEvent=function(){throw Error("EventHandler.handleEvent not implemented");};function Mb(){this.g=!0;}Mb.prototype.Aa=function(){this.g=!1;};function Nb(a,b,c,d,e,f){a.info(function(){if(a.g)if(f){var h="";for(var n=f.split("&"),u=0;u<n.length;u++){var m=n[u].split("=");if(1<m.length){var r=m[0];m=m[1];var G=r.split("_");h=2<=G.length&&"type"==G[1]?h+(r+"="+m+"&"):h+(r+"=redacted&");}}}else h=null;else h=f;return "XMLHTTP REQ ("+d+") [attempt "+e+"]: "+b+"\n"+c+"\n"+h});}
     function Ob(a,b,c,d,e,f,h){a.info(function(){return "XMLHTTP RESP ("+d+") [ attempt "+e+"]: "+b+"\n"+c+"\n"+f+" "+h});}function F$1(a,b,c,d){a.info(function(){return "XMLHTTP TEXT ("+b+"): "+Pb(a,c)+(d?" "+d:"")});}function Qb(a,b){a.info(function(){return "TIMEOUT: "+b});}Mb.prototype.info=function(){};
     function Pb(a,b){if(!a.g)return b;if(!b)return null;try{var c=JSON.parse(b);if(c)for(a=0;a<c.length;a++)if(Array.isArray(c[a])){var d=c[a];if(!(2>d.length)){var e=d[1];if(Array.isArray(e)&&!(1>e.length)){var f=e[0];if("noop"!=f&&"stop"!=f&&"close"!=f)for(var h=1;h<e.length;h++)e[h]="";}}}return rb(c)}catch(n){return b}}var H={},Rb=null;function Sb(){return Rb=Rb||new C$1}H.Ma="serverreachability";function Tb(a){z$1.call(this,H.Ma,a);}t(Tb,z$1);function I(a){const b=Sb();D$1(b,new Tb(b,a));}H.STAT_EVENT="statevent";function Ub(a,b){z$1.call(this,H.STAT_EVENT,a);this.stat=b;}t(Ub,z$1);function J$1(a){const b=Sb();D$1(b,new Ub(b,a));}H.Na="timingevent";function Vb(a,b){z$1.call(this,H.Na,a);this.size=b;}t(Vb,z$1);
-    function K$1(a,b){if("function"!==typeof a)throw Error("Fn must not be null and must be a function");return l.setTimeout(function(){a();},b)}var Wb={NO_ERROR:0,lb:1,yb:2,xb:3,sb:4,wb:5,zb:6,Ja:7,TIMEOUT:8,Cb:9};var Xb={qb:"complete",Mb:"success",Ka:"error",Ja:"abort",Eb:"ready",Fb:"readystatechange",TIMEOUT:"timeout",Ab:"incrementaldata",Db:"progress",tb:"downloadprogress",Ub:"uploadprogress"};function Yb(){}Yb.prototype.h=null;function Zb(a){return a.h||(a.h=a.i())}function $b(){}var L$1={OPEN:"a",pb:"b",Ka:"c",Bb:"d"};function ac$1(){z$1.call(this,"d");}t(ac$1,z$1);function bc$1(){z$1.call(this,"c");}t(bc$1,z$1);var cc$1;function dc$1(){}t(dc$1,Yb);dc$1.prototype.g=function(){return new XMLHttpRequest};dc$1.prototype.i=function(){return {}};cc$1=new dc$1;function M$1(a,b,c,d){this.l=a;this.j=b;this.m=c;this.X=d||1;this.V=new E(this);this.P=ec$1;a=Ja?125:void 0;this.W=new Eb(a);this.H=null;this.i=!1;this.s=this.A=this.v=this.K=this.F=this.Y=this.B=null;this.D=[];this.g=null;this.C=0;this.o=this.u=null;this.N=-1;this.I=!1;this.O=0;this.L=null;this.aa=this.J=this.$=this.U=!1;this.h=new fc$1;}function fc$1(){this.i=null;this.g="";this.h=!1;}var ec$1=45E3,gc$1={},hc$1={};k$1=M$1.prototype;k$1.setTimeout=function(a){this.P=a;};
-    function ic$1(a,b,c){a.K=1;a.v=jc(N$1(b));a.s=c;a.U=!0;kc(a,null);}function kc(a,b){a.F=Date.now();lc$1(a);a.A=N$1(a.v);var c=a.A,d=a.X;Array.isArray(d)||(d=[String(d)]);mc$1(c.h,"t",d);a.C=0;c=a.l.H;a.h=new fc$1;a.g=nc$1(a.l,c?b:null,!a.s);0<a.O&&(a.L=new Ib(q(a.Ia,a,a.g),a.O));Kb(a.V,a.g,"readystatechange",a.gb);b=a.H?ya$1(a.H):{};a.s?(a.u||(a.u="POST"),b["Content-Type"]="application/x-www-form-urlencoded",a.g.ea(a.A,a.u,a.s,b)):(a.u="GET",a.g.ea(a.A,a.u,null,b));I(1);Nb(a.j,a.u,a.A,a.m,a.X,a.s);}
-    k$1.gb=function(a){a=a.target;const b=this.L;b&&3==O$1(a)?b.l():this.Ia(a);};
-    k$1.Ia=function(a){try{if(a==this.g)a:{const r=O$1(this.g);var b=this.g.Da();const G=this.g.ba();if(!(3>r)&&(3!=r||Ja||this.g&&(this.h.h||this.g.ga()||oc$1(this.g)))){this.I||4!=r||7==b||(8==b||0>=G?I(3):I(2));pc$1(this);var c=this.g.ba();this.N=c;b:if(qc(this)){var d=oc$1(this.g);a="";var e=d.length,f=4==O$1(this.g);if(!this.h.i){if("undefined"===typeof TextDecoder){P(this);rc$1(this);var h="";break b}this.h.i=new l.TextDecoder;}for(b=0;b<e;b++)this.h.h=!0,a+=this.h.i.decode(d[b],{stream:f&&b==e-1});d.splice(0,
-    e);this.h.g+=a;this.C=0;h=this.h.g;}else h=this.g.ga();this.i=200==c;Ob(this.j,this.u,this.A,this.m,this.X,r,c);if(this.i){if(this.$&&!this.J){b:{if(this.g){var n,u=this.g;if((n=u.g?u.g.getResponseHeader("X-HTTP-Initial-Response"):null)&&!sa(n)){var m=n;break b}}m=null;}if(c=m)F$1(this.j,this.m,c,"Initial handshake response via X-HTTP-Initial-Response"),this.J=!0,sc$1(this,c);else {this.i=!1;this.o=3;J$1(12);P(this);rc$1(this);break a}}this.U?(tc$1(this,r,h),Ja&&this.i&&3==r&&(Kb(this.V,this.W,"tick",this.fb),
-    this.W.start())):(F$1(this.j,this.m,h,null),sc$1(this,h));4==r&&P(this);this.i&&!this.I&&(4==r?uc$1(this.l,this):(this.i=!1,lc$1(this)));}else 400==c&&0<h.indexOf("Unknown SID")?(this.o=3,J$1(12)):(this.o=0,J$1(13)),P(this),rc$1(this);}}}catch(r){}finally{}};function qc(a){return a.g?"GET"==a.u&&2!=a.K&&a.l.Ba:!1}
-    function tc$1(a,b,c){let d=!0,e;for(;!a.I&&a.C<c.length;)if(e=vc(a,c),e==hc$1){4==b&&(a.o=4,J$1(14),d=!1);F$1(a.j,a.m,null,"[Incomplete Response]");break}else if(e==gc$1){a.o=4;J$1(15);F$1(a.j,a.m,c,"[Invalid Chunk]");d=!1;break}else F$1(a.j,a.m,e,null),sc$1(a,e);qc(a)&&e!=hc$1&&e!=gc$1&&(a.h.g="",a.C=0);4!=b||0!=c.length||a.h.h||(a.o=1,J$1(16),d=!1);a.i=a.i&&d;d?0<c.length&&!a.aa&&(a.aa=!0,b=a.l,b.g==a&&b.$&&!b.L&&(b.h.info("Great, no buffering proxy detected. Bytes received: "+c.length),wc$1(b),b.L=!0,J$1(11))):(F$1(a.j,a.m,
-    c,"[Invalid Chunked Response]"),P(a),rc$1(a));}k$1.fb=function(){if(this.g){var a=O$1(this.g),b=this.g.ga();this.C<b.length&&(pc$1(this),tc$1(this,a,b),this.i&&4!=a&&lc$1(this));}};function vc(a,b){var c=a.C,d=b.indexOf("\n",c);if(-1==d)return hc$1;c=Number(b.substring(c,d));if(isNaN(c))return gc$1;d+=1;if(d+c>b.length)return hc$1;b=b.substr(d,c);a.C=d+c;return b}k$1.cancel=function(){this.I=!0;P(this);};function lc$1(a){a.Y=Date.now()+a.P;xc(a,a.P);}
-    function xc(a,b){if(null!=a.B)throw Error("WatchDog timer not null");a.B=K$1(q(a.eb,a),b);}function pc$1(a){a.B&&(l.clearTimeout(a.B),a.B=null);}k$1.eb=function(){this.B=null;const a=Date.now();0<=a-this.Y?(Qb(this.j,this.A),2!=this.K&&(I(3),J$1(17)),P(this),this.o=2,rc$1(this)):xc(this,this.Y-a);};function rc$1(a){0==a.l.G||a.I||uc$1(a.l,a);}function P(a){pc$1(a);var b=a.L;b&&"function"==typeof b.na&&b.na();a.L=null;Fb(a.W);Lb(a.V);a.g&&(b=a.g,a.g=null,b.abort(),b.na());}
-    function sc$1(a,b){try{var c=a.l;if(0!=c.G&&(c.g==a||yc$1(c.i,a)))if(c.I=a.N,!a.J&&yc$1(c.i,a)&&3==c.G){try{var d=c.Ca.g.parse(b);}catch(m){d=null;}if(Array.isArray(d)&&3==d.length){var e=d;if(0==e[0])a:{if(!c.u){if(c.g)if(c.g.F+3E3<a.F)zc$1(c),Ac$1(c);else break a;Bc(c);J$1(18);}}else c.ta=e[1],0<c.ta-c.U&&37500>e[2]&&c.N&&0==c.A&&!c.v&&(c.v=K$1(q(c.ab,c),6E3));if(1>=Cc(c.i)&&c.ka){try{c.ka();}catch(m){}c.ka=void 0;}}else Q$1(c,11);}else if((a.J||c.g==a)&&zc$1(c),!sa(b))for(e=c.Ca.g.parse(b),b=0;b<e.length;b++){let m=e[b];
-    c.U=m[0];m=m[1];if(2==c.G)if("c"==m[0]){c.J=m[1];c.la=m[2];const r=m[3];null!=r&&(c.ma=r,c.h.info("VER="+c.ma));const G=m[4];null!=G&&(c.za=G,c.h.info("SVER="+c.za));const Da=m[5];null!=Da&&"number"===typeof Da&&0<Da&&(d=1.5*Da,c.K=d,c.h.info("backChannelRequestTimeoutMs_="+d));d=c;const ca=a.g;if(ca){const Ea=ca.g?ca.g.getResponseHeader("X-Client-Wire-Protocol"):null;if(Ea){var f=d.i;!f.g&&(w(Ea,"spdy")||w(Ea,"quic")||w(Ea,"h2"))&&(f.j=f.l,f.g=new Set,f.h&&(Dc(f,f.h),f.h=null));}if(d.D){const xb=
-    ca.g?ca.g.getResponseHeader("X-HTTP-Session-Id"):null;xb&&(d.sa=xb,R(d.F,d.D,xb));}}c.G=3;c.j&&c.j.xa();c.$&&(c.O=Date.now()-a.F,c.h.info("Handshake RTT: "+c.O+"ms"));d=c;var h=a;d.oa=Ec$1(d,d.H?d.la:null,d.W);if(h.J){Fc$1(d.i,h);var n=h,u=d.K;u&&n.setTimeout(u);n.B&&(pc$1(n),lc$1(n));d.g=h;}else Gc$1(d);0<c.l.length&&Hc$1(c);}else "stop"!=m[0]&&"close"!=m[0]||Q$1(c,7);else 3==c.G&&("stop"==m[0]||"close"==m[0]?"stop"==m[0]?Q$1(c,7):Ic$1(c):"noop"!=m[0]&&c.j&&c.j.wa(m),c.A=0);}I(4);}catch(m){}}function Jc$1(a){if(a.R&&"function"==typeof a.R)return a.R();if("string"===typeof a)return a.split("");if(ba(a)){for(var b=[],c=a.length,d=0;d<c;d++)b.push(a[d]);return b}b=[];c=0;for(d in a)b[c++]=a[d];return b}
-    function Kc$1(a,b){if(a.forEach&&"function"==typeof a.forEach)a.forEach(b,void 0);else if(ba(a)||"string"===typeof a)na$1(a,b,void 0);else {if(a.T&&"function"==typeof a.T)var c=a.T();else if(a.R&&"function"==typeof a.R)c=void 0;else if(ba(a)||"string"===typeof a){c=[];for(var d=a.length,e=0;e<d;e++)c.push(e);}else for(e in c=[],d=0,a)c[d++]=e;d=Jc$1(a);e=d.length;for(var f=0;f<e;f++)b.call(void 0,d[f],c&&c[f],a);}}function S(a,b){this.h={};this.g=[];this.i=0;var c=arguments.length;if(1<c){if(c%2)throw Error("Uneven number of arguments");for(var d=0;d<c;d+=2)this.set(arguments[d],arguments[d+1]);}else if(a)if(a instanceof S)for(c=a.T(),d=0;d<c.length;d++)this.set(c[d],a.get(c[d]));else for(d in a)this.set(d,a[d]);}k$1=S.prototype;k$1.R=function(){Lc(this);for(var a=[],b=0;b<this.g.length;b++)a.push(this.h[this.g[b]]);return a};k$1.T=function(){Lc(this);return this.g.concat()};
-    function Lc(a){if(a.i!=a.g.length){for(var b=0,c=0;b<a.g.length;){var d=a.g[b];T(a.h,d)&&(a.g[c++]=d);b++;}a.g.length=c;}if(a.i!=a.g.length){var e={};for(c=b=0;b<a.g.length;)d=a.g[b],T(e,d)||(a.g[c++]=d,e[d]=1),b++;a.g.length=c;}}k$1.get=function(a,b){return T(this.h,a)?this.h[a]:b};k$1.set=function(a,b){T(this.h,a)||(this.i++,this.g.push(a));this.h[a]=b;};k$1.forEach=function(a,b){for(var c=this.T(),d=0;d<c.length;d++){var e=c[d],f=this.get(e);a.call(b,f,e,this);}};
-    function T(a,b){return Object.prototype.hasOwnProperty.call(a,b)}var Mc=/^(?:([^:/?#.]+):)?(?:\/\/(?:([^\\/?#]*)@)?([^\\/?#]*?)(?::([0-9]+))?(?=[\\/?#]|$))?([^?#]+)?(?:\?([^#]*))?(?:#([\s\S]*))?$/;function Nc(a,b){if(a){a=a.split("&");for(var c=0;c<a.length;c++){var d=a[c].indexOf("="),e=null;if(0<=d){var f=a[c].substring(0,d);e=a[c].substring(d+1);}else f=a[c];b(f,e?decodeURIComponent(e.replace(/\+/g," ")):"");}}}function U$1(a,b){this.i=this.s=this.j="";this.m=null;this.o=this.l="";this.g=!1;if(a instanceof U$1){this.g=void 0!==b?b:a.g;Oc$1(this,a.j);this.s=a.s;Pc(this,a.i);Qc(this,a.m);this.l=a.l;b=a.h;var c=new Rc$1;c.i=b.i;b.g&&(c.g=new S(b.g),c.h=b.h);Sc(this,c);this.o=a.o;}else a&&(c=String(a).match(Mc))?(this.g=!!b,Oc$1(this,c[1]||"",!0),this.s=Tc$1(c[2]||""),Pc(this,c[3]||"",!0),Qc(this,c[4]),this.l=Tc$1(c[5]||"",!0),Sc(this,c[6]||"",!0),this.o=Tc$1(c[7]||"")):(this.g=!!b,this.h=new Rc$1(null,this.g));}
-    U$1.prototype.toString=function(){var a=[],b=this.j;b&&a.push(Uc$1(b,Vc,!0),":");var c=this.i;if(c||"file"==b)a.push("//"),(b=this.s)&&a.push(Uc$1(b,Vc,!0),"@"),a.push(encodeURIComponent(String(c)).replace(/%25([0-9a-fA-F]{2})/g,"%$1")),c=this.m,null!=c&&a.push(":",String(c));if(c=this.l)this.i&&"/"!=c.charAt(0)&&a.push("/"),a.push(Uc$1(c,"/"==c.charAt(0)?Wc:Xc,!0));(c=this.h.toString())&&a.push("?",c);(c=this.o)&&a.push("#",Uc$1(c,Yc$1));return a.join("")};function N$1(a){return new U$1(a)}
-    function Oc$1(a,b,c){a.j=c?Tc$1(b,!0):b;a.j&&(a.j=a.j.replace(/:$/,""));}function Pc(a,b,c){a.i=c?Tc$1(b,!0):b;}function Qc(a,b){if(b){b=Number(b);if(isNaN(b)||0>b)throw Error("Bad port number "+b);a.m=b;}else a.m=null;}function Sc(a,b,c){b instanceof Rc$1?(a.h=b,Zc(a.h,a.g)):(c||(b=Uc$1(b,$c$1)),a.h=new Rc$1(b,a.g));}function R(a,b,c){a.h.set(b,c);}function jc(a){R(a,"zx",Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^Date.now()).toString(36));return a}
-    function ad(a){return a instanceof U$1?N$1(a):new U$1(a,void 0)}function bd(a,b,c,d){var e=new U$1(null,void 0);a&&Oc$1(e,a);b&&Pc(e,b);c&&Qc(e,c);d&&(e.l=d);return e}function Tc$1(a,b){return a?b?decodeURI(a.replace(/%25/g,"%2525")):decodeURIComponent(a):""}function Uc$1(a,b,c){return "string"===typeof a?(a=encodeURI(a).replace(b,cd),c&&(a=a.replace(/%25([0-9a-fA-F]{2})/g,"%$1")),a):null}function cd(a){a=a.charCodeAt(0);return "%"+(a>>4&15).toString(16)+(a&15).toString(16)}
-    var Vc=/[#\/\?@]/g,Xc=/[#\?:]/g,Wc=/[#\?]/g,$c$1=/[#\?@]/g,Yc$1=/#/g;function Rc$1(a,b){this.h=this.g=null;this.i=a||null;this.j=!!b;}function V(a){a.g||(a.g=new S,a.h=0,a.i&&Nc(a.i,function(b,c){a.add(decodeURIComponent(b.replace(/\+/g," ")),c);}));}k$1=Rc$1.prototype;k$1.add=function(a,b){V(this);this.i=null;a=W$1(this,a);var c=this.g.get(a);c||this.g.set(a,c=[]);c.push(b);this.h+=1;return this};
-    function dd(a,b){V(a);b=W$1(a,b);T(a.g.h,b)&&(a.i=null,a.h-=a.g.get(b).length,a=a.g,T(a.h,b)&&(delete a.h[b],a.i--,a.g.length>2*a.i&&Lc(a)));}function ed(a,b){V(a);b=W$1(a,b);return T(a.g.h,b)}k$1.forEach=function(a,b){V(this);this.g.forEach(function(c,d){na$1(c,function(e){a.call(b,e,d,this);},this);},this);};k$1.T=function(){V(this);for(var a=this.g.R(),b=this.g.T(),c=[],d=0;d<b.length;d++)for(var e=a[d],f=0;f<e.length;f++)c.push(b[d]);return c};
-    k$1.R=function(a){V(this);var b=[];if("string"===typeof a)ed(this,a)&&(b=qa$1(b,this.g.get(W$1(this,a))));else {a=this.g.R();for(var c=0;c<a.length;c++)b=qa$1(b,a[c]);}return b};k$1.set=function(a,b){V(this);this.i=null;a=W$1(this,a);ed(this,a)&&(this.h-=this.g.get(a).length);this.g.set(a,[b]);this.h+=1;return this};k$1.get=function(a,b){if(!a)return b;a=this.R(a);return 0<a.length?String(a[0]):b};function mc$1(a,b,c){dd(a,b);0<c.length&&(a.i=null,a.g.set(W$1(a,b),ra(c)),a.h+=c.length);}
-    k$1.toString=function(){if(this.i)return this.i;if(!this.g)return "";for(var a=[],b=this.g.T(),c=0;c<b.length;c++){var d=b[c],e=encodeURIComponent(String(d));d=this.R(d);for(var f=0;f<d.length;f++){var h=e;""!==d[f]&&(h+="="+encodeURIComponent(String(d[f])));a.push(h);}}return this.i=a.join("&")};function W$1(a,b){b=String(b);a.j&&(b=b.toLowerCase());return b}function Zc(a,b){b&&!a.j&&(V(a),a.i=null,a.g.forEach(function(c,d){var e=d.toLowerCase();d!=e&&(dd(this,d),mc$1(this,e,c));},a));a.j=b;}var fd=class{constructor(a,b){this.h=a;this.g=b;}};function gd(a){this.l=a||hd;l.PerformanceNavigationTiming?(a=l.performance.getEntriesByType("navigation"),a=0<a.length&&("hq"==a[0].nextHopProtocol||"h2"==a[0].nextHopProtocol)):a=!!(l.g&&l.g.Ea&&l.g.Ea()&&l.g.Ea().Zb);this.j=a?this.l:1;this.g=null;1<this.j&&(this.g=new Set);this.h=null;this.i=[];}var hd=10;function id(a){return a.h?!0:a.g?a.g.size>=a.j:!1}function Cc(a){return a.h?1:a.g?a.g.size:0}function yc$1(a,b){return a.h?a.h==b:a.g?a.g.has(b):!1}function Dc(a,b){a.g?a.g.add(b):a.h=b;}
+    function K$1(a,b){if("function"!==typeof a)throw Error("Fn must not be null and must be a function");return l.setTimeout(function(){a();},b)}var Wb={NO_ERROR:0,lb:1,yb:2,xb:3,sb:4,wb:5,zb:6,Ja:7,TIMEOUT:8,Cb:9};var Xb={qb:"complete",Mb:"success",Ka:"error",Ja:"abort",Eb:"ready",Fb:"readystatechange",TIMEOUT:"timeout",Ab:"incrementaldata",Db:"progress",tb:"downloadprogress",Ub:"uploadprogress"};function Yb(){}Yb.prototype.h=null;function Zb(a){return a.h||(a.h=a.i())}function $b(){}var L$1={OPEN:"a",pb:"b",Ka:"c",Bb:"d"};function ac$1(){z$1.call(this,"d");}t(ac$1,z$1);function bc(){z$1.call(this,"c");}t(bc,z$1);var cc$1;function dc$1(){}t(dc$1,Yb);dc$1.prototype.g=function(){return new XMLHttpRequest};dc$1.prototype.i=function(){return {}};cc$1=new dc$1;function M$1(a,b,c,d){this.l=a;this.j=b;this.m=c;this.X=d||1;this.V=new E(this);this.P=ec$1;a=Ja$1?125:void 0;this.W=new Eb(a);this.H=null;this.i=!1;this.s=this.A=this.v=this.K=this.F=this.Y=this.B=null;this.D=[];this.g=null;this.C=0;this.o=this.u=null;this.N=-1;this.I=!1;this.O=0;this.L=null;this.aa=this.J=this.$=this.U=!1;this.h=new fc$1;}function fc$1(){this.i=null;this.g="";this.h=!1;}var ec$1=45E3,gc$1={},hc$1={};k$1=M$1.prototype;k$1.setTimeout=function(a){this.P=a;};
+    function ic$1(a,b,c){a.K=1;a.v=jc$1(N$1(b));a.s=c;a.U=!0;kc$1(a,null);}function kc$1(a,b){a.F=Date.now();lc$1(a);a.A=N$1(a.v);var c=a.A,d=a.X;Array.isArray(d)||(d=[String(d)]);mc$1(c.h,"t",d);a.C=0;c=a.l.H;a.h=new fc$1;a.g=nc$1(a.l,c?b:null,!a.s);0<a.O&&(a.L=new Ib(q(a.Ia,a,a.g),a.O));Kb(a.V,a.g,"readystatechange",a.gb);b=a.H?ya(a.H):{};a.s?(a.u||(a.u="POST"),b["Content-Type"]="application/x-www-form-urlencoded",a.g.ea(a.A,a.u,a.s,b)):(a.u="GET",a.g.ea(a.A,a.u,null,b));I(1);Nb(a.j,a.u,a.A,a.m,a.X,a.s);}
+    k$1.gb=function(a){a=a.target;const b=this.L;b&&3==O(a)?b.l():this.Ia(a);};
+    k$1.Ia=function(a){try{if(a==this.g)a:{const r=O(this.g);var b=this.g.Da();const G=this.g.ba();if(!(3>r)&&(3!=r||Ja$1||this.g&&(this.h.h||this.g.ga()||oc$1(this.g)))){this.I||4!=r||7==b||(8==b||0>=G?I(3):I(2));pc$1(this);var c=this.g.ba();this.N=c;b:if(qc$1(this)){var d=oc$1(this.g);a="";var e=d.length,f=4==O(this.g);if(!this.h.i){if("undefined"===typeof TextDecoder){P(this);rc$1(this);var h="";break b}this.h.i=new l.TextDecoder;}for(b=0;b<e;b++)this.h.h=!0,a+=this.h.i.decode(d[b],{stream:f&&b==e-1});d.splice(0,
+    e);this.h.g+=a;this.C=0;h=this.h.g;}else h=this.g.ga();this.i=200==c;Ob(this.j,this.u,this.A,this.m,this.X,r,c);if(this.i){if(this.$&&!this.J){b:{if(this.g){var n,u=this.g;if((n=u.g?u.g.getResponseHeader("X-HTTP-Initial-Response"):null)&&!sa(n)){var m=n;break b}}m=null;}if(c=m)F$1(this.j,this.m,c,"Initial handshake response via X-HTTP-Initial-Response"),this.J=!0,sc$1(this,c);else {this.i=!1;this.o=3;J$1(12);P(this);rc$1(this);break a}}this.U?(tc$1(this,r,h),Ja$1&&this.i&&3==r&&(Kb(this.V,this.W,"tick",this.fb),
+    this.W.start())):(F$1(this.j,this.m,h,null),sc$1(this,h));4==r&&P(this);this.i&&!this.I&&(4==r?uc$1(this.l,this):(this.i=!1,lc$1(this)));}else 400==c&&0<h.indexOf("Unknown SID")?(this.o=3,J$1(12)):(this.o=0,J$1(13)),P(this),rc$1(this);}}}catch(r){}finally{}};function qc$1(a){return a.g?"GET"==a.u&&2!=a.K&&a.l.Ba:!1}
+    function tc$1(a,b,c){let d=!0,e;for(;!a.I&&a.C<c.length;)if(e=vc(a,c),e==hc$1){4==b&&(a.o=4,J$1(14),d=!1);F$1(a.j,a.m,null,"[Incomplete Response]");break}else if(e==gc$1){a.o=4;J$1(15);F$1(a.j,a.m,c,"[Invalid Chunk]");d=!1;break}else F$1(a.j,a.m,e,null),sc$1(a,e);qc$1(a)&&e!=hc$1&&e!=gc$1&&(a.h.g="",a.C=0);4!=b||0!=c.length||a.h.h||(a.o=1,J$1(16),d=!1);a.i=a.i&&d;d?0<c.length&&!a.aa&&(a.aa=!0,b=a.l,b.g==a&&b.$&&!b.L&&(b.h.info("Great, no buffering proxy detected. Bytes received: "+c.length),wc$1(b),b.L=!0,J$1(11))):(F$1(a.j,a.m,
+    c,"[Invalid Chunked Response]"),P(a),rc$1(a));}k$1.fb=function(){if(this.g){var a=O(this.g),b=this.g.ga();this.C<b.length&&(pc$1(this),tc$1(this,a,b),this.i&&4!=a&&lc$1(this));}};function vc(a,b){var c=a.C,d=b.indexOf("\n",c);if(-1==d)return hc$1;c=Number(b.substring(c,d));if(isNaN(c))return gc$1;d+=1;if(d+c>b.length)return hc$1;b=b.substr(d,c);a.C=d+c;return b}k$1.cancel=function(){this.I=!0;P(this);};function lc$1(a){a.Y=Date.now()+a.P;xc$1(a,a.P);}
+    function xc$1(a,b){if(null!=a.B)throw Error("WatchDog timer not null");a.B=K$1(q(a.eb,a),b);}function pc$1(a){a.B&&(l.clearTimeout(a.B),a.B=null);}k$1.eb=function(){this.B=null;const a=Date.now();0<=a-this.Y?(Qb(this.j,this.A),2!=this.K&&(I(3),J$1(17)),P(this),this.o=2,rc$1(this)):xc$1(this,this.Y-a);};function rc$1(a){0==a.l.G||a.I||uc$1(a.l,a);}function P(a){pc$1(a);var b=a.L;b&&"function"==typeof b.na&&b.na();a.L=null;Fb(a.W);Lb(a.V);a.g&&(b=a.g,a.g=null,b.abort(),b.na());}
+    function sc$1(a,b){try{var c=a.l;if(0!=c.G&&(c.g==a||yc$1(c.i,a)))if(c.I=a.N,!a.J&&yc$1(c.i,a)&&3==c.G){try{var d=c.Ca.g.parse(b);}catch(m){d=null;}if(Array.isArray(d)&&3==d.length){var e=d;if(0==e[0])a:{if(!c.u){if(c.g)if(c.g.F+3E3<a.F)zc$1(c),Ac$1(c);else break a;Bc$1(c);J$1(18);}}else c.ta=e[1],0<c.ta-c.U&&37500>e[2]&&c.N&&0==c.A&&!c.v&&(c.v=K$1(q(c.ab,c),6E3));if(1>=Cc$1(c.i)&&c.ka){try{c.ka();}catch(m){}c.ka=void 0;}}else Q$1(c,11);}else if((a.J||c.g==a)&&zc$1(c),!sa(b))for(e=c.Ca.g.parse(b),b=0;b<e.length;b++){let m=e[b];
+    c.U=m[0];m=m[1];if(2==c.G)if("c"==m[0]){c.J=m[1];c.la=m[2];const r=m[3];null!=r&&(c.ma=r,c.h.info("VER="+c.ma));const G=m[4];null!=G&&(c.za=G,c.h.info("SVER="+c.za));const Da=m[5];null!=Da&&"number"===typeof Da&&0<Da&&(d=1.5*Da,c.K=d,c.h.info("backChannelRequestTimeoutMs_="+d));d=c;const ca=a.g;if(ca){const Ea=ca.g?ca.g.getResponseHeader("X-Client-Wire-Protocol"):null;if(Ea){var f=d.i;!f.g&&(w(Ea,"spdy")||w(Ea,"quic")||w(Ea,"h2"))&&(f.j=f.l,f.g=new Set,f.h&&(Dc$1(f,f.h),f.h=null));}if(d.D){const xb=
+    ca.g?ca.g.getResponseHeader("X-HTTP-Session-Id"):null;xb&&(d.sa=xb,R(d.F,d.D,xb));}}c.G=3;c.j&&c.j.xa();c.$&&(c.O=Date.now()-a.F,c.h.info("Handshake RTT: "+c.O+"ms"));d=c;var h=a;d.oa=Ec$1(d,d.H?d.la:null,d.W);if(h.J){Fc$1(d.i,h);var n=h,u=d.K;u&&n.setTimeout(u);n.B&&(pc$1(n),lc$1(n));d.g=h;}else Gc(d);0<c.l.length&&Hc$1(c);}else "stop"!=m[0]&&"close"!=m[0]||Q$1(c,7);else 3==c.G&&("stop"==m[0]||"close"==m[0]?"stop"==m[0]?Q$1(c,7):Ic$1(c):"noop"!=m[0]&&c.j&&c.j.wa(m),c.A=0);}I(4);}catch(m){}}function Jc$1(a){if(a.R&&"function"==typeof a.R)return a.R();if("string"===typeof a)return a.split("");if(ba(a)){for(var b=[],c=a.length,d=0;d<c;d++)b.push(a[d]);return b}b=[];c=0;for(d in a)b[c++]=a[d];return b}
+    function Kc$1(a,b){if(a.forEach&&"function"==typeof a.forEach)a.forEach(b,void 0);else if(ba(a)||"string"===typeof a)na$1(a,b,void 0);else {if(a.T&&"function"==typeof a.T)var c=a.T();else if(a.R&&"function"==typeof a.R)c=void 0;else if(ba(a)||"string"===typeof a){c=[];for(var d=a.length,e=0;e<d;e++)c.push(e);}else for(e in c=[],d=0,a)c[d++]=e;d=Jc$1(a);e=d.length;for(var f=0;f<e;f++)b.call(void 0,d[f],c&&c[f],a);}}function S(a,b){this.h={};this.g=[];this.i=0;var c=arguments.length;if(1<c){if(c%2)throw Error("Uneven number of arguments");for(var d=0;d<c;d+=2)this.set(arguments[d],arguments[d+1]);}else if(a)if(a instanceof S)for(c=a.T(),d=0;d<c.length;d++)this.set(c[d],a.get(c[d]));else for(d in a)this.set(d,a[d]);}k$1=S.prototype;k$1.R=function(){Lc$1(this);for(var a=[],b=0;b<this.g.length;b++)a.push(this.h[this.g[b]]);return a};k$1.T=function(){Lc$1(this);return this.g.concat()};
+    function Lc$1(a){if(a.i!=a.g.length){for(var b=0,c=0;b<a.g.length;){var d=a.g[b];T(a.h,d)&&(a.g[c++]=d);b++;}a.g.length=c;}if(a.i!=a.g.length){var e={};for(c=b=0;b<a.g.length;)d=a.g[b],T(e,d)||(a.g[c++]=d,e[d]=1),b++;a.g.length=c;}}k$1.get=function(a,b){return T(this.h,a)?this.h[a]:b};k$1.set=function(a,b){T(this.h,a)||(this.i++,this.g.push(a));this.h[a]=b;};k$1.forEach=function(a,b){for(var c=this.T(),d=0;d<c.length;d++){var e=c[d],f=this.get(e);a.call(b,f,e,this);}};
+    function T(a,b){return Object.prototype.hasOwnProperty.call(a,b)}var Mc$1=/^(?:([^:/?#.]+):)?(?:\/\/(?:([^\\/?#]*)@)?([^\\/?#]*?)(?::([0-9]+))?(?=[\\/?#]|$))?([^?#]+)?(?:\?([^#]*))?(?:#([\s\S]*))?$/;function Nc$1(a,b){if(a){a=a.split("&");for(var c=0;c<a.length;c++){var d=a[c].indexOf("="),e=null;if(0<=d){var f=a[c].substring(0,d);e=a[c].substring(d+1);}else f=a[c];b(f,e?decodeURIComponent(e.replace(/\+/g," ")):"");}}}function U$1(a,b){this.i=this.s=this.j="";this.m=null;this.o=this.l="";this.g=!1;if(a instanceof U$1){this.g=void 0!==b?b:a.g;Oc$1(this,a.j);this.s=a.s;Pc(this,a.i);Qc$1(this,a.m);this.l=a.l;b=a.h;var c=new Rc$1;c.i=b.i;b.g&&(c.g=new S(b.g),c.h=b.h);Sc$1(this,c);this.o=a.o;}else a&&(c=String(a).match(Mc$1))?(this.g=!!b,Oc$1(this,c[1]||"",!0),this.s=Tc$1(c[2]||""),Pc(this,c[3]||"",!0),Qc$1(this,c[4]),this.l=Tc$1(c[5]||"",!0),Sc$1(this,c[6]||"",!0),this.o=Tc$1(c[7]||"")):(this.g=!!b,this.h=new Rc$1(null,this.g));}
+    U$1.prototype.toString=function(){var a=[],b=this.j;b&&a.push(Uc$1(b,Vc,!0),":");var c=this.i;if(c||"file"==b)a.push("//"),(b=this.s)&&a.push(Uc$1(b,Vc,!0),"@"),a.push(encodeURIComponent(String(c)).replace(/%25([0-9a-fA-F]{2})/g,"%$1")),c=this.m,null!=c&&a.push(":",String(c));if(c=this.l)this.i&&"/"!=c.charAt(0)&&a.push("/"),a.push(Uc$1(c,"/"==c.charAt(0)?Wc$1:Xc$1,!0));(c=this.h.toString())&&a.push("?",c);(c=this.o)&&a.push("#",Uc$1(c,Yc$1));return a.join("")};function N$1(a){return new U$1(a)}
+    function Oc$1(a,b,c){a.j=c?Tc$1(b,!0):b;a.j&&(a.j=a.j.replace(/:$/,""));}function Pc(a,b,c){a.i=c?Tc$1(b,!0):b;}function Qc$1(a,b){if(b){b=Number(b);if(isNaN(b)||0>b)throw Error("Bad port number "+b);a.m=b;}else a.m=null;}function Sc$1(a,b,c){b instanceof Rc$1?(a.h=b,Zc$1(a.h,a.g)):(c||(b=Uc$1(b,$c$1)),a.h=new Rc$1(b,a.g));}function R(a,b,c){a.h.set(b,c);}function jc$1(a){R(a,"zx",Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^Date.now()).toString(36));return a}
+    function ad(a){return a instanceof U$1?N$1(a):new U$1(a,void 0)}function bd(a,b,c,d){var e=new U$1(null,void 0);a&&Oc$1(e,a);b&&Pc(e,b);c&&Qc$1(e,c);d&&(e.l=d);return e}function Tc$1(a,b){return a?b?decodeURI(a.replace(/%25/g,"%2525")):decodeURIComponent(a):""}function Uc$1(a,b,c){return "string"===typeof a?(a=encodeURI(a).replace(b,cd),c&&(a=a.replace(/%25([0-9a-fA-F]{2})/g,"%$1")),a):null}function cd(a){a=a.charCodeAt(0);return "%"+(a>>4&15).toString(16)+(a&15).toString(16)}
+    var Vc=/[#\/\?@]/g,Xc$1=/[#\?:]/g,Wc$1=/[#\?]/g,$c$1=/[#\?@]/g,Yc$1=/#/g;function Rc$1(a,b){this.h=this.g=null;this.i=a||null;this.j=!!b;}function V(a){a.g||(a.g=new S,a.h=0,a.i&&Nc$1(a.i,function(b,c){a.add(decodeURIComponent(b.replace(/\+/g," ")),c);}));}k$1=Rc$1.prototype;k$1.add=function(a,b){V(this);this.i=null;a=W$1(this,a);var c=this.g.get(a);c||this.g.set(a,c=[]);c.push(b);this.h+=1;return this};
+    function dd(a,b){V(a);b=W$1(a,b);T(a.g.h,b)&&(a.i=null,a.h-=a.g.get(b).length,a=a.g,T(a.h,b)&&(delete a.h[b],a.i--,a.g.length>2*a.i&&Lc$1(a)));}function ed(a,b){V(a);b=W$1(a,b);return T(a.g.h,b)}k$1.forEach=function(a,b){V(this);this.g.forEach(function(c,d){na$1(c,function(e){a.call(b,e,d,this);},this);},this);};k$1.T=function(){V(this);for(var a=this.g.R(),b=this.g.T(),c=[],d=0;d<b.length;d++)for(var e=a[d],f=0;f<e.length;f++)c.push(b[d]);return c};
+    k$1.R=function(a){V(this);var b=[];if("string"===typeof a)ed(this,a)&&(b=qa(b,this.g.get(W$1(this,a))));else {a=this.g.R();for(var c=0;c<a.length;c++)b=qa(b,a[c]);}return b};k$1.set=function(a,b){V(this);this.i=null;a=W$1(this,a);ed(this,a)&&(this.h-=this.g.get(a).length);this.g.set(a,[b]);this.h+=1;return this};k$1.get=function(a,b){if(!a)return b;a=this.R(a);return 0<a.length?String(a[0]):b};function mc$1(a,b,c){dd(a,b);0<c.length&&(a.i=null,a.g.set(W$1(a,b),ra(c)),a.h+=c.length);}
+    k$1.toString=function(){if(this.i)return this.i;if(!this.g)return "";for(var a=[],b=this.g.T(),c=0;c<b.length;c++){var d=b[c],e=encodeURIComponent(String(d));d=this.R(d);for(var f=0;f<d.length;f++){var h=e;""!==d[f]&&(h+="="+encodeURIComponent(String(d[f])));a.push(h);}}return this.i=a.join("&")};function W$1(a,b){b=String(b);a.j&&(b=b.toLowerCase());return b}function Zc$1(a,b){b&&!a.j&&(V(a),a.i=null,a.g.forEach(function(c,d){var e=d.toLowerCase();d!=e&&(dd(this,d),mc$1(this,e,c));},a));a.j=b;}var fd=class{constructor(a,b){this.h=a;this.g=b;}};function gd(a){this.l=a||hd;l.PerformanceNavigationTiming?(a=l.performance.getEntriesByType("navigation"),a=0<a.length&&("hq"==a[0].nextHopProtocol||"h2"==a[0].nextHopProtocol)):a=!!(l.g&&l.g.Ea&&l.g.Ea()&&l.g.Ea().Zb);this.j=a?this.l:1;this.g=null;1<this.j&&(this.g=new Set);this.h=null;this.i=[];}var hd=10;function id(a){return a.h?!0:a.g?a.g.size>=a.j:!1}function Cc$1(a){return a.h?1:a.g?a.g.size:0}function yc$1(a,b){return a.h?a.h==b:a.g?a.g.has(b):!1}function Dc$1(a,b){a.g?a.g.add(b):a.h=b;}
     function Fc$1(a,b){a.h&&a.h==b?a.h=null:a.g&&a.g.has(b)&&a.g.delete(b);}gd.prototype.cancel=function(){this.i=jd(this);if(this.h)this.h.cancel(),this.h=null;else if(this.g&&0!==this.g.size){for(const a of this.g.values())a.cancel();this.g.clear();}};function jd(a){if(null!=a.h)return a.i.concat(a.h.D);if(null!=a.g&&0!==a.g.size){let b=a.i;for(const c of a.g.values())b=b.concat(c.D);return b}return ra(a.i)}function kd(){}kd.prototype.stringify=function(a){return l.JSON.stringify(a,void 0)};kd.prototype.parse=function(a){return l.JSON.parse(a,void 0)};function ld(){this.g=new kd;}function md(a,b,c){const d=c||"";try{Kc$1(a,function(e,f){let h=e;p(e)&&(h=rb(e));b.push(d+f+"="+encodeURIComponent(h));});}catch(e){throw b.push(d+"type="+encodeURIComponent("_badmap")),e;}}function nd(a,b){const c=new Mb;if(l.Image){const d=new Image;d.onload=ja(od,c,d,"TestLoadImage: loaded",!0,b);d.onerror=ja(od,c,d,"TestLoadImage: error",!1,b);d.onabort=ja(od,c,d,"TestLoadImage: abort",!1,b);d.ontimeout=ja(od,c,d,"TestLoadImage: timeout",!1,b);l.setTimeout(function(){if(d.ontimeout)d.ontimeout();},1E4);d.src=a;}else b(!1);}function od(a,b,c,d,e){try{b.onload=null,b.onerror=null,b.onabort=null,b.ontimeout=null,e(d);}catch(f){}}function pd(a){this.l=a.$b||null;this.j=a.ib||!1;}t(pd,Yb);pd.prototype.g=function(){return new qd(this.l,this.j)};pd.prototype.i=function(a){return function(){return a}}({});function qd(a,b){C$1.call(this);this.D=a;this.u=b;this.m=void 0;this.readyState=rd;this.status=0;this.responseType=this.responseText=this.response=this.statusText="";this.onreadystatechange=null;this.v=new Headers;this.h=null;this.C="GET";this.B="";this.g=!1;this.A=this.j=this.l=null;}t(qd,C$1);var rd=0;k$1=qd.prototype;
     k$1.open=function(a,b){if(this.readyState!=rd)throw this.abort(),Error("Error reopening a connection");this.C=a;this.B=b;this.readyState=1;sd(this);};k$1.send=function(a){if(1!=this.readyState)throw this.abort(),Error("need to call open() first. ");this.g=!0;const b={headers:this.v,method:this.C,credentials:this.m,cache:void 0};a&&(b.body=a);(this.D||l).fetch(new Request(this.B,b)).then(this.Va.bind(this),this.ha.bind(this));};
     k$1.abort=function(){this.response=this.responseText="";this.v=new Headers;this.status=0;this.j&&this.j.cancel("Request was aborted.");1<=this.readyState&&this.g&&4!=this.readyState&&(this.g=!1,td(this));this.readyState=rd;};
@@ -1892,30 +2502,30 @@ var app = (function () {
     k$1.Ua=function(a){this.g&&(this.response=this.responseText=a,td(this));};k$1.Ta=function(a){this.g&&(this.response=a,td(this));};k$1.ha=function(){this.g&&td(this);};function td(a){a.readyState=4;a.l=null;a.j=null;a.A=null;sd(a);}k$1.setRequestHeader=function(a,b){this.v.append(a,b);};k$1.getResponseHeader=function(a){return this.h?this.h.get(a.toLowerCase())||"":""};
     k$1.getAllResponseHeaders=function(){if(!this.h)return "";const a=[],b=this.h.entries();for(var c=b.next();!c.done;)c=c.value,a.push(c[0]+": "+c[1]),c=b.next();return a.join("\r\n")};function sd(a){a.onreadystatechange&&a.onreadystatechange.call(a);}Object.defineProperty(qd.prototype,"withCredentials",{get:function(){return "include"===this.m},set:function(a){this.m=a?"include":"same-origin";}});var vd=l.JSON.parse;function X$1(a){C$1.call(this);this.headers=new S;this.u=a||null;this.h=!1;this.C=this.g=null;this.H="";this.m=0;this.j="";this.l=this.F=this.v=this.D=!1;this.B=0;this.A=null;this.J=wd;this.K=this.L=!1;}t(X$1,C$1);var wd="",xd=/^https?$/i,yd=["POST","PUT"];k$1=X$1.prototype;
     k$1.ea=function(a,b,c,d){if(this.g)throw Error("[goog.net.XhrIo] Object is active with another request="+this.H+"; newUri="+a);b=b?b.toUpperCase():"GET";this.H=a;this.j="";this.m=0;this.D=!1;this.h=!0;this.g=this.u?this.u.g():cc$1.g();this.C=this.u?Zb(this.u):Zb(cc$1);this.g.onreadystatechange=q(this.Fa,this);try{this.F=!0,this.g.open(b,String(a),!0),this.F=!1;}catch(f){zd(this,f);return}a=c||"";const e=new S(this.headers);d&&Kc$1(d,function(f,h){e.set(h,f);});d=oa(e.T());c=l.FormData&&a instanceof l.FormData;
-    !(0<=ma$1(yd,b))||d||c||e.set("Content-Type","application/x-www-form-urlencoded;charset=utf-8");e.forEach(function(f,h){this.g.setRequestHeader(h,f);},this);this.J&&(this.g.responseType=this.J);"withCredentials"in this.g&&this.g.withCredentials!==this.L&&(this.g.withCredentials=this.L);try{Ad(this),0<this.B&&((this.K=Bd(this.g))?(this.g.timeout=this.B,this.g.ontimeout=q(this.pa,this)):this.A=Gb(this.pa,this.B,this)),this.v=!0,this.g.send(a),this.v=!1;}catch(f){zd(this,f);}};
-    function Bd(a){return y&&Ra$1()&&"number"===typeof a.timeout&&void 0!==a.ontimeout}function pa$1(a){return "content-type"==a.toLowerCase()}k$1.pa=function(){"undefined"!=typeof goog&&this.g&&(this.j="Timed out after "+this.B+"ms, aborting",this.m=8,D$1(this,"timeout"),this.abort(8));};function zd(a,b){a.h=!1;a.g&&(a.l=!0,a.g.abort(),a.l=!1);a.j=b;a.m=5;Cd(a);Dd(a);}function Cd(a){a.D||(a.D=!0,D$1(a,"complete"),D$1(a,"error"));}
+    !(0<=ma(yd,b))||d||c||e.set("Content-Type","application/x-www-form-urlencoded;charset=utf-8");e.forEach(function(f,h){this.g.setRequestHeader(h,f);},this);this.J&&(this.g.responseType=this.J);"withCredentials"in this.g&&this.g.withCredentials!==this.L&&(this.g.withCredentials=this.L);try{Ad(this),0<this.B&&((this.K=Bd(this.g))?(this.g.timeout=this.B,this.g.ontimeout=q(this.pa,this)):this.A=Gb(this.pa,this.B,this)),this.v=!0,this.g.send(a),this.v=!1;}catch(f){zd(this,f);}};
+    function Bd(a){return y&&Ra()&&"number"===typeof a.timeout&&void 0!==a.ontimeout}function pa(a){return "content-type"==a.toLowerCase()}k$1.pa=function(){"undefined"!=typeof goog&&this.g&&(this.j="Timed out after "+this.B+"ms, aborting",this.m=8,D$1(this,"timeout"),this.abort(8));};function zd(a,b){a.h=!1;a.g&&(a.l=!0,a.g.abort(),a.l=!1);a.j=b;a.m=5;Cd(a);Dd(a);}function Cd(a){a.D||(a.D=!0,D$1(a,"complete"),D$1(a,"error"));}
     k$1.abort=function(a){this.g&&this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1,this.m=a||7,D$1(this,"complete"),D$1(this,"abort"),Dd(this));};k$1.M=function(){this.g&&(this.h&&(this.h=!1,this.l=!0,this.g.abort(),this.l=!1),Dd(this,!0));X$1.Z.M.call(this);};k$1.Fa=function(){this.s||(this.F||this.v||this.l?Ed(this):this.cb());};k$1.cb=function(){Ed(this);};
-    function Ed(a){if(a.h&&"undefined"!=typeof goog&&(!a.C[1]||4!=O$1(a)||2!=a.ba()))if(a.v&&4==O$1(a))Gb(a.Fa,0,a);else if(D$1(a,"readystatechange"),4==O$1(a)){a.h=!1;try{const n=a.ba();a:switch(n){case 200:case 201:case 202:case 204:case 206:case 304:case 1223:var b=!0;break a;default:b=!1;}var c;if(!(c=b)){var d;if(d=0===n){var e=String(a.H).match(Mc)[1]||null;if(!e&&l.self&&l.self.location){var f=l.self.location.protocol;e=f.substr(0,f.length-1);}d=!xd.test(e?e.toLowerCase():"");}c=d;}if(c)D$1(a,"complete"),D$1(a,
-    "success");else {a.m=6;try{var h=2<O$1(a)?a.g.statusText:"";}catch(u){h="";}a.j=h+" ["+a.ba()+"]";Cd(a);}}finally{Dd(a);}}}function Dd(a,b){if(a.g){Ad(a);const c=a.g,d=a.C[0]?aa$1:null;a.g=null;a.C=null;b||D$1(a,"ready");try{c.onreadystatechange=d;}catch(e){}}}function Ad(a){a.g&&a.K&&(a.g.ontimeout=null);a.A&&(l.clearTimeout(a.A),a.A=null);}function O$1(a){return a.g?a.g.readyState:0}k$1.ba=function(){try{return 2<O$1(this)?this.g.status:-1}catch(a){return -1}};
+    function Ed(a){if(a.h&&"undefined"!=typeof goog&&(!a.C[1]||4!=O(a)||2!=a.ba()))if(a.v&&4==O(a))Gb(a.Fa,0,a);else if(D$1(a,"readystatechange"),4==O(a)){a.h=!1;try{const n=a.ba();a:switch(n){case 200:case 201:case 202:case 204:case 206:case 304:case 1223:var b=!0;break a;default:b=!1;}var c;if(!(c=b)){var d;if(d=0===n){var e=String(a.H).match(Mc$1)[1]||null;if(!e&&l.self&&l.self.location){var f=l.self.location.protocol;e=f.substr(0,f.length-1);}d=!xd.test(e?e.toLowerCase():"");}c=d;}if(c)D$1(a,"complete"),D$1(a,
+    "success");else {a.m=6;try{var h=2<O(a)?a.g.statusText:"";}catch(u){h="";}a.j=h+" ["+a.ba()+"]";Cd(a);}}finally{Dd(a);}}}function Dd(a,b){if(a.g){Ad(a);const c=a.g,d=a.C[0]?aa:null;a.g=null;a.C=null;b||D$1(a,"ready");try{c.onreadystatechange=d;}catch(e){}}}function Ad(a){a.g&&a.K&&(a.g.ontimeout=null);a.A&&(l.clearTimeout(a.A),a.A=null);}function O(a){return a.g?a.g.readyState:0}k$1.ba=function(){try{return 2<O(this)?this.g.status:-1}catch(a){return -1}};
     k$1.ga=function(){try{return this.g?this.g.responseText:""}catch(a){return ""}};k$1.Qa=function(a){if(this.g){var b=this.g.responseText;a&&0==b.indexOf(a)&&(b=b.substring(a.length));return vd(b)}};function oc$1(a){try{if(!a.g)return null;if("response"in a.g)return a.g.response;switch(a.J){case wd:case "text":return a.g.responseText;case "arraybuffer":if("mozResponseArrayBuffer"in a.g)return a.g.mozResponseArrayBuffer}return null}catch(b){return null}}k$1.Da=function(){return this.m};
     k$1.La=function(){return "string"===typeof this.j?this.j:String(this.j)};function Fd(a){let b="";xa$1(a,function(c,d){b+=d;b+=":";b+=c;b+="\r\n";});return b}function Gd(a,b,c){a:{for(d in c){var d=!1;break a}d=!0;}d||(c=Fd(c),"string"===typeof a?(null!=c&&encodeURIComponent(String(c))):R(a,b,c));}function Hd(a,b,c){return c&&c.internalChannelParams?c.internalChannelParams[a]||b:b}
     function Id(a){this.za=0;this.l=[];this.h=new Mb;this.la=this.oa=this.F=this.W=this.g=this.sa=this.D=this.aa=this.o=this.P=this.s=null;this.Za=this.V=0;this.Xa=Hd("failFast",!1,a);this.N=this.v=this.u=this.m=this.j=null;this.X=!0;this.I=this.ta=this.U=-1;this.Y=this.A=this.C=0;this.Pa=Hd("baseRetryDelayMs",5E3,a);this.$a=Hd("retryDelaySeedMs",1E4,a);this.Ya=Hd("forwardChannelMaxRetries",2,a);this.ra=Hd("forwardChannelRequestTimeoutMs",2E4,a);this.qa=a&&a.xmlHttpFactory||void 0;this.Ba=a&&a.Yb||!1;
     this.K=void 0;this.H=a&&a.supportsCrossDomainXhr||!1;this.J="";this.i=new gd(a&&a.concurrentRequestLimit);this.Ca=new ld;this.ja=a&&a.fastHandshake||!1;this.Ra=a&&a.Wb||!1;a&&a.Aa&&this.h.Aa();a&&a.forceLongPolling&&(this.X=!1);this.$=!this.ja&&this.X&&a&&a.detectBufferingProxy||!1;this.ka=void 0;this.O=0;this.L=!1;this.B=null;this.Wa=!a||!1!==a.Xb;}k$1=Id.prototype;k$1.ma=8;k$1.G=1;
-    function Ic$1(a){Jd(a);if(3==a.G){var b=a.V++,c=N$1(a.F);R(c,"SID",a.J);R(c,"RID",b);R(c,"TYPE","terminate");Kd(a,c);b=new M$1(a,a.h,b,void 0);b.K=2;b.v=jc(N$1(c));c=!1;l.navigator&&l.navigator.sendBeacon&&(c=l.navigator.sendBeacon(b.v.toString(),""));!c&&l.Image&&((new Image).src=b.v,c=!0);c||(b.g=nc$1(b.l,null),b.g.ea(b.v));b.F=Date.now();lc$1(b);}Ld(a);}k$1.hb=function(a){try{this.h.info("Origin Trials invoked: "+a);}catch(b){}};function Ac$1(a){a.g&&(wc$1(a),a.g.cancel(),a.g=null);}
-    function Jd(a){Ac$1(a);a.u&&(l.clearTimeout(a.u),a.u=null);zc$1(a);a.i.cancel();a.m&&("number"===typeof a.m&&l.clearTimeout(a.m),a.m=null);}function Md(a,b){a.l.push(new fd(a.Za++,b));3==a.G&&Hc$1(a);}function Hc$1(a){id(a.i)||a.m||(a.m=!0,zb(a.Ha,a),a.C=0);}function Nd(a,b){if(Cc(a.i)>=a.i.j-(a.m?1:0))return !1;if(a.m)return a.l=b.D.concat(a.l),!0;if(1==a.G||2==a.G||a.C>=(a.Xa?0:a.Ya))return !1;a.m=K$1(q(a.Ha,a,b),Od(a,a.C));a.C++;return !0}
-    k$1.Ha=function(a){if(this.m)if(this.m=null,1==this.G){if(!a){this.V=Math.floor(1E5*Math.random());a=this.V++;const e=new M$1(this,this.h,a,void 0);let f=this.s;this.P&&(f?(f=ya$1(f),Aa$1(f,this.P)):f=this.P);null===this.o&&(e.H=f);if(this.ja)a:{var b=0;for(var c=0;c<this.l.length;c++){b:{var d=this.l[c];if("__data__"in d.g&&(d=d.g.__data__,"string"===typeof d)){d=d.length;break b}d=void 0;}if(void 0===d)break;b+=d;if(4096<b){b=c;break a}if(4096===b||c===this.l.length-1){b=c+1;break a}}b=1E3;}else b=1E3;b=
-    Pd(this,e,b);c=N$1(this.F);R(c,"RID",a);R(c,"CVER",22);this.D&&R(c,"X-HTTP-Session-Id",this.D);Kd(this,c);this.o&&f&&Gd(c,this.o,f);Dc(this.i,e);this.Ra&&R(c,"TYPE","init");this.ja?(R(c,"$req",b),R(c,"SID","null"),e.$=!0,ic$1(e,c,null)):ic$1(e,c,b);this.G=2;}}else 3==this.G&&(a?Qd(this,a):0==this.l.length||id(this.i)||Qd(this));};
-    function Qd(a,b){var c;b?c=b.m:c=a.V++;const d=N$1(a.F);R(d,"SID",a.J);R(d,"RID",c);R(d,"AID",a.U);Kd(a,d);a.o&&a.s&&Gd(d,a.o,a.s);c=new M$1(a,a.h,c,a.C+1);null===a.o&&(c.H=a.s);b&&(a.l=b.D.concat(a.l));b=Pd(a,c,1E3);c.setTimeout(Math.round(.5*a.ra)+Math.round(.5*a.ra*Math.random()));Dc(a.i,c);ic$1(c,d,b);}function Kd(a,b){a.j&&Kc$1({},function(c,d){R(b,d,c);});}
-    function Pd(a,b,c){c=Math.min(a.l.length,c);var d=a.j?q(a.j.Oa,a.j,a):null;a:{var e=a.l;let f=-1;for(;;){const h=["count="+c];-1==f?0<c?(f=e[0].h,h.push("ofs="+f)):f=0:h.push("ofs="+f);let n=!0;for(let u=0;u<c;u++){let m=e[u].h;const r=e[u].g;m-=f;if(0>m)f=Math.max(0,e[u].h-100),n=!1;else try{md(r,h,"req"+m+"_");}catch(G){d&&d(r);}}if(n){d=h.join("&");break a}}}a=a.l.splice(0,c);b.D=a;return d}function Gc$1(a){a.g||a.u||(a.Y=1,zb(a.Ga,a),a.A=0);}
-    function Bc(a){if(a.g||a.u||3<=a.A)return !1;a.Y++;a.u=K$1(q(a.Ga,a),Od(a,a.A));a.A++;return !0}k$1.Ga=function(){this.u=null;Rd(this);if(this.$&&!(this.L||null==this.g||0>=this.O)){var a=2*this.O;this.h.info("BP detection timer enabled: "+a);this.B=K$1(q(this.bb,this),a);}};k$1.bb=function(){this.B&&(this.B=null,this.h.info("BP detection timeout reached."),this.h.info("Buffering proxy detected and switch to long-polling!"),this.N=!1,this.L=!0,J$1(10),Ac$1(this),Rd(this));};
-    function wc$1(a){null!=a.B&&(l.clearTimeout(a.B),a.B=null);}function Rd(a){a.g=new M$1(a,a.h,"rpc",a.Y);null===a.o&&(a.g.H=a.s);a.g.O=0;var b=N$1(a.oa);R(b,"RID","rpc");R(b,"SID",a.J);R(b,"CI",a.N?"0":"1");R(b,"AID",a.U);Kd(a,b);R(b,"TYPE","xmlhttp");a.o&&a.s&&Gd(b,a.o,a.s);a.K&&a.g.setTimeout(a.K);var c=a.g;a=a.la;c.K=1;c.v=jc(N$1(b));c.s=null;c.U=!0;kc(c,a);}k$1.ab=function(){null!=this.v&&(this.v=null,Ac$1(this),Bc(this),J$1(19));};function zc$1(a){null!=a.v&&(l.clearTimeout(a.v),a.v=null);}
-    function uc$1(a,b){var c=null;if(a.g==b){zc$1(a);wc$1(a);a.g=null;var d=2;}else if(yc$1(a.i,b))c=b.D,Fc$1(a.i,b),d=1;else return;a.I=b.N;if(0!=a.G)if(b.i)if(1==d){c=b.s?b.s.length:0;b=Date.now()-b.F;var e=a.C;d=Sb();D$1(d,new Vb(d,c,b,e));Hc$1(a);}else Gc$1(a);else if(e=b.o,3==e||0==e&&0<a.I||!(1==d&&Nd(a,b)||2==d&&Bc(a)))switch(c&&0<c.length&&(b=a.i,b.i=b.i.concat(c)),e){case 1:Q$1(a,5);break;case 4:Q$1(a,10);break;case 3:Q$1(a,6);break;default:Q$1(a,2);}}
-    function Od(a,b){let c=a.Pa+Math.floor(Math.random()*a.$a);a.j||(c*=2);return c*b}function Q$1(a,b){a.h.info("Error code "+b);if(2==b){var c=null;a.j&&(c=null);var d=q(a.jb,a);c||(c=new U$1("//www.google.com/images/cleardot.gif"),l.location&&"http"==l.location.protocol||Oc$1(c,"https"),jc(c));nd(c.toString(),d);}else J$1(2);a.G=0;a.j&&a.j.va(b);Ld(a);Jd(a);}k$1.jb=function(a){a?(this.h.info("Successfully pinged google.com"),J$1(2)):(this.h.info("Failed to ping google.com"),J$1(1));};
-    function Ld(a){a.G=0;a.I=-1;if(a.j){if(0!=jd(a.i).length||0!=a.l.length)a.i.i.length=0,ra(a.l),a.l.length=0;a.j.ua();}}function Ec$1(a,b,c){let d=ad(c);if(""!=d.i)b&&Pc(d,b+"."+d.i),Qc(d,d.m);else {const e=l.location;d=bd(e.protocol,b?b+"."+e.hostname:e.hostname,+e.port,c);}a.aa&&xa$1(a.aa,function(e,f){R(d,f,e);});b=a.D;c=a.sa;b&&c&&R(d,b,c);R(d,"VER",a.ma);Kd(a,d);return d}
-    function nc$1(a,b,c){if(b&&!a.H)throw Error("Can't create secondary domain capable XhrIo object.");b=c&&a.Ba&&!a.qa?new X$1(new pd({ib:!0})):new X$1(a.qa);b.L=a.H;return b}function Sd(){}k$1=Sd.prototype;k$1.xa=function(){};k$1.wa=function(){};k$1.va=function(){};k$1.ua=function(){};k$1.Oa=function(){};function Td(){if(y&&!(10<=Number(Ua$1)))throw Error("Environmental error: no available transport.");}Td.prototype.g=function(a,b){return new Y$1(a,b)};
+    function Ic$1(a){Jd(a);if(3==a.G){var b=a.V++,c=N$1(a.F);R(c,"SID",a.J);R(c,"RID",b);R(c,"TYPE","terminate");Kd(a,c);b=new M$1(a,a.h,b,void 0);b.K=2;b.v=jc$1(N$1(c));c=!1;l.navigator&&l.navigator.sendBeacon&&(c=l.navigator.sendBeacon(b.v.toString(),""));!c&&l.Image&&((new Image).src=b.v,c=!0);c||(b.g=nc$1(b.l,null),b.g.ea(b.v));b.F=Date.now();lc$1(b);}Ld(a);}k$1.hb=function(a){try{this.h.info("Origin Trials invoked: "+a);}catch(b){}};function Ac$1(a){a.g&&(wc$1(a),a.g.cancel(),a.g=null);}
+    function Jd(a){Ac$1(a);a.u&&(l.clearTimeout(a.u),a.u=null);zc$1(a);a.i.cancel();a.m&&("number"===typeof a.m&&l.clearTimeout(a.m),a.m=null);}function Md(a,b){a.l.push(new fd(a.Za++,b));3==a.G&&Hc$1(a);}function Hc$1(a){id(a.i)||a.m||(a.m=!0,zb(a.Ha,a),a.C=0);}function Nd(a,b){if(Cc$1(a.i)>=a.i.j-(a.m?1:0))return !1;if(a.m)return a.l=b.D.concat(a.l),!0;if(1==a.G||2==a.G||a.C>=(a.Xa?0:a.Ya))return !1;a.m=K$1(q(a.Ha,a,b),Od(a,a.C));a.C++;return !0}
+    k$1.Ha=function(a){if(this.m)if(this.m=null,1==this.G){if(!a){this.V=Math.floor(1E5*Math.random());a=this.V++;const e=new M$1(this,this.h,a,void 0);let f=this.s;this.P&&(f?(f=ya(f),Aa(f,this.P)):f=this.P);null===this.o&&(e.H=f);if(this.ja)a:{var b=0;for(var c=0;c<this.l.length;c++){b:{var d=this.l[c];if("__data__"in d.g&&(d=d.g.__data__,"string"===typeof d)){d=d.length;break b}d=void 0;}if(void 0===d)break;b+=d;if(4096<b){b=c;break a}if(4096===b||c===this.l.length-1){b=c+1;break a}}b=1E3;}else b=1E3;b=
+    Pd(this,e,b);c=N$1(this.F);R(c,"RID",a);R(c,"CVER",22);this.D&&R(c,"X-HTTP-Session-Id",this.D);Kd(this,c);this.o&&f&&Gd(c,this.o,f);Dc$1(this.i,e);this.Ra&&R(c,"TYPE","init");this.ja?(R(c,"$req",b),R(c,"SID","null"),e.$=!0,ic$1(e,c,null)):ic$1(e,c,b);this.G=2;}}else 3==this.G&&(a?Qd(this,a):0==this.l.length||id(this.i)||Qd(this));};
+    function Qd(a,b){var c;b?c=b.m:c=a.V++;const d=N$1(a.F);R(d,"SID",a.J);R(d,"RID",c);R(d,"AID",a.U);Kd(a,d);a.o&&a.s&&Gd(d,a.o,a.s);c=new M$1(a,a.h,c,a.C+1);null===a.o&&(c.H=a.s);b&&(a.l=b.D.concat(a.l));b=Pd(a,c,1E3);c.setTimeout(Math.round(.5*a.ra)+Math.round(.5*a.ra*Math.random()));Dc$1(a.i,c);ic$1(c,d,b);}function Kd(a,b){a.j&&Kc$1({},function(c,d){R(b,d,c);});}
+    function Pd(a,b,c){c=Math.min(a.l.length,c);var d=a.j?q(a.j.Oa,a.j,a):null;a:{var e=a.l;let f=-1;for(;;){const h=["count="+c];-1==f?0<c?(f=e[0].h,h.push("ofs="+f)):f=0:h.push("ofs="+f);let n=!0;for(let u=0;u<c;u++){let m=e[u].h;const r=e[u].g;m-=f;if(0>m)f=Math.max(0,e[u].h-100),n=!1;else try{md(r,h,"req"+m+"_");}catch(G){d&&d(r);}}if(n){d=h.join("&");break a}}}a=a.l.splice(0,c);b.D=a;return d}function Gc(a){a.g||a.u||(a.Y=1,zb(a.Ga,a),a.A=0);}
+    function Bc$1(a){if(a.g||a.u||3<=a.A)return !1;a.Y++;a.u=K$1(q(a.Ga,a),Od(a,a.A));a.A++;return !0}k$1.Ga=function(){this.u=null;Rd(this);if(this.$&&!(this.L||null==this.g||0>=this.O)){var a=2*this.O;this.h.info("BP detection timer enabled: "+a);this.B=K$1(q(this.bb,this),a);}};k$1.bb=function(){this.B&&(this.B=null,this.h.info("BP detection timeout reached."),this.h.info("Buffering proxy detected and switch to long-polling!"),this.N=!1,this.L=!0,J$1(10),Ac$1(this),Rd(this));};
+    function wc$1(a){null!=a.B&&(l.clearTimeout(a.B),a.B=null);}function Rd(a){a.g=new M$1(a,a.h,"rpc",a.Y);null===a.o&&(a.g.H=a.s);a.g.O=0;var b=N$1(a.oa);R(b,"RID","rpc");R(b,"SID",a.J);R(b,"CI",a.N?"0":"1");R(b,"AID",a.U);Kd(a,b);R(b,"TYPE","xmlhttp");a.o&&a.s&&Gd(b,a.o,a.s);a.K&&a.g.setTimeout(a.K);var c=a.g;a=a.la;c.K=1;c.v=jc$1(N$1(b));c.s=null;c.U=!0;kc$1(c,a);}k$1.ab=function(){null!=this.v&&(this.v=null,Ac$1(this),Bc$1(this),J$1(19));};function zc$1(a){null!=a.v&&(l.clearTimeout(a.v),a.v=null);}
+    function uc$1(a,b){var c=null;if(a.g==b){zc$1(a);wc$1(a);a.g=null;var d=2;}else if(yc$1(a.i,b))c=b.D,Fc$1(a.i,b),d=1;else return;a.I=b.N;if(0!=a.G)if(b.i)if(1==d){c=b.s?b.s.length:0;b=Date.now()-b.F;var e=a.C;d=Sb();D$1(d,new Vb(d,c,b,e));Hc$1(a);}else Gc(a);else if(e=b.o,3==e||0==e&&0<a.I||!(1==d&&Nd(a,b)||2==d&&Bc$1(a)))switch(c&&0<c.length&&(b=a.i,b.i=b.i.concat(c)),e){case 1:Q$1(a,5);break;case 4:Q$1(a,10);break;case 3:Q$1(a,6);break;default:Q$1(a,2);}}
+    function Od(a,b){let c=a.Pa+Math.floor(Math.random()*a.$a);a.j||(c*=2);return c*b}function Q$1(a,b){a.h.info("Error code "+b);if(2==b){var c=null;a.j&&(c=null);var d=q(a.jb,a);c||(c=new U$1("//www.google.com/images/cleardot.gif"),l.location&&"http"==l.location.protocol||Oc$1(c,"https"),jc$1(c));nd(c.toString(),d);}else J$1(2);a.G=0;a.j&&a.j.va(b);Ld(a);Jd(a);}k$1.jb=function(a){a?(this.h.info("Successfully pinged google.com"),J$1(2)):(this.h.info("Failed to ping google.com"),J$1(1));};
+    function Ld(a){a.G=0;a.I=-1;if(a.j){if(0!=jd(a.i).length||0!=a.l.length)a.i.i.length=0,ra(a.l),a.l.length=0;a.j.ua();}}function Ec$1(a,b,c){let d=ad(c);if(""!=d.i)b&&Pc(d,b+"."+d.i),Qc$1(d,d.m);else {const e=l.location;d=bd(e.protocol,b?b+"."+e.hostname:e.hostname,+e.port,c);}a.aa&&xa$1(a.aa,function(e,f){R(d,f,e);});b=a.D;c=a.sa;b&&c&&R(d,b,c);R(d,"VER",a.ma);Kd(a,d);return d}
+    function nc$1(a,b,c){if(b&&!a.H)throw Error("Can't create secondary domain capable XhrIo object.");b=c&&a.Ba&&!a.qa?new X$1(new pd({ib:!0})):new X$1(a.qa);b.L=a.H;return b}function Sd(){}k$1=Sd.prototype;k$1.xa=function(){};k$1.wa=function(){};k$1.va=function(){};k$1.ua=function(){};k$1.Oa=function(){};function Td(){if(y&&!(10<=Number(Ua)))throw Error("Environmental error: no available transport.");}Td.prototype.g=function(a,b){return new Y$1(a,b)};
     function Y$1(a,b){C$1.call(this);this.g=new Id(b);this.l=a;this.h=b&&b.messageUrlParams||null;a=b&&b.messageHeaders||null;b&&b.clientProtocolHeaderRequired&&(a?a["X-Client-Protocol"]="webchannel":a={"X-Client-Protocol":"webchannel"});this.g.s=a;a=b&&b.initMessageHeaders||null;b&&b.messageContentType&&(a?a["X-WebChannel-Content-Type"]=b.messageContentType:a={"X-WebChannel-Content-Type":b.messageContentType});b&&b.ya&&(a?a["X-WebChannel-Client-Profile"]=b.ya:a={"X-WebChannel-Client-Profile":b.ya});this.g.P=
     a;(a=b&&b.httpHeadersOverwriteParam)&&!sa(a)&&(this.g.o=a);this.A=b&&b.supportsCrossDomainXhr||!1;this.v=b&&b.sendRawJson||!1;(b=b&&b.httpSessionIdParam)&&!sa(b)&&(this.g.D=b,a=this.h,null!==a&&b in a&&(a=this.h,b in a&&delete a[b]));this.j=new Z$1(this);}t(Y$1,C$1);Y$1.prototype.m=function(){this.g.j=this.j;this.A&&(this.g.H=!0);var a=this.g,b=this.l,c=this.h||void 0;a.Wa&&(a.h.info("Origin Trials enabled."),zb(q(a.hb,a,b)));J$1(0);a.W=b;a.aa=c||{};a.N=a.X;a.F=Ec$1(a,null,a.W);Hc$1(a);};Y$1.prototype.close=function(){Ic$1(this.g);};
-    Y$1.prototype.u=function(a){if("string"===typeof a){var b={};b.__data__=a;Md(this.g,b);}else this.v?(b={},b.__data__=rb(a),Md(this.g,b)):Md(this.g,a);};Y$1.prototype.M=function(){this.g.j=null;delete this.j;Ic$1(this.g);delete this.g;Y$1.Z.M.call(this);};function Ud(a){ac$1.call(this);var b=a.__sm__;if(b){a:{for(const c in b){a=c;break a}a=void 0;}if(this.i=a)a=this.i,b=null!==b&&a in b?b[a]:void 0;this.data=b;}else this.data=a;}t(Ud,ac$1);function Vd(){bc$1.call(this);this.status=1;}t(Vd,bc$1);function Z$1(a){this.g=a;}
+    Y$1.prototype.u=function(a){if("string"===typeof a){var b={};b.__data__=a;Md(this.g,b);}else this.v?(b={},b.__data__=rb(a),Md(this.g,b)):Md(this.g,a);};Y$1.prototype.M=function(){this.g.j=null;delete this.j;Ic$1(this.g);delete this.g;Y$1.Z.M.call(this);};function Ud(a){ac$1.call(this);var b=a.__sm__;if(b){a:{for(const c in b){a=c;break a}a=void 0;}if(this.i=a)a=this.i,b=null!==b&&a in b?b[a]:void 0;this.data=b;}else this.data=a;}t(Ud,ac$1);function Vd(){bc.call(this);this.status=1;}t(Vd,bc);function Z$1(a){this.g=a;}
     t(Z$1,Sd);Z$1.prototype.xa=function(){D$1(this.g,"a");};Z$1.prototype.wa=function(a){D$1(this.g,new Ud(a));};Z$1.prototype.va=function(a){D$1(this.g,new Vd(a));};Z$1.prototype.ua=function(){D$1(this.g,"b");};/*
 
      Copyright 2017 Google LLC
@@ -1998,7 +2608,7 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    let N = "9.6.3";
+    let N = "9.6.7";
 
     /**
      * @license
@@ -2016,39 +2626,39 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    const k = new Logger("@firebase/firestore");
+    const x = new Logger("@firebase/firestore");
 
     // Helper methods are needed because variables can't be exported as read/write
-    function x() {
-        return k.logLevel;
-    }
-
-    function O(t, ...e) {
-        if (k.logLevel <= LogLevel.DEBUG) {
-            const n = e.map(L);
-            k.debug(`Firestore (${N}): ${t}`, ...n);
-        }
+    function k() {
+        return x.logLevel;
     }
 
     function M(t, ...e) {
-        if (k.logLevel <= LogLevel.ERROR) {
-            const n = e.map(L);
-            k.error(`Firestore (${N}): ${t}`, ...n);
+        if (x.logLevel <= LogLevel.DEBUG) {
+            const n = e.map(B);
+            x.debug(`Firestore (${N}): ${t}`, ...n);
+        }
+    }
+
+    function $(t, ...e) {
+        if (x.logLevel <= LogLevel.ERROR) {
+            const n = e.map(B);
+            x.error(`Firestore (${N}): ${t}`, ...n);
         }
     }
 
     /**
      * @internal
      */ function F(t, ...e) {
-        if (k.logLevel <= LogLevel.WARN) {
-            const n = e.map(L);
-            k.warn(`Firestore (${N}): ${t}`, ...n);
+        if (x.logLevel <= LogLevel.WARN) {
+            const n = e.map(B);
+            x.warn(`Firestore (${N}): ${t}`, ...n);
         }
     }
 
     /**
      * Converts an additional log parameter to a string representation.
-     */ function L(t) {
+     */ function B(t) {
         if ("string" == typeof t) return t;
         try {
             return e = t, JSON.stringify(e);
@@ -2099,14 +2709,14 @@ var app = (function () {
      * Returns `never` and can be used in expressions:
      * @example
      * let futureVar = fail('not implemented yet');
-     */ function B(t = "Unexpected state") {
+     */ function L(t = "Unexpected state") {
         // Log the failure in addition to throw an exception, just in case the
         // exception is swallowed.
         const e = `FIRESTORE (${N}) INTERNAL ASSERTION FAILED: ` + t;
         // NOTE: We don't use FirestoreError here because these are internal failures
         // that cannot be handled by the user. (Also it would create a circular
         // dependency between the error and assert modules which doesn't work.)
-        throw M(e), new Error(e);
+        throw $(e), new Error(e);
     }
 
     /**
@@ -2115,7 +2725,7 @@ var app = (function () {
      *
      * Messages are stripped in production builds.
      */ function U(t, e) {
-        t || B();
+        t || L();
     }
 
     /**
@@ -2142,7 +2752,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ const j = {
+     */ const G = {
         // Causes are copied from:
         // https://github.com/grpc/grpc/blob/bceec94ea4fc5f0085d81235d8e1c06798dc341a/include/grpc%2B%2B/impl/codegen/status_code_enum.h
         /** Not an error; returned on success. */
@@ -2255,7 +2865,7 @@ var app = (function () {
         DATA_LOSS: "data-loss"
     };
 
-    /** An error returned by a Firestore operation. */ class Q extends FirebaseError {
+    /** An error returned by a Firestore operation. */ class j extends FirebaseError {
         /** @hideconstructor */
         constructor(
         /**
@@ -2289,7 +2899,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class W {
+     */ class Q {
         constructor() {
             this.promise = new Promise(((t, e) => {
                 this.resolve = t, this.reject = e;
@@ -2312,7 +2922,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class G {
+     */ class W {
         constructor(t, e) {
             this.user = e, this.type = "OAuth", this.headers = new Map, this.headers.set("Authorization", `Bearer ${t}`);
         }
@@ -2350,9 +2960,9 @@ var app = (function () {
                     const s = t => this.i !== n ? (n = this.i, e(t)) : Promise.resolve();
             // A promise that can be waited on to block on the next token change.
             // This promise is re-created after each change.
-                    let i = new W;
+                    let i = new Q;
             this.o = () => {
-                this.i++, this.currentUser = this.u(), i.resolve(), i = new W, t.enqueueRetryable((() => s(this.currentUser)));
+                this.i++, this.currentUser = this.u(), i.resolve(), i = new Q, t.enqueueRetryable((() => s(this.currentUser)));
             };
             const r = () => {
                 const e = i;
@@ -2360,7 +2970,7 @@ var app = (function () {
                     await e.promise, await s(this.currentUser);
                 }));
             }, o = t => {
-                O("FirebaseAuthCredentialsProvider", "Auth detected"), this.auth = t, this.auth.addAuthTokenListener(this.o), 
+                M("FirebaseAuthCredentialsProvider", "Auth detected"), this.auth = t, this.auth.addAuthTokenListener(this.o), 
                 r();
             };
             this.t.onInit((t => o(t))), 
@@ -2374,7 +2984,7 @@ var app = (function () {
                     });
                     t ? o(t) : (
                     // If auth is still not available, proceed with `null` user
-                    O("FirebaseAuthCredentialsProvider", "Auth not yet detected"), i.resolve(), i = new W);
+                    M("FirebaseAuthCredentialsProvider", "Auth not yet detected"), i.resolve(), i = new Q);
                 }
             }), 0), r();
         }
@@ -2387,8 +2997,8 @@ var app = (function () {
             // Cancel the request since the token changed while the request was
             // outstanding so the response is potentially for a previous user (which
             // user, we can't be sure).
-            this.i !== t ? (O("FirebaseAuthCredentialsProvider", "getToken aborted due to token change."), 
-            this.getToken()) : e ? (U("string" == typeof e.accessToken), new G(e.accessToken, this.currentUser)) : null)) : Promise.resolve(null);
+            this.i !== t ? (M("FirebaseAuthCredentialsProvider", "getToken aborted due to token change."), 
+            this.getToken()) : e ? (U("string" == typeof e.accessToken), new W(e.accessToken, this.currentUser)) : null)) : Promise.resolve(null);
         }
         invalidateToken() {
             this.forceRefresh = !0;
@@ -2447,17 +3057,22 @@ var app = (function () {
 
     class tt {
         constructor(t) {
-            this.g = t, this.forceRefresh = !1, this.appCheck = null;
+            this.g = t, this.forceRefresh = !1, this.appCheck = null, this.p = null;
         }
         start(t, e) {
-            this.o = n => {
-                t.enqueueRetryable((() => (t => (null != t.error && O("FirebaseAppCheckTokenProvider", `Error getting App Check token; using placeholder token instead. Error: ${t.error.message}`), 
-                e(t.token)))(n)));
-            };
             const n = t => {
-                O("FirebaseAppCheckTokenProvider", "AppCheck detected"), this.appCheck = t, this.appCheck.addTokenListener(this.o);
+                null != t.error && M("FirebaseAppCheckTokenProvider", `Error getting App Check token; using placeholder token instead. Error: ${t.error.message}`);
+                const n = t.token !== this.p;
+                return this.p = t.token, M("FirebaseAppCheckTokenProvider", `Received ${n ? "new" : "existing"} token.`), 
+                n ? e(t.token) : Promise.resolve();
             };
-            this.g.onInit((t => n(t))), 
+            this.o = e => {
+                t.enqueueRetryable((() => n(e)));
+            };
+            const s = t => {
+                M("FirebaseAppCheckTokenProvider", "AppCheck detected"), this.appCheck = t, this.appCheck.addTokenListener(this.o);
+            };
+            this.g.onInit((t => s(t))), 
             // Our users can initialize AppCheck after Firestore, so we give it
             // a chance to register itself with the component framework.
             setTimeout((() => {
@@ -2465,16 +3080,16 @@ var app = (function () {
                     const t = this.g.getImmediate({
                         optional: !0
                     });
-                    t ? n(t) : 
+                    t ? s(t) : 
                     // If AppCheck is still not available, proceed without it.
-                    O("FirebaseAppCheckTokenProvider", "AppCheck not yet detected");
+                    M("FirebaseAppCheckTokenProvider", "AppCheck not yet detected");
                 }
             }), 0);
         }
         getToken() {
             const t = this.forceRefresh;
             return this.forceRefresh = !1, this.appCheck ? this.appCheck.getToken(t).then((t => t ? (U("string" == typeof t.token), 
-            new Z(t.token)) : null)) : Promise.resolve(null);
+            this.p = t.token, new Z(t.token)) : null)) : Promise.resolve(null);
         }
         invalidateToken() {
             this.forceRefresh = !0;
@@ -2512,9 +3127,9 @@ var app = (function () {
      */
     class nt {
         constructor(t, e) {
-            this.previousValue = t, e && (e.sequenceNumberHandler = t => this.p(t), this.T = t => e.writeSequenceNumber(t));
+            this.previousValue = t, e && (e.sequenceNumberHandler = t => this.I(t), this.T = t => e.writeSequenceNumber(t));
         }
-        p(t) {
+        I(t) {
             return this.previousValue = Math.max(t, this.previousValue), this.previousValue;
         }
         next() {
@@ -2570,10 +3185,10 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ nt.I = -1;
+     */ nt.A = -1;
 
     class it {
-        static A() {
+        static R() {
             // Alphanumeric characters
             const t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", e = Math.floor(256 / t.length) * t.length;
             // The largest byte value that is a multiple of `char.length`.
@@ -2628,7 +3243,7 @@ var app = (function () {
      * For examples and further specifications, refer to the
      * {@link https://github.com/google/protobuf/blob/master/src/google/protobuf/timestamp.proto | Timestamp definition}.
      */
-    class at {
+    class ut {
         /**
          * Creates a new timestamp.
          *
@@ -2649,18 +3264,18 @@ var app = (function () {
          * The fractions of a second at nanosecond resolution.*
          */
         e) {
-            if (this.seconds = t, this.nanoseconds = e, e < 0) throw new Q(j.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
-            if (e >= 1e9) throw new Q(j.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
-            if (t < -62135596800) throw new Q(j.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
+            if (this.seconds = t, this.nanoseconds = e, e < 0) throw new j(G.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
+            if (e >= 1e9) throw new j(G.INVALID_ARGUMENT, "Timestamp nanoseconds out of range: " + e);
+            if (t < -62135596800) throw new j(G.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
             // This will break in the year 10,000.
-                    if (t >= 253402300800) throw new Q(j.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
+                    if (t >= 253402300800) throw new j(G.INVALID_ARGUMENT, "Timestamp seconds out of range: " + t);
         }
         /**
          * Creates a new timestamp with the current date, with millisecond precision.
          *
          * @returns a new timestamp representing the current date.
          */    static now() {
-            return at.fromMillis(Date.now());
+            return ut.fromMillis(Date.now());
         }
         /**
          * Creates a new timestamp from the given date.
@@ -2669,7 +3284,7 @@ var app = (function () {
          * @returns A new `Timestamp` representing the same point in time as the given
          *     date.
          */    static fromDate(t) {
-            return at.fromMillis(t.getTime());
+            return ut.fromMillis(t.getTime());
         }
         /**
          * Creates a new timestamp from the given number of milliseconds.
@@ -2680,7 +3295,7 @@ var app = (function () {
          *     number of milliseconds.
          */    static fromMillis(t) {
             const e = Math.floor(t / 1e3), n = Math.floor(1e6 * (t - 1e3 * e));
-            return new at(e, n);
+            return new ut(e, n);
         }
         /**
          * Converts a `Timestamp` to a JavaScript `Date` object. This conversion
@@ -2758,15 +3373,15 @@ var app = (function () {
     /**
      * A version of a document in Firestore. This corresponds to the version
      * timestamp, such as update_time or read_time.
-     */ class ut {
+     */ class at {
         constructor(t) {
             this.timestamp = t;
         }
         static fromTimestamp(t) {
-            return new ut(t);
+            return new at(t);
         }
         static min() {
-            return new ut(new at(0, 0));
+            return new at(new ut(0, 0));
         }
         compareTo(t) {
             return this.timestamp._compareTo(t.timestamp);
@@ -2837,7 +3452,7 @@ var app = (function () {
      */
     class dt {
         constructor(t, e, n) {
-            void 0 === e ? e = 0 : e > t.length && B(), void 0 === n ? n = t.length - e : n > t.length - e && B(), 
+            void 0 === e ? e = 0 : e > t.length && L(), void 0 === n ? n = t.length - e : n > t.length - e && L(), 
             this.segments = t, this.offset = e, this.len = n;
         }
         get length() {
@@ -2905,9 +3520,9 @@ var app = (function () {
      * within Firestore.
      *
      * @internal
-     */ class wt extends dt {
+     */ class _t extends dt {
         construct(t, e, n) {
-            return new wt(t, e, n);
+            return new _t(t, e, n);
         }
         canonicalString() {
             // NOTE: The client is ignorant of any path segments containing escape
@@ -2928,18 +3543,18 @@ var app = (function () {
             // for legacy reasons and should not be used frequently).
             const e = [];
             for (const n of t) {
-                if (n.indexOf("//") >= 0) throw new Q(j.INVALID_ARGUMENT, `Invalid segment (${n}). Paths must not contain // in them.`);
+                if (n.indexOf("//") >= 0) throw new j(G.INVALID_ARGUMENT, `Invalid segment (${n}). Paths must not contain // in them.`);
                 // Strip leading and traling slashed.
                             e.push(...n.split("/").filter((t => t.length > 0)));
             }
-            return new wt(e);
+            return new _t(e);
         }
         static emptyPath() {
-            return new wt([]);
+            return new _t([]);
         }
     }
 
-    const _t = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
+    const wt = /^[_a-zA-Z][_a-zA-Z0-9]*$/;
 
     /**
      * A dot-separated path for navigating sub-objects within a document.
@@ -2952,7 +3567,7 @@ var app = (function () {
          * Returns true if the string could be used as a segment in a field path
          * without escaping.
          */    static isValidIdentifier(t) {
-            return _t.test(t);
+            return wt.test(t);
         }
         canonicalString() {
             return this.toArray().map((t => (t = t.replace(/\\/g, "\\\\").replace(/`/g, "\\`"), 
@@ -2984,20 +3599,20 @@ var app = (function () {
             const e = [];
             let n = "", s = 0;
             const i = () => {
-                if (0 === n.length) throw new Q(j.INVALID_ARGUMENT, `Invalid field path (${t}). Paths must not be empty, begin with '.', end with '.', or contain '..'`);
+                if (0 === n.length) throw new j(G.INVALID_ARGUMENT, `Invalid field path (${t}). Paths must not be empty, begin with '.', end with '.', or contain '..'`);
                 e.push(n), n = "";
             };
             let r = !1;
             for (;s < t.length; ) {
                 const e = t[s];
                 if ("\\" === e) {
-                    if (s + 1 === t.length) throw new Q(j.INVALID_ARGUMENT, "Path has trailing escape character: " + t);
+                    if (s + 1 === t.length) throw new j(G.INVALID_ARGUMENT, "Path has trailing escape character: " + t);
                     const e = t[s + 1];
-                    if ("\\" !== e && "." !== e && "`" !== e) throw new Q(j.INVALID_ARGUMENT, "Path has invalid escape sequence: " + t);
+                    if ("\\" !== e && "." !== e && "`" !== e) throw new j(G.INVALID_ARGUMENT, "Path has invalid escape sequence: " + t);
                     n += e, s += 2;
                 } else "`" === e ? (r = !r, s++) : "." !== e || r ? (n += e, s++) : (i(), s++);
             }
-            if (i(), r) throw new Q(j.INVALID_ARGUMENT, "Unterminated ` in path: " + t);
+            if (i(), r) throw new j(G.INVALID_ARGUMENT, "Unterminated ` in path: " + t);
             return new mt(e);
         }
         static emptyPath() {
@@ -3153,7 +3768,7 @@ var app = (function () {
 
     pt.EMPTY_BYTE_STRING = new pt("");
 
-    const Tt = new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);
+    const It = new RegExp(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.(\d+))?Z$/);
 
     /**
      * Converts the possible Proto values for a timestamp value into a "seconds and
@@ -3167,7 +3782,7 @@ var app = (function () {
             // (millis), so we do some custom parsing here.
             // Parse the nanos right out of the string.
             let e = 0;
-            const n = Tt.exec(t);
+            const n = It.exec(t);
             if (U(!!n), n[1]) {
                 // Pad the fraction out to 9 digits (nanos).
                 let t = n[1];
@@ -3181,15 +3796,15 @@ var app = (function () {
             };
         }
         return {
-            seconds: It(t.seconds),
-            nanos: It(t.nanos)
+            seconds: Tt(t.seconds),
+            nanos: Tt(t.nanos)
         };
     }
 
     /**
      * Converts the possible Proto types for numbers into a JavaScript number.
      * Returns 0 if the value is not numeric.
-     */ function It(t) {
+     */ function Tt(t) {
         // TODO(bjornick): Handle int64 greater than 53 bits.
         return "number" == typeof t ? t : "string" == typeof t ? Number(t) : 0;
     }
@@ -3245,16 +3860,75 @@ var app = (function () {
      * Preserving the previous values allows the user to display the last resoled
      * value until the backend responds with the timestamp.
      */
-    function bt(t) {
+    function Pt(t) {
         const e = t.mapValue.fields.__previous_value__;
-        return Rt(e) ? bt(e) : e;
+        return Rt(e) ? Pt(e) : e;
     }
 
     /**
      * Returns the local time at which this timestamp was first set.
-     */ function Pt(t) {
+     */ function bt(t) {
         const e = Et(t.mapValue.fields.__local_write_time__.timestampValue);
-        return new at(e.seconds, e.nanos);
+        return new ut(e.seconds, e.nanos);
+    }
+
+    /**
+     * @license
+     * Copyright 2017 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */ class vt {
+        /**
+         * Constructs a DatabaseInfo using the provided host, databaseId and
+         * persistenceKey.
+         *
+         * @param databaseId - The database to use.
+         * @param appId - The Firebase App Id.
+         * @param persistenceKey - A unique identifier for this Firestore's local
+         * storage (used in conjunction with the databaseId).
+         * @param host - The Firestore backend host to connect to.
+         * @param ssl - Whether to use SSL when connecting.
+         * @param forceLongPolling - Whether to use the forceLongPolling option
+         * when using WebChannel as the network transport.
+         * @param autoDetectLongPolling - Whether to use the detectBufferingProxy
+         * option when using WebChannel as the network transport.
+         * @param useFetchStreams Whether to use the Fetch API instead of
+         * XMLHTTPRequest
+         */
+        constructor(t, e, n, s, i, r, o, c) {
+            this.databaseId = t, this.appId = e, this.persistenceKey = n, this.host = s, this.ssl = i, 
+            this.forceLongPolling = r, this.autoDetectLongPolling = o, this.useFetchStreams = c;
+        }
+    }
+
+    /** The default database name for a project. */
+    /**
+     * Represents the database ID a Firestore client is associated with.
+     * @internal
+     */
+    class Vt {
+        constructor(t, e) {
+            this.projectId = t, this.database = e || "(default)";
+        }
+        static empty() {
+            return new Vt("", "");
+        }
+        get isDefaultDatabase() {
+            return "(default)" === this.database;
+        }
+        isEqual(t) {
+            return t instanceof Vt && t.projectId === this.projectId && t.database === this.database;
+        }
     }
 
     /**
@@ -3277,11 +3951,11 @@ var app = (function () {
     /**
      * Returns whether a variable is either undefined or null.
      */
-    function vt(t) {
+    function St(t) {
         return null == t;
     }
 
-    /** Returns whether the value represents -0. */ function Vt(t) {
+    /** Returns whether the value represents -0. */ function Dt(t) {
         // Detect if the value is -0.0. Based on polyfill from
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is
         return 0 === t && 1 / t == -1 / 0;
@@ -3290,8 +3964,8 @@ var app = (function () {
     /**
      * Returns whether a value is an integer and in the safe integer range
      * @param value - The value to test for being an integer and in the safe range
-     */ function St(t) {
-        return "number" == typeof t && Number.isInteger(t) && !Vt(t) && t <= Number.MAX_SAFE_INTEGER && t >= Number.MIN_SAFE_INTEGER;
+     */ function Ct(t) {
+        return "number" == typeof t && Number.isInteger(t) && !Dt(t) && t <= Number.MAX_SAFE_INTEGER && t >= Number.MIN_SAFE_INTEGER;
     }
 
     /**
@@ -3312,27 +3986,39 @@ var app = (function () {
      */
     /**
      * @internal
-     */ class Dt {
+     */ class Nt {
         constructor(t) {
             this.path = t;
         }
         static fromPath(t) {
-            return new Dt(wt.fromString(t));
+            return new Nt(_t.fromString(t));
         }
         static fromName(t) {
-            return new Dt(wt.fromString(t).popFirst(5));
+            return new Nt(_t.fromString(t).popFirst(5));
+        }
+        static empty() {
+            return new Nt(_t.emptyPath());
+        }
+        get collectionGroup() {
+            return this.path.popLast().lastSegment();
         }
         /** Returns true if the document is in the specified collectionId. */    hasCollectionId(t) {
             return this.path.length >= 2 && this.path.get(this.path.length - 2) === t;
         }
+        /** Returns the collection group (i.e. the name of the parent collection) for this key. */    getCollectionGroup() {
+            return this.path.get(this.path.length - 2);
+        }
+        /** Returns the fully qualified path to the parent collection. */    getCollectionPath() {
+            return this.path.popLast();
+        }
         isEqual(t) {
-            return null !== t && 0 === wt.comparator(this.path, t.path);
+            return null !== t && 0 === _t.comparator(this.path, t.path);
         }
         toString() {
             return this.path.toString();
         }
         static comparator(t, e) {
-            return wt.comparator(t.path, e.path);
+            return _t.comparator(t.path, e.path);
         }
         static isDocumentKey(t) {
             return t.length % 2 == 0;
@@ -3343,34 +4029,18 @@ var app = (function () {
          * @param segments - The segments of the path to the document
          * @returns A new instance of DocumentKey
          */    static fromSegments(t) {
-            return new Dt(new wt(t.slice()));
+            return new Nt(new _t(t.slice()));
         }
     }
 
-    /**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */
-    /** Extracts the backend's type order for the provided value. */ function Ct(t) {
-        return "nullValue" in t ? 0 /* NullValue */ : "booleanValue" in t ? 1 /* BooleanValue */ : "integerValue" in t || "doubleValue" in t ? 2 /* NumberValue */ : "timestampValue" in t ? 3 /* TimestampValue */ : "stringValue" in t ? 5 /* StringValue */ : "bytesValue" in t ? 6 /* BlobValue */ : "referenceValue" in t ? 7 /* RefValue */ : "geoPointValue" in t ? 8 /* GeoPointValue */ : "arrayValue" in t ? 9 /* ArrayValue */ : "mapValue" in t ? Rt(t) ? 4 /* ServerTimestampValue */ : 10 /* ObjectValue */ : B();
+    /** Extracts the backend's type order for the provided value. */ function kt(t) {
+        return "nullValue" in t ? 0 /* NullValue */ : "booleanValue" in t ? 1 /* BooleanValue */ : "integerValue" in t || "doubleValue" in t ? 2 /* NumberValue */ : "timestampValue" in t ? 3 /* TimestampValue */ : "stringValue" in t ? 5 /* StringValue */ : "bytesValue" in t ? 6 /* BlobValue */ : "referenceValue" in t ? 7 /* RefValue */ : "geoPointValue" in t ? 8 /* GeoPointValue */ : "arrayValue" in t ? 9 /* ArrayValue */ : "mapValue" in t ? Rt(t) ? 4 /* ServerTimestampValue */ : 10 /* ObjectValue */ : L();
     }
 
-    /** Tests `left` and `right` for equality based on the backend semantics. */ function Nt(t, e) {
+    /** Tests `left` and `right` for equality based on the backend semantics. */ function Ot(t, e) {
         if (t === e) return !0;
-        const n = Ct(t);
-        if (n !== Ct(e)) return !1;
+        const n = kt(t);
+        if (n !== kt(e)) return !1;
         switch (n) {
           case 0 /* NullValue */ :
             return !0;
@@ -3379,7 +4049,7 @@ var app = (function () {
             return t.booleanValue === e.booleanValue;
 
           case 4 /* ServerTimestampValue */ :
-            return Pt(t).isEqual(Pt(e));
+            return bt(t).isEqual(bt(e));
 
           case 3 /* TimestampValue */ :
             return function(t, e) {
@@ -3403,43 +4073,43 @@ var app = (function () {
 
           case 8 /* GeoPointValue */ :
             return function(t, e) {
-                return It(t.geoPointValue.latitude) === It(e.geoPointValue.latitude) && It(t.geoPointValue.longitude) === It(e.geoPointValue.longitude);
+                return Tt(t.geoPointValue.latitude) === Tt(e.geoPointValue.latitude) && Tt(t.geoPointValue.longitude) === Tt(e.geoPointValue.longitude);
             }(t, e);
 
           case 2 /* NumberValue */ :
             return function(t, e) {
-                if ("integerValue" in t && "integerValue" in e) return It(t.integerValue) === It(e.integerValue);
+                if ("integerValue" in t && "integerValue" in e) return Tt(t.integerValue) === Tt(e.integerValue);
                 if ("doubleValue" in t && "doubleValue" in e) {
-                    const n = It(t.doubleValue), s = It(e.doubleValue);
-                    return n === s ? Vt(n) === Vt(s) : isNaN(n) && isNaN(s);
+                    const n = Tt(t.doubleValue), s = Tt(e.doubleValue);
+                    return n === s ? Dt(n) === Dt(s) : isNaN(n) && isNaN(s);
                 }
                 return !1;
             }(t, e);
 
           case 9 /* ArrayValue */ :
-            return ot(t.arrayValue.values || [], e.arrayValue.values || [], Nt);
+            return ot(t.arrayValue.values || [], e.arrayValue.values || [], Ot);
 
           case 10 /* ObjectValue */ :
             return function(t, e) {
                 const n = t.mapValue.fields || {}, s = e.mapValue.fields || {};
                 if (ht(n) !== ht(s)) return !1;
-                for (const t in n) if (n.hasOwnProperty(t) && (void 0 === s[t] || !Nt(n[t], s[t]))) return !1;
+                for (const t in n) if (n.hasOwnProperty(t) && (void 0 === s[t] || !Ot(n[t], s[t]))) return !1;
                 return !0;
             }
             /** Returns true if the ArrayValue contains the specified element. */ (t, e);
 
           default:
-            return B();
+            return L();
         }
     }
 
-    function kt(t, e) {
-        return void 0 !== (t.values || []).find((t => Nt(t, e)));
+    function Mt(t, e) {
+        return void 0 !== (t.values || []).find((t => Ot(t, e)));
     }
 
-    function xt(t, e) {
+    function $t(t, e) {
         if (t === e) return 0;
-        const n = Ct(t), s = Ct(e);
+        const n = kt(t), s = kt(e);
         if (n !== s) return rt(n, s);
         switch (n) {
           case 0 /* NullValue */ :
@@ -3450,17 +4120,17 @@ var app = (function () {
 
           case 2 /* NumberValue */ :
             return function(t, e) {
-                const n = It(t.integerValue || t.doubleValue), s = It(e.integerValue || e.doubleValue);
+                const n = Tt(t.integerValue || t.doubleValue), s = Tt(e.integerValue || e.doubleValue);
                 return n < s ? -1 : n > s ? 1 : n === s ? 0 : 
                 // one or both are NaN.
                 isNaN(n) ? isNaN(s) ? 0 : -1 : 1;
             }(t, e);
 
           case 3 /* TimestampValue */ :
-            return $t(t.timestampValue, e.timestampValue);
+            return Ft(t.timestampValue, e.timestampValue);
 
           case 4 /* ServerTimestampValue */ :
-            return $t(Pt(t), Pt(e));
+            return Ft(bt(t), bt(e));
 
           case 5 /* StringValue */ :
             return rt(t.stringValue, e.stringValue);
@@ -3483,16 +4153,16 @@ var app = (function () {
 
           case 8 /* GeoPointValue */ :
             return function(t, e) {
-                const n = rt(It(t.latitude), It(e.latitude));
+                const n = rt(Tt(t.latitude), Tt(e.latitude));
                 if (0 !== n) return n;
-                return rt(It(t.longitude), It(e.longitude));
+                return rt(Tt(t.longitude), Tt(e.longitude));
             }(t.geoPointValue, e.geoPointValue);
 
           case 9 /* ArrayValue */ :
             return function(t, e) {
                 const n = t.values || [], s = e.values || [];
                 for (let t = 0; t < n.length && t < s.length; ++t) {
-                    const e = xt(n[t], s[t]);
+                    const e = $t(n[t], s[t]);
                     if (e) return e;
                 }
                 return rt(n.length, s.length);
@@ -3509,7 +4179,7 @@ var app = (function () {
                 for (let t = 0; t < s.length && t < r.length; ++t) {
                     const e = rt(s[t], r[t]);
                     if (0 !== e) return e;
-                    const o = xt(n[s[t]], i[r[t]]);
+                    const o = $t(n[s[t]], i[r[t]]);
                     if (0 !== o) return o;
                 }
                 return rt(s.length, r.length);
@@ -3520,28 +4190,28 @@ var app = (function () {
      */ (t.mapValue, e.mapValue);
 
           default:
-            throw B();
+            throw L();
         }
     }
 
-    function $t(t, e) {
+    function Ft(t, e) {
         if ("string" == typeof t && "string" == typeof e && t.length === e.length) return rt(t, e);
         const n = Et(t), s = Et(e), i = rt(n.seconds, s.seconds);
         return 0 !== i ? i : rt(n.nanos, s.nanos);
     }
 
-    function Ot(t) {
-        return Mt(t);
+    function Bt(t) {
+        return Lt(t);
     }
 
-    function Mt(t) {
+    function Lt(t) {
         return "nullValue" in t ? "null" : "booleanValue" in t ? "" + t.booleanValue : "integerValue" in t ? "" + t.integerValue : "doubleValue" in t ? "" + t.doubleValue : "timestampValue" in t ? function(t) {
             const e = Et(t);
             return `time(${e.seconds},${e.nanos})`;
         }(t.timestampValue) : "stringValue" in t ? t.stringValue : "bytesValue" in t ? At(t.bytesValue).toBase64() : "referenceValue" in t ? (n = t.referenceValue, 
-        Dt.fromName(n).toString()) : "geoPointValue" in t ? `geo(${(e = t.geoPointValue).latitude},${e.longitude})` : "arrayValue" in t ? function(t) {
+        Nt.fromName(n).toString()) : "geoPointValue" in t ? `geo(${(e = t.geoPointValue).latitude},${e.longitude})` : "arrayValue" in t ? function(t) {
             let e = "[", n = !0;
-            for (const s of t.values || []) n ? n = !1 : e += ",", e += Mt(s);
+            for (const s of t.values || []) n ? n = !1 : e += ",", e += Lt(s);
             return e + "]";
         }
         /** Returns a reference value for the provided database and key. */ (t.arrayValue) : "mapValue" in t ? function(t) {
@@ -3549,35 +4219,35 @@ var app = (function () {
             // matching canonical IDs for identical maps, we need to sort the keys.
             const e = Object.keys(t.fields || {}).sort();
             let n = "{", s = !0;
-            for (const i of e) s ? s = !1 : n += ",", n += `${i}:${Mt(t.fields[i])}`;
+            for (const i of e) s ? s = !1 : n += ",", n += `${i}:${Lt(t.fields[i])}`;
             return n + "}";
-        }(t.mapValue) : B();
+        }(t.mapValue) : L();
         var e, n;
     }
 
-    /** Returns true if `value` is an IntegerValue . */ function Lt(t) {
+    /** Returns true if `value` is an IntegerValue . */ function qt(t) {
         return !!t && "integerValue" in t;
     }
 
     /** Returns true if `value` is a DoubleValue. */
     /** Returns true if `value` is an ArrayValue. */
-    function Bt(t) {
+    function Kt(t) {
         return !!t && "arrayValue" in t;
     }
 
-    /** Returns true if `value` is a NullValue. */ function Ut(t) {
+    /** Returns true if `value` is a NullValue. */ function Gt(t) {
         return !!t && "nullValue" in t;
     }
 
-    /** Returns true if `value` is NaN. */ function qt(t) {
+    /** Returns true if `value` is NaN. */ function jt(t) {
         return !!t && "doubleValue" in t && isNaN(Number(t.doubleValue));
     }
 
-    /** Returns true if `value` is a MapValue. */ function Kt(t) {
+    /** Returns true if `value` is a MapValue. */ function Qt(t) {
         return !!t && "mapValue" in t;
     }
 
-    /** Creates a deep copy of `source`. */ function jt(t) {
+    /** Creates a deep copy of `source`. */ function Wt(t) {
         if (t.geoPointValue) return {
             geoPointValue: Object.assign({}, t.geoPointValue)
         };
@@ -3590,7 +4260,7 @@ var app = (function () {
                     fields: {}
                 }
             };
-            return lt(t.mapValue.fields, ((t, n) => e.mapValue.fields[t] = jt(n))), e;
+            return lt(t.mapValue.fields, ((t, n) => e.mapValue.fields[t] = Wt(n))), e;
         }
         if (t.arrayValue) {
             const e = {
@@ -3598,12 +4268,13 @@ var app = (function () {
                     values: []
                 }
             };
-            for (let n = 0; n < (t.arrayValue.values || []).length; ++n) e.arrayValue.values[n] = jt(t.arrayValue.values[n]);
+            for (let n = 0; n < (t.arrayValue.values || []).length; ++n) e.arrayValue.values[n] = Wt(t.arrayValue.values[n]);
             return e;
         }
         return Object.assign({}, t);
     }
 
+    /** Returns true if the Value represents the canonical {@link #MAX_VALUE} . */
     /**
      * @license
      * Copyright 2017 Google LLC
@@ -3623,12 +4294,13 @@ var app = (function () {
     /**
      * An ObjectValue represents a MapValue in the Firestore Proto and offers the
      * ability to add and remove fields (via the ObjectValueBuilder).
-     */ class Qt {
+     */
+    class zt {
         constructor(t) {
             this.value = t;
         }
         static empty() {
-            return new Qt({
+            return new zt({
                 mapValue: {}
             });
         }
@@ -3642,7 +4314,7 @@ var app = (function () {
             {
                 let e = this.value;
                 for (let n = 0; n < t.length - 1; ++n) if (e = (e.mapValue.fields || {})[t.get(n)], 
-                !Kt(e)) return null;
+                !Qt(e)) return null;
                 return e = (e.mapValue.fields || {})[t.lastSegment()], e || null;
             }
         }
@@ -3652,7 +4324,7 @@ var app = (function () {
          * @param path - The field path to set.
          * @param value - The value to set.
          */    set(t, e) {
-            this.getFieldsMap(t.popLast())[t.lastSegment()] = jt(e);
+            this.getFieldsMap(t.popLast())[t.lastSegment()] = Wt(e);
         }
         /**
          * Sets the provided fields to the provided values.
@@ -3666,7 +4338,7 @@ var app = (function () {
                     const t = this.getFieldsMap(e);
                     this.applyChanges(t, n, s), n = {}, s = [], e = i.popLast();
                 }
-                t ? n[i.lastSegment()] = jt(t) : s.push(i.lastSegment());
+                t ? n[i.lastSegment()] = Wt(t) : s.push(i.lastSegment());
             }));
             const i = this.getFieldsMap(e);
             this.applyChanges(i, n, s);
@@ -3678,10 +4350,10 @@ var app = (function () {
          * @param path - The field path to remove.
          */    delete(t) {
             const e = this.field(t.popLast());
-            Kt(e) && e.mapValue.fields && delete e.mapValue.fields[t.lastSegment()];
+            Qt(e) && e.mapValue.fields && delete e.mapValue.fields[t.lastSegment()];
         }
         isEqual(t) {
-            return Nt(this.value, t.value);
+            return Ot(this.value, t.value);
         }
         /**
          * Returns the map that contains the leaf element of `path`. If the parent
@@ -3693,7 +4365,7 @@ var app = (function () {
             });
             for (let n = 0; n < t.length; ++n) {
                 let s = e.mapValue.fields[t.get(n)];
-                Kt(s) && s.mapValue.fields || (s = {
+                Qt(s) && s.mapValue.fields || (s = {
                     mapValue: {
                         fields: {}
                     }
@@ -3709,18 +4381,18 @@ var app = (function () {
             for (const e of n) delete t[e];
         }
         clone() {
-            return new Qt(jt(this.value));
+            return new zt(Wt(this.value));
         }
     }
 
     /**
      * Returns a FieldMask built from all fields in a MapValue.
-     */ function Wt(t) {
+     */ function Ht(t) {
         const e = [];
         return lt(t.fields, ((t, n) => {
             const s = new mt([ t ]);
-            if (Kt(n)) {
-                const t = Wt(n.mapValue).fields;
+            if (Qt(n)) {
+                const t = Ht(n.mapValue).fields;
                 if (0 === t.length) 
                 // Preserve the empty map by adding it to the FieldMask.
                 e.push(s); else 
@@ -3759,31 +4431,32 @@ var app = (function () {
      * not transition to one of these states even after all mutations have been
      * applied, `isValidDocument()` returns false and the document should be removed
      * from all views.
-     */ class Gt {
-        constructor(t, e, n, s, i) {
-            this.key = t, this.documentType = e, this.version = n, this.data = s, this.documentState = i;
+     */ class Jt {
+        constructor(t, e, n, s, i, r) {
+            this.key = t, this.documentType = e, this.version = n, this.readTime = s, this.data = i, 
+            this.documentState = r;
         }
         /**
          * Creates a document with no known version or data, but which can serve as
          * base document for mutations.
          */    static newInvalidDocument(t) {
-            return new Gt(t, 0 /* INVALID */ , ut.min(), Qt.empty(), 0 /* SYNCED */);
+            return new Jt(t, 0 /* INVALID */ , at.min(), at.min(), zt.empty(), 0 /* SYNCED */);
         }
         /**
          * Creates a new document that is known to exist with the given data at the
          * given version.
          */    static newFoundDocument(t, e, n) {
-            return new Gt(t, 1 /* FOUND_DOCUMENT */ , e, n, 0 /* SYNCED */);
+            return new Jt(t, 1 /* FOUND_DOCUMENT */ , e, at.min(), n, 0 /* SYNCED */);
         }
         /** Creates a new document that is known to not exist at the given version. */    static newNoDocument(t, e) {
-            return new Gt(t, 2 /* NO_DOCUMENT */ , e, Qt.empty(), 0 /* SYNCED */);
+            return new Jt(t, 2 /* NO_DOCUMENT */ , e, at.min(), zt.empty(), 0 /* SYNCED */);
         }
         /**
          * Creates a new document that is known to exist at the given version but
          * whose data is not known (e.g. a document that was updated without a known
          * base document).
          */    static newUnknownDocument(t, e) {
-            return new Gt(t, 3 /* UNKNOWN_DOCUMENT */ , e, Qt.empty(), 2 /* HAS_COMMITTED_MUTATIONS */);
+            return new Jt(t, 3 /* UNKNOWN_DOCUMENT */ , e, at.min(), zt.empty(), 2 /* HAS_COMMITTED_MUTATIONS */);
         }
         /**
          * Changes the document type to indicate that it exists and that its version
@@ -3796,7 +4469,7 @@ var app = (function () {
          * Changes the document type to indicate that it doesn't exist at the given
          * version.
          */    convertToNoDocument(t) {
-            return this.version = t, this.documentType = 2 /* NO_DOCUMENT */ , this.data = Qt.empty(), 
+            return this.version = t, this.documentType = 2 /* NO_DOCUMENT */ , this.data = zt.empty(), 
             this.documentState = 0 /* SYNCED */ , this;
         }
         /**
@@ -3804,7 +4477,7 @@ var app = (function () {
          * that its data is not known (e.g. a document that was updated without a known
          * base document).
          */    convertToUnknownDocument(t) {
-            return this.version = t, this.documentType = 3 /* UNKNOWN_DOCUMENT */ , this.data = Qt.empty(), 
+            return this.version = t, this.documentType = 3 /* UNKNOWN_DOCUMENT */ , this.data = zt.empty(), 
             this.documentState = 2 /* HAS_COMMITTED_MUTATIONS */ , this;
         }
         setHasCommittedMutations() {
@@ -3812,6 +4485,9 @@ var app = (function () {
         }
         setHasLocalMutations() {
             return this.documentState = 1 /* HAS_LOCAL_MUTATIONS */ , this;
+        }
+        setReadTime(t) {
+            return this.readTime = t, this;
         }
         get hasLocalMutations() {
             return 1 /* HAS_LOCAL_MUTATIONS */ === this.documentState;
@@ -3835,20 +4511,16 @@ var app = (function () {
             return 3 /* UNKNOWN_DOCUMENT */ === this.documentType;
         }
         isEqual(t) {
-            return t instanceof Gt && this.key.isEqual(t.key) && this.version.isEqual(t.version) && this.documentType === t.documentType && this.documentState === t.documentState && this.data.isEqual(t.data);
+            return t instanceof Jt && this.key.isEqual(t.key) && this.version.isEqual(t.version) && this.documentType === t.documentType && this.documentState === t.documentState && this.data.isEqual(t.data);
         }
         mutableCopy() {
-            return new Gt(this.key, this.documentType, this.version, this.data.clone(), this.documentState);
+            return new Jt(this.key, this.documentType, this.version, this.readTime, this.data.clone(), this.documentState);
         }
         toString() {
             return `Document(${this.key}, ${this.version}, ${JSON.stringify(this.data.value)}, {documentType: ${this.documentType}}), {documentState: ${this.documentState}})`;
         }
     }
 
-    /**
-     * Compares the value for field `field` in the provided documents. Throws if
-     * the field does not exist in both documents.
-     */
     /**
      * @license
      * Copyright 2019 Google LLC
@@ -3866,10 +4538,10 @@ var app = (function () {
      * limitations under the License.
      */
     // Visible for testing
-    class zt {
+    class ee {
         constructor(t, e = null, n = [], s = [], i = null, r = null, o = null) {
             this.path = t, this.collectionGroup = e, this.orderBy = n, this.filters = s, this.limit = i, 
-            this.startAt = r, this.endAt = o, this.R = null;
+            this.startAt = r, this.endAt = o, this.P = null;
         }
     }
 
@@ -3880,72 +4552,78 @@ var app = (function () {
      * NOTE: you should always construct `Target` from `Query.toTarget` instead of
      * using this factory method, because `Query` provides an implicit `orderBy`
      * property.
-     */ function Ht(t, e = null, n = [], s = [], i = null, r = null, o = null) {
-        return new zt(t, e, n, s, i, r, o);
+     */ function ne(t, e = null, n = [], s = [], i = null, r = null, o = null) {
+        return new ee(t, e, n, s, i, r, o);
     }
 
-    function Jt(t) {
+    function se(t) {
         const e = K(t);
-        if (null === e.R) {
+        if (null === e.P) {
             let t = e.path.canonicalString();
-            null !== e.collectionGroup && (t += "|cg:" + e.collectionGroup), t += "|f:", t += e.filters.map((t => ee(t))).join(","), 
-            t += "|ob:", t += e.orderBy.map((t => function(t) {
+            null !== e.collectionGroup && (t += "|cg:" + e.collectionGroup), t += "|f:", t += e.filters.map((t => {
+                return (e = t).field.canonicalString() + e.op.toString() + Bt(e.value);
+                var e;
+            })).join(","), t += "|ob:", t += e.orderBy.map((t => function(t) {
                 // TODO(b/29183165): Make this collision robust.
                 return t.field.canonicalString() + t.dir;
-            }(t))).join(","), vt(e.limit) || (t += "|l:", t += e.limit), e.startAt && (t += "|lb:", 
-            t += le(e.startAt)), e.endAt && (t += "|ub:", t += le(e.endAt)), e.R = t;
+            }(t))).join(","), St(e.limit) || (t += "|l:", t += e.limit), e.startAt && (t += "|lb:", 
+            t += e.startAt.inclusive ? "b:" : "a:", t += e.startAt.position.map((t => Bt(t))).join(",")), 
+            e.endAt && (t += "|ub:", t += e.endAt.inclusive ? "a:" : "b:", t += e.endAt.position.map((t => Bt(t))).join(",")), 
+            e.P = t;
         }
-        return e.R;
+        return e.P;
     }
 
-    function Yt(t) {
+    function ie(t) {
         let e = t.path.canonicalString();
         return null !== t.collectionGroup && (e += " collectionGroup=" + t.collectionGroup), 
         t.filters.length > 0 && (e += `, filters: [${t.filters.map((t => {
-        return `${(e = t).field.canonicalString()} ${e.op} ${Ot(e.value)}`;
+        return `${(e = t).field.canonicalString()} ${e.op} ${Bt(e.value)}`;
         /** Returns a debug description for `filter`. */
         var e;
         /** Filter that matches on key fields (i.e. '__name__'). */    })).join(", ")}]`), 
-        vt(t.limit) || (e += ", limit: " + t.limit), t.orderBy.length > 0 && (e += `, orderBy: [${t.orderBy.map((t => function(t) {
+        St(t.limit) || (e += ", limit: " + t.limit), t.orderBy.length > 0 && (e += `, orderBy: [${t.orderBy.map((t => function(t) {
         return `${t.field.canonicalString()} (${t.dir})`;
-    }(t))).join(", ")}]`), t.startAt && (e += ", startAt: " + le(t.startAt)), t.endAt && (e += ", endAt: " + le(t.endAt)), 
+    }(t))).join(", ")}]`), t.startAt && (e += ", startAt: ", e += t.startAt.inclusive ? "b:" : "a:", 
+        e += t.startAt.position.map((t => Bt(t))).join(",")), t.endAt && (e += ", endAt: ", 
+        e += t.endAt.inclusive ? "a:" : "b:", e += t.endAt.position.map((t => Bt(t))).join(",")), 
         `Target(${e})`;
     }
 
-    function Xt(t, e) {
+    function re(t, e) {
         if (t.limit !== e.limit) return !1;
         if (t.orderBy.length !== e.orderBy.length) return !1;
-        for (let n = 0; n < t.orderBy.length; n++) if (!de(t.orderBy[n], e.orderBy[n])) return !1;
+        for (let n = 0; n < t.orderBy.length; n++) if (!ye(t.orderBy[n], e.orderBy[n])) return !1;
         if (t.filters.length !== e.filters.length) return !1;
         for (let i = 0; i < t.filters.length; i++) if (n = t.filters[i], s = e.filters[i], 
-        n.op !== s.op || !n.field.isEqual(s.field) || !Nt(n.value, s.value)) return !1;
+        n.op !== s.op || !n.field.isEqual(s.field) || !Ot(n.value, s.value)) return !1;
         var n, s;
-        return t.collectionGroup === e.collectionGroup && (!!t.path.isEqual(e.path) && (!!_e(t.startAt, e.startAt) && _e(t.endAt, e.endAt)));
+        return t.collectionGroup === e.collectionGroup && (!!t.path.isEqual(e.path) && (!!Ie(t.startAt, e.startAt) && Ie(t.endAt, e.endAt)));
     }
 
-    function Zt(t) {
-        return Dt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
+    function oe(t) {
+        return Nt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
     }
 
-    class te extends class {} {
+    class ce extends class {} {
         constructor(t, e, n) {
             super(), this.field = t, this.op = e, this.value = n;
         }
         /**
          * Creates a filter based on the provided arguments.
          */    static create(t, e, n) {
-            return t.isKeyField() ? "in" /* IN */ === e || "not-in" /* NOT_IN */ === e ? this.P(t, e, n) : new ne(t, e, n) : "array-contains" /* ARRAY_CONTAINS */ === e ? new oe(t, n) : "in" /* IN */ === e ? new ce(t, n) : "not-in" /* NOT_IN */ === e ? new ae(t, n) : "array-contains-any" /* ARRAY_CONTAINS_ANY */ === e ? new ue(t, n) : new te(t, e, n);
+            return t.isKeyField() ? "in" /* IN */ === e || "not-in" /* NOT_IN */ === e ? this.v(t, e, n) : new ue(t, e, n) : "array-contains" /* ARRAY_CONTAINS */ === e ? new fe(t, n) : "in" /* IN */ === e ? new de(t, n) : "not-in" /* NOT_IN */ === e ? new _e(t, n) : "array-contains-any" /* ARRAY_CONTAINS_ANY */ === e ? new we(t, n) : new ce(t, e, n);
         }
-        static P(t, e, n) {
-            return "in" /* IN */ === e ? new se(t, n) : new ie(t, n);
+        static v(t, e, n) {
+            return "in" /* IN */ === e ? new ae(t, n) : new he(t, n);
         }
         matches(t) {
             const e = t.data.field(this.field);
             // Types do not have to match in NOT_EQUAL filters.
-                    return "!=" /* NOT_EQUAL */ === this.op ? null !== e && this.v(xt(e, this.value)) : null !== e && Ct(this.value) === Ct(e) && this.v(xt(e, this.value));
+                    return "!=" /* NOT_EQUAL */ === this.op ? null !== e && this.V($t(e, this.value)) : null !== e && kt(this.value) === kt(e) && this.V($t(e, this.value));
             // Only compare types with matching backend order (such as double and int).
             }
-        v(t) {
+        V(t) {
             switch (this.op) {
               case "<" /* LESS_THAN */ :
                 return t < 0;
@@ -3966,94 +4644,87 @@ var app = (function () {
                 return t >= 0;
 
               default:
-                return B();
+                return L();
             }
         }
-        V() {
+        S() {
             return [ "<" /* LESS_THAN */ , "<=" /* LESS_THAN_OR_EQUAL */ , ">" /* GREATER_THAN */ , ">=" /* GREATER_THAN_OR_EQUAL */ , "!=" /* NOT_EQUAL */ , "not-in" /* NOT_IN */ ].indexOf(this.op) >= 0;
         }
     }
 
-    function ee(t) {
-        // TODO(b/29183165): Technically, this won't be unique if two values have
-        // the same description, such as the int 3 and the string "3". So we should
-        // add the types in here somehow, too.
-        return t.field.canonicalString() + t.op.toString() + Ot(t.value);
-    }
-
-    class ne extends te {
+    class ue extends ce {
         constructor(t, e, n) {
-            super(t, e, n), this.key = Dt.fromName(n.referenceValue);
+            super(t, e, n), this.key = Nt.fromName(n.referenceValue);
         }
         matches(t) {
-            const e = Dt.comparator(t.key, this.key);
-            return this.v(e);
+            const e = Nt.comparator(t.key, this.key);
+            return this.V(e);
         }
     }
 
-    /** Filter that matches on key fields within an array. */ class se extends te {
+    /** Filter that matches on key fields within an array. */ class ae extends ce {
         constructor(t, e) {
-            super(t, "in" /* IN */ , e), this.keys = re("in" /* IN */ , e);
+            super(t, "in" /* IN */ , e), this.keys = le("in" /* IN */ , e);
         }
         matches(t) {
             return this.keys.some((e => e.isEqual(t.key)));
         }
     }
 
-    /** Filter that matches on key fields not present within an array. */ class ie extends te {
+    /** Filter that matches on key fields not present within an array. */ class he extends ce {
         constructor(t, e) {
-            super(t, "not-in" /* NOT_IN */ , e), this.keys = re("not-in" /* NOT_IN */ , e);
+            super(t, "not-in" /* NOT_IN */ , e), this.keys = le("not-in" /* NOT_IN */ , e);
         }
         matches(t) {
             return !this.keys.some((e => e.isEqual(t.key)));
         }
     }
 
-    function re(t, e) {
+    function le(t, e) {
         var n;
-        return ((null === (n = e.arrayValue) || void 0 === n ? void 0 : n.values) || []).map((t => Dt.fromName(t.referenceValue)));
+        return ((null === (n = e.arrayValue) || void 0 === n ? void 0 : n.values) || []).map((t => Nt.fromName(t.referenceValue)));
     }
 
-    /** A Filter that implements the array-contains operator. */ class oe extends te {
+    /** A Filter that implements the array-contains operator. */ class fe extends ce {
         constructor(t, e) {
             super(t, "array-contains" /* ARRAY_CONTAINS */ , e);
         }
         matches(t) {
             const e = t.data.field(this.field);
-            return Bt(e) && kt(e.arrayValue, this.value);
+            return Kt(e) && Mt(e.arrayValue, this.value);
         }
     }
 
-    /** A Filter that implements the IN operator. */ class ce extends te {
+    /** A Filter that implements the IN operator. */ class de extends ce {
         constructor(t, e) {
             super(t, "in" /* IN */ , e);
         }
         matches(t) {
             const e = t.data.field(this.field);
-            return null !== e && kt(this.value.arrayValue, e);
+            return null !== e && Mt(this.value.arrayValue, e);
         }
     }
 
-    /** A Filter that implements the not-in operator. */ class ae extends te {
+    /** A Filter that implements the not-in operator. */ class _e extends ce {
         constructor(t, e) {
             super(t, "not-in" /* NOT_IN */ , e);
         }
         matches(t) {
-            if (kt(this.value.arrayValue, {
+            if (Mt(this.value.arrayValue, {
                 nullValue: "NULL_VALUE"
             })) return !1;
             const e = t.data.field(this.field);
-            return null !== e && !kt(this.value.arrayValue, e);
+            return null !== e && !Mt(this.value.arrayValue, e);
         }
     }
 
-    /** A Filter that implements the array-contains-any operator. */ class ue extends te {
+    /** A Filter that implements the array-contains-any operator. */ class we extends ce {
         constructor(t, e) {
             super(t, "array-contains-any" /* ARRAY_CONTAINS_ANY */ , e);
         }
         matches(t) {
             const e = t.data.field(this.field);
-            return !(!Bt(e) || !e.arrayValue.values) && e.arrayValue.values.some((t => kt(this.value.arrayValue, t)));
+            return !(!Kt(e) || !e.arrayValue.values) && e.arrayValue.values.some((t => Mt(this.value.arrayValue, t)));
         }
     }
 
@@ -4070,50 +4741,45 @@ var app = (function () {
      * Bound provides a function to determine whether a document comes before or
      * after a bound. This is influenced by whether the position is just before or
      * just after the provided values.
-     */ class he {
+     */ class me {
         constructor(t, e) {
-            this.position = t, this.before = e;
+            this.position = t, this.inclusive = e;
         }
-    }
-
-    function le(t) {
-        // TODO(b/29183165): Make this collision robust.
-        return `${t.before ? "b" : "a"}:${t.position.map((t => Ot(t))).join(",")}`;
     }
 
     /**
      * An ordering on a field, in some Direction. Direction defaults to ASCENDING.
-     */ class fe {
+     */ class ge {
         constructor(t, e = "asc" /* ASCENDING */) {
             this.field = t, this.dir = e;
         }
     }
 
-    function de(t, e) {
+    function ye(t, e) {
         return t.dir === e.dir && t.field.isEqual(e.field);
     }
 
-    /**
-     * Returns true if a document sorts before a bound using the provided sort
-     * order.
-     */ function we(t, e, n) {
+    function pe(t, e, n) {
         let s = 0;
         for (let i = 0; i < t.position.length; i++) {
             const r = e[i], o = t.position[i];
-            if (r.field.isKeyField()) s = Dt.comparator(Dt.fromName(o.referenceValue), n.key); else {
-                s = xt(o, n.data.field(r.field));
+            if (r.field.isKeyField()) s = Nt.comparator(Nt.fromName(o.referenceValue), n.key); else {
+                s = $t(o, n.data.field(r.field));
             }
             if ("desc" /* DESCENDING */ === r.dir && (s *= -1), 0 !== s) break;
         }
-        return t.before ? s <= 0 : s < 0;
+        return s;
     }
 
-    function _e(t, e) {
+    /**
+     * Returns true if a document sorts after a bound using the provided sort
+     * order.
+     */ function Ie(t, e) {
         if (null === t) return null === e;
         if (null === e) return !1;
-        if (t.before !== e.before || t.position.length !== e.position.length) return !1;
+        if (t.inclusive !== e.inclusive || t.position.length !== e.position.length) return !1;
         for (let n = 0; n < t.position.length; n++) {
-            if (!Nt(t.position[n], e.position[n])) return !1;
+            if (!Ot(t.position[n], e.position[n])) return !1;
         }
         return !0;
     }
@@ -4140,25 +4806,25 @@ var app = (function () {
      * query the RemoteStore results.
      *
      * Visible for testing.
-     */ class me {
+     */ class Ee {
         /**
          * Initializes a Query with a path and optional additional query constraints.
          * Path must currently be empty if this is a collection group query.
          */
         constructor(t, e = null, n = [], s = [], i = null, r = "F" /* First */ , o = null, c = null) {
             this.path = t, this.collectionGroup = e, this.explicitOrderBy = n, this.filters = s, 
-            this.limit = i, this.limitType = r, this.startAt = o, this.endAt = c, this.S = null, 
+            this.limit = i, this.limitType = r, this.startAt = o, this.endAt = c, this.D = null, 
             // The corresponding `Target` of this `Query` instance.
-            this.D = null, this.startAt, this.endAt;
+            this.C = null, this.startAt, this.endAt;
         }
     }
 
-    /** Creates a new Query instance with the options provided. */ function ge(t, e, n, s, i, r, o, c) {
-        return new me(t, e, n, s, i, r, o, c);
+    /** Creates a new Query instance with the options provided. */ function Te(t, e, n, s, i, r, o, c) {
+        return new Ee(t, e, n, s, i, r, o, c);
     }
 
-    /** Creates a new Query for a query that matches all documents at `path` */ function ye(t) {
-        return new me(t);
+    /** Creates a new Query for a query that matches all documents at `path` */ function Ae(t) {
+        return new Ee(t);
     }
 
     /**
@@ -4166,20 +4832,20 @@ var app = (function () {
      * specific path. This is used when executing collection group queries, since
      * we have to split the query into a set of collection queries at multiple
      * paths.
-     */ function pe(t) {
-        return !vt(t.limit) && "F" /* First */ === t.limitType;
+     */ function Re(t) {
+        return !St(t.limit) && "F" /* First */ === t.limitType;
     }
 
-    function Te(t) {
-        return !vt(t.limit) && "L" /* Last */ === t.limitType;
+    function Pe(t) {
+        return !St(t.limit) && "L" /* Last */ === t.limitType;
     }
 
-    function Ee(t) {
+    function be(t) {
         return t.explicitOrderBy.length > 0 ? t.explicitOrderBy[0].field : null;
     }
 
-    function Ie(t) {
-        for (const e of t.filters) if (e.V()) return e.field;
+    function ve(t) {
+        for (const e of t.filters) if (e.S()) return e.field;
         return null;
     }
 
@@ -4191,7 +4857,7 @@ var app = (function () {
      * Returns whether the query matches a collection group rather than a specific
      * collection.
      */
-    function Ae(t) {
+    function Ve(t) {
         return null !== t.collectionGroup;
     }
 
@@ -4199,71 +4865,71 @@ var app = (function () {
      * Returns the implicit order by constraint that is used to execute the Query,
      * which can be different from the order by constraints the user provided (e.g.
      * the SDK and backend always orders by `__name__`).
-     */ function Re(t) {
+     */ function Se(t) {
         const e = K(t);
-        if (null === e.S) {
-            e.S = [];
-            const t = Ie(e), n = Ee(e);
+        if (null === e.D) {
+            e.D = [];
+            const t = ve(e), n = be(e);
             if (null !== t && null === n) 
             // In order to implicitly add key ordering, we must also add the
             // inequality filter field for it to be a valid query.
             // Note that the default inequality field and key ordering is ascending.
-            t.isKeyField() || e.S.push(new fe(t)), e.S.push(new fe(mt.keyField(), "asc" /* ASCENDING */)); else {
+            t.isKeyField() || e.D.push(new ge(t)), e.D.push(new ge(mt.keyField(), "asc" /* ASCENDING */)); else {
                 let t = !1;
-                for (const n of e.explicitOrderBy) e.S.push(n), n.field.isKeyField() && (t = !0);
+                for (const n of e.explicitOrderBy) e.D.push(n), n.field.isKeyField() && (t = !0);
                 if (!t) {
                     // The order of the implicit key ordering always matches the last
                     // explicit order by
                     const t = e.explicitOrderBy.length > 0 ? e.explicitOrderBy[e.explicitOrderBy.length - 1].dir : "asc" /* ASCENDING */;
-                    e.S.push(new fe(mt.keyField(), t));
+                    e.D.push(new ge(mt.keyField(), t));
                 }
             }
-        }
-        return e.S;
-    }
-
-    /**
-     * Converts this `Query` instance to it's corresponding `Target` representation.
-     */ function be(t) {
-        const e = K(t);
-        if (!e.D) if ("F" /* First */ === e.limitType) e.D = Ht(e.path, e.collectionGroup, Re(e), e.filters, e.limit, e.startAt, e.endAt); else {
-            // Flip the orderBy directions since we want the last results
-            const t = [];
-            for (const n of Re(e)) {
-                const e = "desc" /* DESCENDING */ === n.dir ? "asc" /* ASCENDING */ : "desc" /* DESCENDING */;
-                t.push(new fe(n.field, e));
-            }
-            // We need to swap the cursors to match the now-flipped query ordering.
-                    const n = e.endAt ? new he(e.endAt.position, !e.endAt.before) : null, s = e.startAt ? new he(e.startAt.position, !e.startAt.before) : null;
-            // Now return as a LimitType.First query.
-            e.D = Ht(e.path, e.collectionGroup, t, e.filters, e.limit, n, s);
         }
         return e.D;
     }
 
-    function Pe(t, e, n) {
-        return new me(t.path, t.collectionGroup, t.explicitOrderBy.slice(), t.filters.slice(), e, n, t.startAt, t.endAt);
+    /**
+     * Converts this `Query` instance to it's corresponding `Target` representation.
+     */ function De(t) {
+        const e = K(t);
+        if (!e.C) if ("F" /* First */ === e.limitType) e.C = ne(e.path, e.collectionGroup, Se(e), e.filters, e.limit, e.startAt, e.endAt); else {
+            // Flip the orderBy directions since we want the last results
+            const t = [];
+            for (const n of Se(e)) {
+                const e = "desc" /* DESCENDING */ === n.dir ? "asc" /* ASCENDING */ : "desc" /* DESCENDING */;
+                t.push(new ge(n.field, e));
+            }
+            // We need to swap the cursors to match the now-flipped query ordering.
+                    const n = e.endAt ? new me(e.endAt.position, !e.endAt.inclusive) : null, s = e.startAt ? new me(e.startAt.position, !e.startAt.inclusive) : null;
+            // Now return as a LimitType.First query.
+            e.C = ne(e.path, e.collectionGroup, t, e.filters, e.limit, n, s);
+        }
+        return e.C;
     }
 
-    function ve(t, e) {
-        return Xt(be(t), be(e)) && t.limitType === e.limitType;
+    function Ce(t, e, n) {
+        return new Ee(t.path, t.collectionGroup, t.explicitOrderBy.slice(), t.filters.slice(), e, n, t.startAt, t.endAt);
+    }
+
+    function Ne(t, e) {
+        return re(De(t), De(e)) && t.limitType === e.limitType;
     }
 
     // TODO(b/29183165): This is used to get a unique string from a query to, for
     // example, use as a dictionary key, but the implementation is subject to
     // collisions. Make it collision-free.
-    function Ve(t) {
-        return `${Jt(be(t))}|lt:${t.limitType}`;
+    function xe(t) {
+        return `${se(De(t))}|lt:${t.limitType}`;
     }
 
-    function Se(t) {
-        return `Query(target=${Yt(be(t))}; limitType=${t.limitType})`;
+    function ke(t) {
+        return `Query(target=${ie(De(t))}; limitType=${t.limitType})`;
     }
 
-    /** Returns whether `doc` matches the constraints of `query`. */ function De(t, e) {
+    /** Returns whether `doc` matches the constraints of `query`. */ function Oe(t, e) {
         return e.isFoundDocument() && function(t, e) {
             const n = e.key.path;
-            return null !== t.collectionGroup ? e.key.hasCollectionId(t.collectionGroup) && t.path.isPrefixOf(n) : Dt.isDocumentKey(t.path) ? t.path.isEqual(n) : t.path.isImmediateParentOf(n);
+            return null !== t.collectionGroup ? e.key.hasCollectionId(t.collectionGroup) && t.path.isPrefixOf(n) : Nt.isDocumentKey(t.path) ? t.path.isEqual(n) : t.path.isImmediateParentOf(n);
         }
         /**
      * A document must have a value for every ordering clause in order to show up
@@ -4278,8 +4944,19 @@ var app = (function () {
             return !0;
         }
         /** Makes sure a document is within the bounds, if provided. */ (t, e) && function(t, e) {
-            if (t.startAt && !we(t.startAt, Re(t), e)) return !1;
-            if (t.endAt && we(t.endAt, Re(t), e)) return !1;
+            if (t.startAt && !
+            /**
+     * Returns true if a document sorts before a bound using the provided sort
+     * order.
+     */
+            function(t, e, n) {
+                const s = pe(t, e, n);
+                return t.inclusive ? s <= 0 : s < 0;
+            }(t.startAt, Se(t), e)) return !1;
+            if (t.endAt && !function(t, e, n) {
+                const s = pe(t, e, n);
+                return t.inclusive ? s >= 0 : s > 0;
+            }(t.endAt, Se(t), e)) return !1;
             return !0;
         }
         /**
@@ -4288,11 +4965,11 @@ var app = (function () {
      */ (t, e);
     }
 
-    function Ce(t) {
+    function Me(t) {
         return (e, n) => {
             let s = !1;
-            for (const i of Re(t)) {
-                const t = Ne(i, e, n);
+            for (const i of Se(t)) {
+                const t = $e(i, e, n);
                 if (0 !== t) return t;
                 s = s || i.field.isKeyField();
             }
@@ -4300,11 +4977,31 @@ var app = (function () {
         };
     }
 
-    function Ne(t, e, n) {
-        const s = t.field.isKeyField() ? Dt.comparator(e.key, n.key) : function(t, e, n) {
+    function $e(t, e, n) {
+        const s = t.field.isKeyField() ? Nt.comparator(e.key, n.key) : function(t, e, n) {
             const s = e.data.field(t), i = n.data.field(t);
-            return null !== s && null !== i ? xt(s, i) : B();
-        }(t.field, e, n);
+            return null !== s && null !== i ? $t(s, i) : L();
+        }
+        /**
+     * @license
+     * Copyright 2021 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+        /**
+     * The initial mutation batch id for each index. Gets updated during index
+     * backfill.
+     */ (t.field, e, n);
         switch (t.dir) {
           case "asc" /* ASCENDING */ :
             return s;
@@ -4313,7 +5010,7 @@ var app = (function () {
             return -1 * s;
 
           default:
-            return B();
+            return L();
         }
     }
 
@@ -4336,8 +5033,8 @@ var app = (function () {
     /**
      * Returns an DoubleValue for `value` that is encoded based the serializer's
      * `useProto3Json` setting.
-     */ function ke(t, e) {
-        if (t.C) {
+     */ function Fe(t, e) {
+        if (t.N) {
             if (isNaN(e)) return {
                 doubleValue: "NaN"
             };
@@ -4349,13 +5046,13 @@ var app = (function () {
             };
         }
         return {
-            doubleValue: Vt(e) ? "-0" : e
+            doubleValue: Dt(e) ? "-0" : e
         };
     }
 
     /**
      * Returns an IntegerValue for `value`.
-     */ function xe(t) {
+     */ function Be(t) {
         return {
             integerValue: "" + t
         };
@@ -4365,8 +5062,8 @@ var app = (function () {
      * Returns a value for a number that's appropriate to put into a proto.
      * The return value is an IntegerValue if it can safely represent the value,
      * otherwise a DoubleValue is returned.
-     */ function $e(t, e) {
-        return St(e) ? xe(e) : ke(t, e);
+     */ function Le(t, e) {
+        return Ct(e) ? Be(e) : Fe(t, e);
     }
 
     /**
@@ -4385,7 +5082,7 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    /** Used to represent a field transform on a mutation. */ class Oe {
+    /** Used to represent a field transform on a mutation. */ class Ue {
         constructor() {
             // Make sure that the structural type of `TransformOperation` is unique.
             // See https://github.com/microsoft/TypeScript/issues/5451
@@ -4396,8 +5093,8 @@ var app = (function () {
     /**
      * Computes the local transform result against the provided `previousValue`,
      * optionally using the provided localWriteTime.
-     */ function Me(t, e, n) {
-        return t instanceof Be ? function(t, e) {
+     */ function qe(t, e, n) {
+        return t instanceof je ? function(t, e) {
             const n = {
                 fields: {
                     __type__: {
@@ -4414,23 +5111,23 @@ var app = (function () {
             return e && (n.fields.__previous_value__ = e), {
                 mapValue: n
             };
-        }(n, e) : t instanceof Ue ? qe(t, e) : t instanceof Ke ? je(t, e) : function(t, e) {
+        }(n, e) : t instanceof Qe ? We(t, e) : t instanceof ze ? He(t, e) : function(t, e) {
             // PORTING NOTE: Since JavaScript's integer arithmetic is limited to 53 bit
             // precision and resolves overflows by reducing precision, we do not
             // manually cap overflows at 2^63.
-            const n = Le(t, e), s = We(n) + We(t.N);
-            return Lt(n) && Lt(t.N) ? xe(s) : ke(t.k, s);
+            const n = Ge(t, e), s = Ye(n) + Ye(t.k);
+            return qt(n) && qt(t.k) ? Be(s) : Fe(t.O, s);
         }(t, e);
     }
 
     /**
      * Computes a final transform result after the transform has been acknowledged
      * by the server, potentially using the server-provided transformResult.
-     */ function Fe(t, e, n) {
+     */ function Ke(t, e, n) {
         // The server just sends null as the transform result for array operations,
         // so we have to calculate a result the same as we do for local
         // applications.
-        return t instanceof Ue ? qe(t, e) : t instanceof Ke ? je(t, e) : n;
+        return t instanceof Qe ? We(t, e) : t instanceof ze ? He(t, e) : n;
     }
 
     /**
@@ -4447,8 +5144,8 @@ var app = (function () {
      *
      * @returns a base value to store along with the mutation, or null for
      * idempotent transforms.
-     */ function Le(t, e) {
-        return t instanceof Qe ? Lt(n = e) || function(t) {
+     */ function Ge(t, e) {
+        return t instanceof Je ? qt(n = e) || function(t) {
             return !!t && "doubleValue" in t;
         }
         /** Returns true if `value` is either an IntegerValue or a DoubleValue. */ (n) ? e : {
@@ -4458,17 +5155,17 @@ var app = (function () {
     }
 
     /** Transforms a value into a server-generated timestamp. */
-    class Be extends Oe {}
+    class je extends Ue {}
 
-    /** Transforms an array value via a union operation. */ class Ue extends Oe {
+    /** Transforms an array value via a union operation. */ class Qe extends Ue {
         constructor(t) {
             super(), this.elements = t;
         }
     }
 
-    function qe(t, e) {
-        const n = Ge(e);
-        for (const e of t.elements) n.some((t => Nt(t, e))) || n.push(e);
+    function We(t, e) {
+        const n = Xe(e);
+        for (const e of t.elements) n.some((t => Ot(t, e))) || n.push(e);
         return {
             arrayValue: {
                 values: n
@@ -4476,15 +5173,15 @@ var app = (function () {
         };
     }
 
-    /** Transforms an array value via a remove operation. */ class Ke extends Oe {
+    /** Transforms an array value via a remove operation. */ class ze extends Ue {
         constructor(t) {
             super(), this.elements = t;
         }
     }
 
-    function je(t, e) {
-        let n = Ge(e);
-        for (const e of t.elements) n = n.filter((t => !Nt(t, e)));
+    function He(t, e) {
+        let n = Xe(e);
+        for (const e of t.elements) n = n.filter((t => !Ot(t, e)));
         return {
             arrayValue: {
                 values: n
@@ -4497,28 +5194,28 @@ var app = (function () {
      * transforms. Converts all field values to integers or doubles, but unlike the
      * backend does not cap integer values at 2^63. Instead, JavaScript number
      * arithmetic is used and precision loss can occur for values greater than 2^53.
-     */ class Qe extends Oe {
+     */ class Je extends Ue {
         constructor(t, e) {
-            super(), this.k = t, this.N = e;
+            super(), this.O = t, this.k = e;
         }
     }
 
-    function We(t) {
-        return It(t.integerValue || t.doubleValue);
+    function Ye(t) {
+        return Tt(t.integerValue || t.doubleValue);
     }
 
-    function Ge(t) {
-        return Bt(t) && t.arrayValue.values ? t.arrayValue.values.slice() : [];
+    function Xe(t) {
+        return Kt(t) && t.arrayValue.values ? t.arrayValue.values.slice() : [];
     }
 
-    function He(t, e) {
+    function tn(t, e) {
         return t.field.isEqual(e.field) && function(t, e) {
-            return t instanceof Ue && e instanceof Ue || t instanceof Ke && e instanceof Ke ? ot(t.elements, e.elements, Nt) : t instanceof Qe && e instanceof Qe ? Nt(t.N, e.N) : t instanceof Be && e instanceof Be;
+            return t instanceof Qe && e instanceof Qe || t instanceof ze && e instanceof ze ? ot(t.elements, e.elements, Ot) : t instanceof Je && e instanceof Je ? Ot(t.k, e.k) : t instanceof je && e instanceof je;
         }(t.transform, e.transform);
     }
 
     /** The result of successfully applying a mutation to the backend. */
-    class Je {
+    class en {
         constructor(
         /**
          * The version at which the mutation was committed:
@@ -4547,18 +5244,18 @@ var app = (function () {
      * Encodes a precondition for a mutation. This follows the model that the
      * backend accepts with the special case of an explicit "empty" precondition
      * (meaning no precondition).
-     */ class Ye {
+     */ class nn {
         constructor(t, e) {
             this.updateTime = t, this.exists = e;
         }
         /** Creates a new empty Precondition. */    static none() {
-            return new Ye;
+            return new nn;
         }
         /** Creates a new Precondition with an exists flag. */    static exists(t) {
-            return new Ye(void 0, t);
+            return new nn(void 0, t);
         }
         /** Creates a new Precondition based on a version a document exists at. */    static updateTime(t) {
-            return new Ye(t);
+            return new nn(t);
         }
         /** Returns whether this Precondition is empty. */    get isNone() {
             return void 0 === this.updateTime && void 0 === this.exists;
@@ -4568,7 +5265,7 @@ var app = (function () {
         }
     }
 
-    /** Returns true if the preconditions is valid for the given document. */ function Xe(t, e) {
+    /** Returns true if the preconditions is valid for the given document. */ function sn(t, e) {
         return void 0 !== t.updateTime ? e.isFoundDocument() && e.version.isEqual(t.updateTime) : void 0 === t.exists || t.exists === e.isFoundDocument();
     }
 
@@ -4615,7 +5312,7 @@ var app = (function () {
      * applyToLocalView() to implement the actual behavior of applying the mutation
      * to some source document (see `setMutationApplyToRemoteDocument()` for an
      * example).
-     */ class Ze {}
+     */ class rn {}
 
     /**
      * Applies this mutation to the given document for the purposes of computing a
@@ -4628,22 +5325,22 @@ var app = (function () {
      *     invalid document if the client has no knowledge of the pre-mutation state
      *     of the document.
      * @param mutationResult - The result of applying the mutation from the backend.
-     */ function tn(t, e, n) {
-        t instanceof on ? function(t, e, n) {
+     */ function on(t, e, n) {
+        t instanceof ln ? function(t, e, n) {
             // Unlike setMutationApplyToLocalView, if we're applying a mutation to a
             // remote document the server has accepted the mutation so the precondition
             // must have held.
-            const s = t.value.clone(), i = un(t.fieldTransforms, e, n.transformResults);
+            const s = t.value.clone(), i = _n(t.fieldTransforms, e, n.transformResults);
             s.setAll(i), e.convertToFoundDocument(n.version, s).setHasCommittedMutations();
-        }(t, e, n) : t instanceof cn ? function(t, e, n) {
-            if (!Xe(t.precondition, e)) 
+        }(t, e, n) : t instanceof fn ? function(t, e, n) {
+            if (!sn(t.precondition, e)) 
             // Since the mutation was not rejected, we know that the precondition
             // matched on the backend. We therefore must not have the expected version
             // of the document in our cache and convert to an UnknownDocument with a
             // known updateTime.
             return void e.convertToUnknownDocument(n.version);
-            const s = un(t.fieldTransforms, e, n.transformResults), i = e.data;
-            i.setAll(an(t)), i.setAll(s), e.convertToFoundDocument(n.version, i).setHasCommittedMutations();
+            const s = _n(t.fieldTransforms, e, n.transformResults), i = e.data;
+            i.setAll(dn(t)), i.setAll(s), e.convertToFoundDocument(n.version, i).setHasCommittedMutations();
         }(t, e, n) : function(t, e, n) {
             // Unlike applyToLocalView, if we're applying a mutation to a remote
             // document the server has accepted the mutation so the precondition must
@@ -4663,14 +5360,14 @@ var app = (function () {
      *     of the document.
      * @param localWriteTime - A timestamp indicating the local write time of the
      *     batch this mutation is a part of.
-     */ function en(t, e, n) {
-        t instanceof on ? function(t, e, n) {
-            if (!Xe(t.precondition, e)) 
+     */ function cn(t, e, n) {
+        t instanceof ln ? function(t, e, n) {
+            if (!sn(t.precondition, e)) 
             // The mutation failed to apply (e.g. a document ID created with add()
             // caused a name collision).
             return;
-            const s = t.value.clone(), i = hn(t.fieldTransforms, n, e);
-            s.setAll(i), e.convertToFoundDocument(rn(e), s).setHasLocalMutations();
+            const s = t.value.clone(), i = wn(t.fieldTransforms, n, e);
+            s.setAll(i), e.convertToFoundDocument(hn(e), s).setHasLocalMutations();
         }
         /**
      * A mutation that modifies fields of the document at the given key with the
@@ -4684,18 +5381,18 @@ var app = (function () {
      *    is deleted.
      *  * When a field is not in the mask but is in the values, the values map is
      *    ignored.
-     */ (t, e, n) : t instanceof cn ? function(t, e, n) {
-            if (!Xe(t.precondition, e)) return;
-            const s = hn(t.fieldTransforms, n, e), i = e.data;
-            i.setAll(an(t)), i.setAll(s), e.convertToFoundDocument(rn(e), i).setHasLocalMutations();
+     */ (t, e, n) : t instanceof fn ? function(t, e, n) {
+            if (!sn(t.precondition, e)) return;
+            const s = wn(t.fieldTransforms, n, e), i = e.data;
+            i.setAll(dn(t)), i.setAll(s), e.convertToFoundDocument(hn(e), i).setHasLocalMutations();
         }
         /**
      * Returns a FieldPath/Value map with the content of the PatchMutation.
      */ (t, e, n) : function(t, e) {
-            Xe(t.precondition, e) && 
+            sn(t.precondition, e) && 
             // We don't call `setHasLocalMutations()` since we want to be backwards
             // compatible with the existing SDK behavior.
-            e.convertToNoDocument(ut.min());
+            e.convertToNoDocument(at.min());
         }
         /**
      * A mutation that verifies the existence of the document at the given key with
@@ -4721,18 +5418,18 @@ var app = (function () {
      *
      * @returns a base value to store along with the mutation, or null for
      * idempotent mutations.
-     */ function nn(t, e) {
+     */ function un(t, e) {
         let n = null;
         for (const s of t.fieldTransforms) {
-            const t = e.data.field(s.field), i = Le(s.transform, t || null);
-            null != i && (null == n && (n = Qt.empty()), n.set(s.field, i));
+            const t = e.data.field(s.field), i = Ge(s.transform, t || null);
+            null != i && (null == n && (n = zt.empty()), n.set(s.field, i));
         }
         return n || null;
     }
 
-    function sn(t, e) {
+    function an(t, e) {
         return t.type === e.type && (!!t.key.isEqual(e.key) && (!!t.precondition.isEqual(e.precondition) && (!!function(t, e) {
-            return void 0 === t && void 0 === e || !(!t || !e) && ot(t, e, ((t, e) => He(t, e)));
+            return void 0 === t && void 0 === e || !(!t || !e) && ot(t, e, ((t, e) => tn(t, e)));
         }(t.fieldTransforms, e.fieldTransforms) && (0 /* Set */ === t.type ? t.value.isEqual(e.value) : 1 /* Patch */ !== t.type || t.data.isEqual(e.data) && t.fieldMask.isEqual(e.fieldMask)))));
     }
 
@@ -4741,28 +5438,28 @@ var app = (function () {
      * mutation. Mutations are defined to return the version of the base document
      * only if it is an existing document. Deleted and unknown documents have a
      * post-mutation version of SnapshotVersion.min().
-     */ function rn(t) {
-        return t.isFoundDocument() ? t.version : ut.min();
+     */ function hn(t) {
+        return t.isFoundDocument() ? t.version : at.min();
     }
 
     /**
      * A mutation that creates or replaces the document at the given key with the
      * object value contents.
-     */ class on extends Ze {
+     */ class ln extends rn {
         constructor(t, e, n, s = []) {
             super(), this.key = t, this.value = e, this.precondition = n, this.fieldTransforms = s, 
             this.type = 0 /* Set */;
         }
     }
 
-    class cn extends Ze {
+    class fn extends rn {
         constructor(t, e, n, s, i = []) {
             super(), this.key = t, this.data = e, this.fieldMask = n, this.precondition = s, 
             this.fieldTransforms = i, this.type = 1 /* Patch */;
         }
     }
 
-    function an(t) {
+    function dn(t) {
         const e = new Map;
         return t.fieldMask.fields.forEach((n => {
             if (!n.isEmpty()) {
@@ -4782,12 +5479,12 @@ var app = (function () {
      * previous mutations.
      * @param serverTransformResults - The transform results received by the server.
      * @returns The transform results list.
-     */ function un(t, e, n) {
+     */ function _n(t, e, n) {
         const s = new Map;
         U(t.length === n.length);
         for (let i = 0; i < n.length; i++) {
             const r = t[i], o = r.transform, c = e.data.field(r.field);
-            s.set(r.field, Fe(o, c, n[i]));
+            s.set(r.field, Ke(o, c, n[i]));
         }
         return s;
     }
@@ -4803,22 +5500,22 @@ var app = (function () {
      * @param mutableDocument - The current state of the document after applying all
      *     previous mutations.
      * @returns The transform results list.
-     */ function hn(t, e, n) {
+     */ function wn(t, e, n) {
         const s = new Map;
         for (const i of t) {
             const t = i.transform, r = n.data.field(i.field);
-            s.set(i.field, Me(t, r, e));
+            s.set(i.field, qe(t, r, e));
         }
         return s;
     }
 
-    /** A mutation that deletes the document at the given key. */ class ln extends Ze {
+    /** A mutation that deletes the document at the given key. */ class mn extends rn {
         constructor(t, e) {
             super(), this.key = t, this.precondition = e, this.type = 2 /* Delete */ , this.fieldTransforms = [];
         }
     }
 
-    class fn extends Ze {
+    class gn extends rn {
         constructor(t, e) {
             super(), this.key = t, this.precondition = e, this.type = 3 /* Verify */ , this.fieldTransforms = [];
         }
@@ -4839,7 +5536,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class dn {
+     */ class yn {
         // TODO(b/33078163): just use simplest form of existence filter for now
         constructor(t) {
             this.count = t;
@@ -4871,7 +5568,7 @@ var app = (function () {
      * Important! The names of these identifiers matter because the string forms
      * are used for reverse lookups from the webchannel stream. Do NOT change the
      * names of these identifiers or change this into a const enum.
-     */ var wn, _n;
+     */ var pn, In;
 
     /**
      * Determines whether an error code represents a permanent error when received
@@ -4879,34 +5576,34 @@ var app = (function () {
      *
      * See isPermanentWriteError for classifying write errors.
      */
-    function mn(t) {
+    function En(t) {
         switch (t) {
           default:
-            return B();
+            return L();
 
-          case j.CANCELLED:
-          case j.UNKNOWN:
-          case j.DEADLINE_EXCEEDED:
-          case j.RESOURCE_EXHAUSTED:
-          case j.INTERNAL:
-          case j.UNAVAILABLE:
+          case G.CANCELLED:
+          case G.UNKNOWN:
+          case G.DEADLINE_EXCEEDED:
+          case G.RESOURCE_EXHAUSTED:
+          case G.INTERNAL:
+          case G.UNAVAILABLE:
      // Unauthenticated means something went wrong with our token and we need
             // to retry with new credentials which will happen automatically.
-                  case j.UNAUTHENTICATED:
+                  case G.UNAUTHENTICATED:
             return !1;
 
-          case j.INVALID_ARGUMENT:
-          case j.NOT_FOUND:
-          case j.ALREADY_EXISTS:
-          case j.PERMISSION_DENIED:
-          case j.FAILED_PRECONDITION:
+          case G.INVALID_ARGUMENT:
+          case G.NOT_FOUND:
+          case G.ALREADY_EXISTS:
+          case G.PERMISSION_DENIED:
+          case G.FAILED_PRECONDITION:
      // Aborted might be retried in some scenarios, but that is dependant on
             // the context and should handled individually by the calling code.
             // See https://cloud.google.com/apis/design/errors.
-                  case j.ABORTED:
-          case j.OUT_OF_RANGE:
-          case j.UNIMPLEMENTED:
-          case j.DATA_LOSS:
+                  case G.ABORTED:
+          case G.OUT_OF_RANGE:
+          case G.UNIMPLEMENTED:
+          case G.DATA_LOSS:
             return !0;
         }
     }
@@ -4930,65 +5627,65 @@ var app = (function () {
      * @returns The Code equivalent to the given GRPC status code. Fails if there
      *     is no match.
      */
-    function gn(t) {
+    function Tn(t) {
         if (void 0 === t) 
         // This shouldn't normally happen, but in certain error cases (like trying
         // to send invalid proto messages) we may get an error with no GRPC code.
-        return M("GRPC error has no .code"), j.UNKNOWN;
+        return $("GRPC error has no .code"), G.UNKNOWN;
         switch (t) {
-          case wn.OK:
-            return j.OK;
+          case pn.OK:
+            return G.OK;
 
-          case wn.CANCELLED:
-            return j.CANCELLED;
+          case pn.CANCELLED:
+            return G.CANCELLED;
 
-          case wn.UNKNOWN:
-            return j.UNKNOWN;
+          case pn.UNKNOWN:
+            return G.UNKNOWN;
 
-          case wn.DEADLINE_EXCEEDED:
-            return j.DEADLINE_EXCEEDED;
+          case pn.DEADLINE_EXCEEDED:
+            return G.DEADLINE_EXCEEDED;
 
-          case wn.RESOURCE_EXHAUSTED:
-            return j.RESOURCE_EXHAUSTED;
+          case pn.RESOURCE_EXHAUSTED:
+            return G.RESOURCE_EXHAUSTED;
 
-          case wn.INTERNAL:
-            return j.INTERNAL;
+          case pn.INTERNAL:
+            return G.INTERNAL;
 
-          case wn.UNAVAILABLE:
-            return j.UNAVAILABLE;
+          case pn.UNAVAILABLE:
+            return G.UNAVAILABLE;
 
-          case wn.UNAUTHENTICATED:
-            return j.UNAUTHENTICATED;
+          case pn.UNAUTHENTICATED:
+            return G.UNAUTHENTICATED;
 
-          case wn.INVALID_ARGUMENT:
-            return j.INVALID_ARGUMENT;
+          case pn.INVALID_ARGUMENT:
+            return G.INVALID_ARGUMENT;
 
-          case wn.NOT_FOUND:
-            return j.NOT_FOUND;
+          case pn.NOT_FOUND:
+            return G.NOT_FOUND;
 
-          case wn.ALREADY_EXISTS:
-            return j.ALREADY_EXISTS;
+          case pn.ALREADY_EXISTS:
+            return G.ALREADY_EXISTS;
 
-          case wn.PERMISSION_DENIED:
-            return j.PERMISSION_DENIED;
+          case pn.PERMISSION_DENIED:
+            return G.PERMISSION_DENIED;
 
-          case wn.FAILED_PRECONDITION:
-            return j.FAILED_PRECONDITION;
+          case pn.FAILED_PRECONDITION:
+            return G.FAILED_PRECONDITION;
 
-          case wn.ABORTED:
-            return j.ABORTED;
+          case pn.ABORTED:
+            return G.ABORTED;
 
-          case wn.OUT_OF_RANGE:
-            return j.OUT_OF_RANGE;
+          case pn.OUT_OF_RANGE:
+            return G.OUT_OF_RANGE;
 
-          case wn.UNIMPLEMENTED:
-            return j.UNIMPLEMENTED;
+          case pn.UNIMPLEMENTED:
+            return G.UNIMPLEMENTED;
 
-          case wn.DATA_LOSS:
-            return j.DATA_LOSS;
+          case pn.DATA_LOSS:
+            return G.DATA_LOSS;
 
           default:
-            return B();
+            return L();
         }
     }
 
@@ -4999,14 +5696,14 @@ var app = (function () {
      * "UNKNOWN", etc.)
      * @returns The equivalent Code. Non-matching responses are mapped to
      *     Code.UNKNOWN.
-     */ (_n = wn || (wn = {}))[_n.OK = 0] = "OK", _n[_n.CANCELLED = 1] = "CANCELLED", 
-    _n[_n.UNKNOWN = 2] = "UNKNOWN", _n[_n.INVALID_ARGUMENT = 3] = "INVALID_ARGUMENT", 
-    _n[_n.DEADLINE_EXCEEDED = 4] = "DEADLINE_EXCEEDED", _n[_n.NOT_FOUND = 5] = "NOT_FOUND", 
-    _n[_n.ALREADY_EXISTS = 6] = "ALREADY_EXISTS", _n[_n.PERMISSION_DENIED = 7] = "PERMISSION_DENIED", 
-    _n[_n.UNAUTHENTICATED = 16] = "UNAUTHENTICATED", _n[_n.RESOURCE_EXHAUSTED = 8] = "RESOURCE_EXHAUSTED", 
-    _n[_n.FAILED_PRECONDITION = 9] = "FAILED_PRECONDITION", _n[_n.ABORTED = 10] = "ABORTED", 
-    _n[_n.OUT_OF_RANGE = 11] = "OUT_OF_RANGE", _n[_n.UNIMPLEMENTED = 12] = "UNIMPLEMENTED", 
-    _n[_n.INTERNAL = 13] = "INTERNAL", _n[_n.UNAVAILABLE = 14] = "UNAVAILABLE", _n[_n.DATA_LOSS = 15] = "DATA_LOSS";
+     */ (In = pn || (pn = {}))[In.OK = 0] = "OK", In[In.CANCELLED = 1] = "CANCELLED", 
+    In[In.UNKNOWN = 2] = "UNKNOWN", In[In.INVALID_ARGUMENT = 3] = "INVALID_ARGUMENT", 
+    In[In.DEADLINE_EXCEEDED = 4] = "DEADLINE_EXCEEDED", In[In.NOT_FOUND = 5] = "NOT_FOUND", 
+    In[In.ALREADY_EXISTS = 6] = "ALREADY_EXISTS", In[In.PERMISSION_DENIED = 7] = "PERMISSION_DENIED", 
+    In[In.UNAUTHENTICATED = 16] = "UNAUTHENTICATED", In[In.RESOURCE_EXHAUSTED = 8] = "RESOURCE_EXHAUSTED", 
+    In[In.FAILED_PRECONDITION = 9] = "FAILED_PRECONDITION", In[In.ABORTED = 10] = "ABORTED", 
+    In[In.OUT_OF_RANGE = 11] = "OUT_OF_RANGE", In[In.UNIMPLEMENTED = 12] = "UNIMPLEMENTED", 
+    In[In.INTERNAL = 13] = "INTERNAL", In[In.UNAVAILABLE = 14] = "UNAVAILABLE", In[In.DATA_LOSS = 15] = "DATA_LOSS";
 
     /**
      * @license
@@ -5026,17 +5723,17 @@ var app = (function () {
      */
     // An immutable sorted map implementation, based on a Left-leaning Red-Black
     // tree.
-    class yn {
+    class An {
         constructor(t, e) {
-            this.comparator = t, this.root = e || Tn.EMPTY;
+            this.comparator = t, this.root = e || Pn.EMPTY;
         }
         // Returns a copy of the map, with the specified key/value added or replaced.
         insert(t, e) {
-            return new yn(this.comparator, this.root.insert(t, e, this.comparator).copy(null, null, Tn.BLACK, null, null));
+            return new An(this.comparator, this.root.insert(t, e, this.comparator).copy(null, null, Pn.BLACK, null, null));
         }
         // Returns a copy of the map, with the specified key removed.
         remove(t) {
-            return new yn(this.comparator, this.root.remove(t, this.comparator).copy(null, null, Tn.BLACK, null, null));
+            return new An(this.comparator, this.root.remove(t, this.comparator).copy(null, null, Pn.BLACK, null, null));
         }
         // Returns the value of the node with the given key, or null.
         get(t) {
@@ -5102,22 +5799,22 @@ var app = (function () {
         }
         // Returns an iterator over the SortedMap.
         getIterator() {
-            return new pn(this.root, null, this.comparator, !1);
+            return new Rn(this.root, null, this.comparator, !1);
         }
         getIteratorFrom(t) {
-            return new pn(this.root, t, this.comparator, !1);
+            return new Rn(this.root, t, this.comparator, !1);
         }
         getReverseIterator() {
-            return new pn(this.root, null, this.comparator, !0);
+            return new Rn(this.root, null, this.comparator, !0);
         }
         getReverseIteratorFrom(t) {
-            return new pn(this.root, t, this.comparator, !0);
+            return new Rn(this.root, t, this.comparator, !0);
         }
     }
 
      // end SortedMap
     // An iterator over an LLRBNode.
-    class pn {
+    class Rn {
         constructor(t, e, n, s) {
             this.isReverse = s, this.nodeStack = [];
             let i = 1;
@@ -5162,14 +5859,14 @@ var app = (function () {
 
      // end SortedMapIterator
     // Represents a node in a Left-leaning Red-Black tree.
-    class Tn {
+    class Pn {
         constructor(t, e, n, s, i) {
-            this.key = t, this.value = e, this.color = null != n ? n : Tn.RED, this.left = null != s ? s : Tn.EMPTY, 
-            this.right = null != i ? i : Tn.EMPTY, this.size = this.left.size + 1 + this.right.size;
+            this.key = t, this.value = e, this.color = null != n ? n : Pn.RED, this.left = null != s ? s : Pn.EMPTY, 
+            this.right = null != i ? i : Pn.EMPTY, this.size = this.left.size + 1 + this.right.size;
         }
         // Returns a copy of the current node, optionally replacing pieces of it.
         copy(t, e, n, s, i) {
-            return new Tn(null != t ? t : this.key, null != e ? e : this.value, null != n ? n : this.color, null != s ? s : this.left, null != i ? i : this.right);
+            return new Pn(null != t ? t : this.key, null != e ? e : this.value, null != n ? n : this.color, null != s ? s : this.left, null != i ? i : this.right);
         }
         isEmpty() {
             return !1;
@@ -5208,7 +5905,7 @@ var app = (function () {
             s.fixUp();
         }
         removeMin() {
-            if (this.left.isEmpty()) return Tn.EMPTY;
+            if (this.left.isEmpty()) return Pn.EMPTY;
             let t = this;
             return t.left.isRed() || t.left.left.isRed() || (t = t.moveRedLeft()), t = t.copy(null, null, null, t.left.removeMin(), null), 
             t.fixUp();
@@ -5220,7 +5917,7 @@ var app = (function () {
             s = s.copy(null, null, null, s.left.remove(t, e), null); else {
                 if (s.left.isRed() && (s = s.rotateRight()), s.right.isEmpty() || s.right.isRed() || s.right.left.isRed() || (s = s.moveRedRight()), 
                 0 === e(t, s.key)) {
-                    if (s.right.isEmpty()) return Tn.EMPTY;
+                    if (s.right.isEmpty()) return Pn.EMPTY;
                     n = s.right.min(), s = s.copy(n.key, n.value, null, null, s.right.removeMin());
                 }
                 s = s.copy(null, null, null, null, s.right.remove(t, e));
@@ -5246,11 +5943,11 @@ var app = (function () {
             return t.left.left.isRed() && (t = t.rotateRight(), t = t.colorFlip()), t;
         }
         rotateLeft() {
-            const t = this.copy(null, null, Tn.RED, null, this.right.left);
+            const t = this.copy(null, null, Pn.RED, null, this.right.left);
             return this.right.copy(null, null, this.color, t, null);
         }
         rotateRight() {
-            const t = this.copy(null, null, Tn.RED, this.left.right, null);
+            const t = this.copy(null, null, Pn.RED, this.left.right, null);
             return this.left.copy(null, null, this.color, null, t);
         }
         colorFlip() {
@@ -5265,10 +5962,10 @@ var app = (function () {
         // In a balanced RB tree, the black-depth (number of black nodes) from root to
         // leaves is equal on both sides.  This function verifies that or asserts.
         check() {
-            if (this.isRed() && this.left.isRed()) throw B();
-            if (this.right.isRed()) throw B();
+            if (this.isRed() && this.left.isRed()) throw L();
+            if (this.right.isRed()) throw L();
             const t = this.left.check();
-            if (t !== this.right.check()) throw B();
+            if (t !== this.right.check()) throw L();
             return t + (this.isRed() ? 0 : 1);
         }
     }
@@ -5276,29 +5973,29 @@ var app = (function () {
      // end LLRBNode
     // Empty node is shared between all LLRB trees.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Tn.EMPTY = null, Tn.RED = !0, Tn.BLACK = !1;
+    Pn.EMPTY = null, Pn.RED = !0, Pn.BLACK = !1;
 
     // end LLRBEmptyNode
-    Tn.EMPTY = new 
+    Pn.EMPTY = new 
     // Represents an empty node (a leaf node in the Red-Black Tree).
     class {
         constructor() {
             this.size = 0;
         }
         get key() {
-            throw B();
+            throw L();
         }
         get value() {
-            throw B();
+            throw L();
         }
         get color() {
-            throw B();
+            throw L();
         }
         get left() {
-            throw B();
+            throw L();
         }
         get right() {
-            throw B();
+            throw L();
         }
         // Returns a copy of the current node.
         copy(t, e, n, s, i) {
@@ -5306,7 +6003,7 @@ var app = (function () {
         }
         // Returns a copy of the tree, with the specified key/value added.
         insert(t, e, n) {
-            return new Tn(t, e);
+            return new Pn(t, e);
         }
         // Returns a copy of the tree, with the specified key removed.
         remove(t, e) {
@@ -5362,9 +6059,9 @@ var app = (function () {
      * NOTE: if provided comparator returns 0 for two elements, we consider them to
      * be equal!
      */
-    class En {
+    class bn {
         constructor(t) {
-            this.comparator = t, this.data = new yn(this.comparator);
+            this.comparator = t, this.data = new An(this.comparator);
         }
         has(t) {
             return null !== this.data.get(t);
@@ -5405,10 +6102,10 @@ var app = (function () {
             return e.hasNext() ? e.getNext().key : null;
         }
         getIterator() {
-            return new In(this.data.getIterator());
+            return new vn(this.data.getIterator());
         }
         getIteratorFrom(t) {
-            return new In(this.data.getIteratorFrom(t));
+            return new vn(this.data.getIteratorFrom(t));
         }
         /** Inserts or updates an element */    add(t) {
             return this.copy(this.data.remove(t).insert(t, !0));
@@ -5427,7 +6124,7 @@ var app = (function () {
             })), e;
         }
         isEqual(t) {
-            if (!(t instanceof En)) return !1;
+            if (!(t instanceof bn)) return !1;
             if (this.size !== t.size) return !1;
             const e = this.data.getIterator(), n = t.data.getIterator();
             for (;e.hasNext(); ) {
@@ -5447,12 +6144,12 @@ var app = (function () {
             return this.forEach((e => t.push(e))), "SortedSet(" + t.toString() + ")";
         }
         copy(t) {
-            const e = new En(this.comparator);
+            const e = new bn(this.comparator);
             return e.data = t, e;
         }
     }
 
-    class In {
+    class vn {
         constructor(t) {
             this.iter = t;
         }
@@ -5479,36 +6176,32 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ const An = new yn(Dt.comparator);
+     */ const Sn = new An(Nt.comparator);
 
-    function Rn() {
-        return An;
+    function Dn() {
+        return Sn;
     }
 
-    const bn = new yn(Dt.comparator);
+    const Cn = new An(Nt.comparator);
 
-    function Pn() {
-        return bn;
+    function Nn() {
+        return Cn;
     }
 
-    const vn = new yn(Dt.comparator);
+    const xn = new An(Nt.comparator);
 
-    function Vn() {
-        return vn;
-    }
+    const kn = new bn(Nt.comparator);
 
-    const Sn = new En(Dt.comparator);
-
-    function Dn(...t) {
-        let e = Sn;
+    function On(...t) {
+        let e = kn;
         for (const n of t) e = e.add(n);
         return e;
     }
 
-    const Cn = new En(rt);
+    const Mn = new bn(rt);
 
-    function Nn() {
-        return Cn;
+    function $n() {
+        return Mn;
     }
 
     /**
@@ -5531,7 +6224,7 @@ var app = (function () {
      * An event from the RemoteStore. It is split into targetChanges (changes to the
      * state or the set of documents in our watched targets) and documentUpdates
      * (changes to the actual documents).
-     */ class kn {
+     */ class Fn {
         constructor(
         /**
          * The snapshot version this event brings us up to, or MIN if not set.
@@ -5567,7 +6260,7 @@ var app = (function () {
         // PORTING NOTE: Multi-tab only
         static createSynthesizedRemoteEventForCurrentChange(t, e) {
             const n = new Map;
-            return n.set(t, xn.createSynthesizedTargetChangeForCurrentChange(t, e)), new kn(ut.min(), n, Nn(), Rn(), Dn());
+            return n.set(t, Bn.createSynthesizedTargetChangeForCurrentChange(t, e)), new Fn(at.min(), n, $n(), Dn(), On());
         }
     }
 
@@ -5578,7 +6271,7 @@ var app = (function () {
      * marked CURRENT.
      * The actual changes *to* documents are not part of the TargetChange since
      * documents may be part of multiple targets.
-     */ class xn {
+     */ class Bn {
         constructor(
         /**
          * An opaque, server-assigned token that allows watching a query to be resumed
@@ -5616,7 +6309,7 @@ var app = (function () {
          * apply a CURRENT status change to a View (for queries executed in a different
          * tab) or for new queries (to raise snapshots with correct CURRENT status).
          */    static createSynthesizedTargetChangeForCurrentChange(t, e) {
-            return new xn(pt.EMPTY_BYTE_STRING, e, Dn(), Dn(), Dn());
+            return new Bn(pt.EMPTY_BYTE_STRING, e, On(), On(), On());
         }
     }
 
@@ -5641,7 +6334,7 @@ var app = (function () {
      * applies.
      *
      * If document has been deleted NoDocument will be provided.
-     */ class $n {
+     */ class Ln {
         constructor(
         /** The new document applies to all of these targets. */
         t, 
@@ -5654,17 +6347,17 @@ var app = (function () {
          * document went out of view without the server sending a new document.
          */
         s) {
-            this.$ = t, this.removedTargetIds = e, this.key = n, this.O = s;
+            this.M = t, this.removedTargetIds = e, this.key = n, this.$ = s;
         }
     }
 
-    class On {
+    class Un {
         constructor(t, e) {
-            this.targetId = t, this.M = e;
+            this.targetId = t, this.F = e;
         }
     }
 
-    class Mn {
+    class qn {
         constructor(
         /** What kind of change occurred to the watch target. */
         t, 
@@ -5682,28 +6375,28 @@ var app = (function () {
         }
     }
 
-    /** Tracks the internal state of a Watch target. */ class Fn {
+    /** Tracks the internal state of a Watch target. */ class Kn {
         constructor() {
             /**
              * The number of pending responses (adds or removes) that we are waiting on.
              * We only consider targets active that have no pending responses.
              */
-            this.F = 0, 
+            this.B = 0, 
             /**
              * Keeps track of the document changes since the last raised snapshot.
              *
              * These changes are continuously updated as we receive document updates and
              * always reflect the current set of changes against the last issued snapshot.
              */
-            this.L = Un(), 
+            this.L = Qn(), 
             /** See public getters for explanations of these fields. */
-            this.B = pt.EMPTY_BYTE_STRING, this.U = !1, 
+            this.U = pt.EMPTY_BYTE_STRING, this.q = !1, 
             /**
              * Whether this target state should be included in the next snapshot. We
              * initialize to true so that newly-added targets are included in the next
              * RemoteEvent.
              */
-            this.q = !0;
+            this.K = !0;
         }
         /**
          * Whether this target has been marked 'current'.
@@ -5713,30 +6406,30 @@ var app = (function () {
          * was added and that the target is consistent with the rest of the watch
          * stream.
          */    get current() {
-            return this.U;
+            return this.q;
         }
         /** The last resume token sent to us for this target. */    get resumeToken() {
-            return this.B;
+            return this.U;
         }
-        /** Whether this target has pending target adds or target removes. */    get K() {
-            return 0 !== this.F;
+        /** Whether this target has pending target adds or target removes. */    get G() {
+            return 0 !== this.B;
         }
         /** Whether we have modified any state that should trigger a snapshot. */    get j() {
-            return this.q;
+            return this.K;
         }
         /**
          * Applies the resume token to the TargetChange, but only when it has a new
          * value. Empty resumeTokens are discarded.
          */    W(t) {
-            t.approximateByteSize() > 0 && (this.q = !0, this.B = t);
+            t.approximateByteSize() > 0 && (this.K = !0, this.U = t);
         }
         /**
          * Creates a target change from the current set of changes.
          *
          * To reset the document changes after raising this snapshot, call
          * `clearPendingChanges()`.
-         */    G() {
-            let t = Dn(), e = Dn(), n = Dn();
+         */    H() {
+            let t = On(), e = On(), n = On();
             return this.L.forEach(((s, i) => {
                 switch (i) {
                   case 0 /* Added */ :
@@ -5752,73 +6445,73 @@ var app = (function () {
                     break;
 
                   default:
-                    B();
+                    L();
                 }
-            })), new xn(this.B, this.U, t, e, n);
+            })), new Bn(this.U, this.q, t, e, n);
         }
         /**
          * Resets the document changes and sets `hasPendingChanges` to false.
-         */    H() {
-            this.q = !1, this.L = Un();
+         */    J() {
+            this.K = !1, this.L = Qn();
         }
-        J(t, e) {
-            this.q = !0, this.L = this.L.insert(t, e);
+        Y(t, e) {
+            this.K = !0, this.L = this.L.insert(t, e);
         }
-        Y(t) {
-            this.q = !0, this.L = this.L.remove(t);
-        }
-        X() {
-            this.F += 1;
+        X(t) {
+            this.K = !0, this.L = this.L.remove(t);
         }
         Z() {
-            this.F -= 1;
+            this.B += 1;
         }
         tt() {
-            this.q = !0, this.U = !0;
+            this.B -= 1;
+        }
+        et() {
+            this.K = !0, this.q = !0;
         }
     }
 
     /**
      * A helper class to accumulate watch changes into a RemoteEvent.
      */
-    class Ln {
+    class Gn {
         constructor(t) {
-            this.et = t, 
+            this.nt = t, 
             /** The internal state of all tracked targets. */
-            this.nt = new Map, 
+            this.st = new Map, 
             /** Keeps track of the documents to update since the last raised snapshot. */
-            this.st = Rn(), 
+            this.it = Dn(), 
             /** A mapping of document keys to their set of target IDs. */
-            this.it = Bn(), 
+            this.rt = jn(), 
             /**
              * A list of targets with existence filter mismatches. These targets are
              * known to be inconsistent and their listens needs to be re-established by
              * RemoteStore.
              */
-            this.rt = new En(rt);
+            this.ot = new bn(rt);
         }
         /**
          * Processes and adds the DocumentWatchChange to the current set of changes.
-         */    ot(t) {
-            for (const e of t.$) t.O && t.O.isFoundDocument() ? this.ct(e, t.O) : this.at(e, t.key, t.O);
-            for (const e of t.removedTargetIds) this.at(e, t.key, t.O);
+         */    ct(t) {
+            for (const e of t.M) t.$ && t.$.isFoundDocument() ? this.ut(e, t.$) : this.at(e, t.key, t.$);
+            for (const e of t.removedTargetIds) this.at(e, t.key, t.$);
         }
-        /** Processes and adds the WatchTargetChange to the current set of changes. */    ut(t) {
+        /** Processes and adds the WatchTargetChange to the current set of changes. */    ht(t) {
             this.forEachTarget(t, (e => {
-                const n = this.ht(e);
+                const n = this.lt(e);
                 switch (t.state) {
                   case 0 /* NoChange */ :
-                    this.lt(e) && n.W(t.resumeToken);
+                    this.ft(e) && n.W(t.resumeToken);
                     break;
 
                   case 1 /* Added */ :
                     // We need to decrement the number of pending acks needed from watch
                     // for this targetId.
-                    n.Z(), n.K || 
+                    n.tt(), n.G || 
                     // We have a freshly added target, so we need to reset any state
                     // that we had previously. This can happen e.g. when remove and add
                     // back a target for existence filter mismatches.
-                    n.H(), n.W(t.resumeToken);
+                    n.J(), n.W(t.resumeToken);
                     break;
 
                   case 2 /* Removed */ :
@@ -5826,23 +6519,23 @@ var app = (function () {
                     // remove any target changes.
                     // We need to decrement the number of pending acks needed from watch
                     // for this targetId.
-                    n.Z(), n.K || this.removeTarget(e);
+                    n.tt(), n.G || this.removeTarget(e);
                     break;
 
                   case 3 /* Current */ :
-                    this.lt(e) && (n.tt(), n.W(t.resumeToken));
+                    this.ft(e) && (n.et(), n.W(t.resumeToken));
                     break;
 
                   case 4 /* Reset */ :
-                    this.lt(e) && (
+                    this.ft(e) && (
                     // Reset the target and synthesizes removes for all existing
                     // documents. The backend will re-add any documents that still
                     // match the target before it sends the next global snapshot.
-                    this.ft(e), n.W(t.resumeToken));
+                    this.dt(e), n.W(t.resumeToken));
                     break;
 
                   default:
-                    B();
+                    L();
                 }
             }));
         }
@@ -5851,44 +6544,44 @@ var app = (function () {
          * targetIds explicitly listed in the change or the targetIds of all currently
          * active targets.
          */    forEachTarget(t, e) {
-            t.targetIds.length > 0 ? t.targetIds.forEach(e) : this.nt.forEach(((t, n) => {
-                this.lt(n) && e(n);
+            t.targetIds.length > 0 ? t.targetIds.forEach(e) : this.st.forEach(((t, n) => {
+                this.ft(n) && e(n);
             }));
         }
         /**
          * Handles existence filters and synthesizes deletes for filter mismatches.
          * Targets that are invalidated by filter mismatches are added to
          * `pendingTargetResets`.
-         */    dt(t) {
-            const e = t.targetId, n = t.M.count, s = this.wt(e);
+         */    _t(t) {
+            const e = t.targetId, n = t.F.count, s = this.wt(e);
             if (s) {
                 const t = s.target;
-                if (Zt(t)) if (0 === n) {
+                if (oe(t)) if (0 === n) {
                     // The existence filter told us the document does not exist. We deduce
                     // that this document does not exist and apply a deleted document to
                     // our updates. Without applying this deleted document there might be
                     // another query that will raise this document as part of a snapshot
                     // until it is resolved, essentially exposing inconsistency between
                     // queries.
-                    const n = new Dt(t.path);
-                    this.at(e, n, Gt.newNoDocument(n, ut.min()));
+                    const n = new Nt(t.path);
+                    this.at(e, n, Jt.newNoDocument(n, at.min()));
                 } else U(1 === n); else {
-                    this._t(e) !== n && (
+                    this.gt(e) !== n && (
                     // Existence filter mismatch: We reset the mapping and raise a new
                     // snapshot with `isFromCache:true`.
-                    this.ft(e), this.rt = this.rt.add(e));
+                    this.dt(e), this.ot = this.ot.add(e));
                 }
             }
         }
         /**
          * Converts the currently accumulated state into a remote event at the
          * provided snapshot version. Resets the accumulated changes before returning.
-         */    gt(t) {
+         */    yt(t) {
             const e = new Map;
-            this.nt.forEach(((n, s) => {
+            this.st.forEach(((n, s) => {
                 const i = this.wt(s);
                 if (i) {
-                    if (n.current && Zt(i.target)) {
+                    if (n.current && oe(i.target)) {
                         // Document queries for document that don't exist can produce an empty
                         // result set. To update our local cache, we synthesize a document
                         // delete if we have not previously received the document. This
@@ -5897,37 +6590,37 @@ var app = (function () {
                         // TODO(dimond): Ideally we would have an explicit lookup target
                         // instead resulting in an explicit delete message and we could
                         // remove this special logic.
-                        const e = new Dt(i.target.path);
-                        null !== this.st.get(e) || this.yt(s, e) || this.at(s, e, Gt.newNoDocument(e, t));
+                        const e = new Nt(i.target.path);
+                        null !== this.it.get(e) || this.It(s, e) || this.at(s, e, Jt.newNoDocument(e, t));
                     }
-                    n.j && (e.set(s, n.G()), n.H());
+                    n.j && (e.set(s, n.H()), n.J());
                 }
             }));
-            let n = Dn();
+            let n = On();
             // We extract the set of limbo-only document updates as the GC logic
             // special-cases documents that do not appear in the target cache.
             
             // TODO(gsoltis): Expand on this comment once GC is available in the JS
             // client.
-                    this.it.forEach(((t, e) => {
+                    this.rt.forEach(((t, e) => {
                 let s = !0;
                 e.forEachWhile((t => {
                     const e = this.wt(t);
                     return !e || 2 /* LimboResolution */ === e.purpose || (s = !1, !1);
                 })), s && (n = n.add(t));
-            }));
-            const s = new kn(t, e, this.rt, this.st, n);
-            return this.st = Rn(), this.it = Bn(), this.rt = new En(rt), s;
+            })), this.it.forEach(((e, n) => n.setReadTime(t)));
+            const s = new Fn(t, e, this.ot, this.it, n);
+            return this.it = Dn(), this.rt = jn(), this.ot = new bn(rt), s;
         }
         /**
          * Adds the provided document to the internal list of document updates and
          * its document key to the given target's mapping.
          */
         // Visible for testing.
-        ct(t, e) {
-            if (!this.lt(t)) return;
-            const n = this.yt(t, e.key) ? 2 /* Modified */ : 0 /* Added */;
-            this.ht(t).J(e.key, n), this.st = this.st.insert(e.key, e), this.it = this.it.insert(e.key, this.Tt(e.key).add(t));
+        ut(t, e) {
+            if (!this.ft(t)) return;
+            const n = this.It(t, e.key) ? 2 /* Modified */ : 0 /* Added */;
+            this.lt(t).Y(e.key, n), this.it = this.it.insert(e.key, e), this.rt = this.rt.insert(e.key, this.Et(e.key).add(t));
         }
         /**
          * Removes the provided document from the target mapping. If the
@@ -5938,77 +6631,77 @@ var app = (function () {
          */
         // Visible for testing.
         at(t, e, n) {
-            if (!this.lt(t)) return;
-            const s = this.ht(t);
-            this.yt(t, e) ? s.J(e, 1 /* Removed */) : 
+            if (!this.ft(t)) return;
+            const s = this.lt(t);
+            this.It(t, e) ? s.Y(e, 1 /* Removed */) : 
             // The document may have entered and left the target before we raised a
             // snapshot, so we can just ignore the change.
-            s.Y(e), this.it = this.it.insert(e, this.Tt(e).delete(t)), n && (this.st = this.st.insert(e, n));
+            s.X(e), this.rt = this.rt.insert(e, this.Et(e).delete(t)), n && (this.it = this.it.insert(e, n));
         }
         removeTarget(t) {
-            this.nt.delete(t);
+            this.st.delete(t);
         }
         /**
          * Returns the current count of documents in the target. This includes both
          * the number of documents that the LocalStore considers to be part of the
          * target as well as any accumulated changes.
-         */    _t(t) {
-            const e = this.ht(t).G();
-            return this.et.getRemoteKeysForTarget(t).size + e.addedDocuments.size - e.removedDocuments.size;
+         */    gt(t) {
+            const e = this.lt(t).H();
+            return this.nt.getRemoteKeysForTarget(t).size + e.addedDocuments.size - e.removedDocuments.size;
         }
         /**
          * Increment the number of acks needed from watch before we can consider the
          * server to be 'in-sync' with the client's active targets.
-         */    X(t) {
-            this.ht(t).X();
+         */    Z(t) {
+            this.lt(t).Z();
         }
-        ht(t) {
-            let e = this.nt.get(t);
-            return e || (e = new Fn, this.nt.set(t, e)), e;
+        lt(t) {
+            let e = this.st.get(t);
+            return e || (e = new Kn, this.st.set(t, e)), e;
         }
-        Tt(t) {
-            let e = this.it.get(t);
-            return e || (e = new En(rt), this.it = this.it.insert(t, e)), e;
+        Et(t) {
+            let e = this.rt.get(t);
+            return e || (e = new bn(rt), this.rt = this.rt.insert(t, e)), e;
         }
         /**
          * Verifies that the user is still interested in this target (by calling
          * `getTargetDataForTarget()`) and that we are not waiting for pending ADDs
          * from watch.
-         */    lt(t) {
+         */    ft(t) {
             const e = null !== this.wt(t);
-            return e || O("WatchChangeAggregator", "Detected inactive target", t), e;
+            return e || M("WatchChangeAggregator", "Detected inactive target", t), e;
         }
         /**
          * Returns the TargetData for an active target (i.e. a target that the user
          * is still interested in that has no outstanding target change requests).
          */    wt(t) {
-            const e = this.nt.get(t);
-            return e && e.K ? null : this.et.Et(t);
+            const e = this.st.get(t);
+            return e && e.G ? null : this.nt.Tt(t);
         }
         /**
          * Resets the state of a Watch target to its initial state (e.g. sets
          * 'current' to false, clears the resume token and removes its target mapping
          * from all documents).
-         */    ft(t) {
-            this.nt.set(t, new Fn);
-            this.et.getRemoteKeysForTarget(t).forEach((e => {
+         */    dt(t) {
+            this.st.set(t, new Kn);
+            this.nt.getRemoteKeysForTarget(t).forEach((e => {
                 this.at(t, e, /*updatedDocument=*/ null);
             }));
         }
         /**
          * Returns whether the LocalStore considers the document to be part of the
          * specified target.
-         */    yt(t, e) {
-            return this.et.getRemoteKeysForTarget(t).has(e);
+         */    It(t, e) {
+            return this.nt.getRemoteKeysForTarget(t).has(e);
         }
     }
 
-    function Bn() {
-        return new yn(Dt.comparator);
+    function jn() {
+        return new An(Nt.comparator);
     }
 
-    function Un() {
-        return new yn(Dt.comparator);
+    function Qn() {
+        return new An(Nt.comparator);
     }
 
     /**
@@ -6026,13 +6719,13 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ const qn = (() => {
+     */ const Wn = (() => {
         const t = {
             asc: "ASCENDING",
             desc: "DESCENDING"
         };
         return t;
-    })(), Kn = (() => {
+    })(), zn = (() => {
         const t = {
             "<": "LESS_THAN",
             "<=": "LESS_THAN_OR_EQUAL",
@@ -6062,17 +6755,17 @@ var app = (function () {
      * TODO(klimt): We can remove the databaseId argument if we keep the full
      * resource name in documents.
      */
-    class jn {
+    class Hn {
         constructor(t, e) {
-            this.databaseId = t, this.C = e;
+            this.databaseId = t, this.N = e;
         }
     }
 
     /**
      * Returns a value for a Date that's appropriate to put into a proto.
      */
-    function Qn(t, e) {
-        if (t.C) {
+    function Jn(t, e) {
+        if (t.N) {
             return `${new Date(1e3 * e.seconds).toISOString().replace(/\.\d*/, "").replace("Z", "")}.${("000000000" + e.nanoseconds).slice(-9)}Z`;
         }
         return {
@@ -6086,87 +6779,87 @@ var app = (function () {
      *
      * Visible for testing.
      */
-    function Wn(t, e) {
-        return t.C ? e.toBase64() : e.toUint8Array();
+    function Yn(t, e) {
+        return t.N ? e.toBase64() : e.toUint8Array();
     }
 
     /**
      * Returns a ByteString based on the proto string value.
-     */ function Gn(t, e) {
-        return Qn(t, e.toTimestamp());
+     */ function Xn(t, e) {
+        return Jn(t, e.toTimestamp());
     }
 
-    function zn(t) {
-        return U(!!t), ut.fromTimestamp(function(t) {
+    function Zn(t) {
+        return U(!!t), at.fromTimestamp(function(t) {
             const e = Et(t);
-            return new at(e.seconds, e.nanos);
+            return new ut(e.seconds, e.nanos);
         }(t));
     }
 
-    function Hn(t, e) {
+    function ts(t, e) {
         return function(t) {
-            return new wt([ "projects", t.projectId, "databases", t.database ]);
+            return new _t([ "projects", t.projectId, "databases", t.database ]);
         }(t).child("documents").child(e).canonicalString();
     }
 
-    function Jn(t) {
-        const e = wt.fromString(t);
-        return U(Rs(e)), e;
+    function es(t) {
+        const e = _t.fromString(t);
+        return U(vs(e)), e;
     }
 
-    function Yn(t, e) {
-        return Hn(t.databaseId, e.path);
+    function ns(t, e) {
+        return ts(t.databaseId, e.path);
     }
 
-    function Xn(t, e) {
-        const n = Jn(e);
-        if (n.get(1) !== t.databaseId.projectId) throw new Q(j.INVALID_ARGUMENT, "Tried to deserialize key from different project: " + n.get(1) + " vs " + t.databaseId.projectId);
-        if (n.get(3) !== t.databaseId.database) throw new Q(j.INVALID_ARGUMENT, "Tried to deserialize key from different database: " + n.get(3) + " vs " + t.databaseId.database);
-        return new Dt(ns(n));
+    function ss(t, e) {
+        const n = es(e);
+        if (n.get(1) !== t.databaseId.projectId) throw new j(G.INVALID_ARGUMENT, "Tried to deserialize key from different project: " + n.get(1) + " vs " + t.databaseId.projectId);
+        if (n.get(3) !== t.databaseId.database) throw new j(G.INVALID_ARGUMENT, "Tried to deserialize key from different database: " + n.get(3) + " vs " + t.databaseId.database);
+        return new Nt(cs(n));
     }
 
-    function Zn(t, e) {
-        return Hn(t.databaseId, e);
+    function is(t, e) {
+        return ts(t.databaseId, e);
     }
 
-    function ts(t) {
-        const e = Jn(t);
+    function rs(t) {
+        const e = es(t);
         // In v1beta1 queries for collections at the root did not have a trailing
         // "/documents". In v1 all resource paths contain "/documents". Preserve the
         // ability to read the v1beta1 form for compatibility with queries persisted
         // in the local target cache.
-            return 4 === e.length ? wt.emptyPath() : ns(e);
+            return 4 === e.length ? _t.emptyPath() : cs(e);
     }
 
-    function es(t) {
-        return new wt([ "projects", t.databaseId.projectId, "databases", t.databaseId.database ]).canonicalString();
+    function os(t) {
+        return new _t([ "projects", t.databaseId.projectId, "databases", t.databaseId.database ]).canonicalString();
     }
 
-    function ns(t) {
+    function cs(t) {
         return U(t.length > 4 && "documents" === t.get(4)), t.popFirst(5);
     }
 
-    /** Creates a Document proto from key and fields (but no create/update time) */ function ss(t, e, n) {
+    /** Creates a Document proto from key and fields (but no create/update time) */ function us(t, e, n) {
         return {
-            name: Yn(t, e),
+            name: ns(t, e),
             fields: n.value.mapValue.fields
         };
     }
 
-    function os(t, e) {
+    function ls(t, e) {
         let n;
         if ("targetChange" in e) {
             e.targetChange;
             // proto3 default value is unset in JSON (undefined), so use 'NO_CHANGE'
             // if unset
             const s = function(t) {
-                return "NO_CHANGE" === t ? 0 /* NoChange */ : "ADD" === t ? 1 /* Added */ : "REMOVE" === t ? 2 /* Removed */ : "CURRENT" === t ? 3 /* Current */ : "RESET" === t ? 4 /* Reset */ : B();
+                return "NO_CHANGE" === t ? 0 /* NoChange */ : "ADD" === t ? 1 /* Added */ : "REMOVE" === t ? 2 /* Removed */ : "CURRENT" === t ? 3 /* Current */ : "RESET" === t ? 4 /* Reset */ : L();
             }(e.targetChange.targetChangeType || "NO_CHANGE"), i = e.targetChange.targetIds || [], r = function(t, e) {
-                return t.C ? (U(void 0 === e || "string" == typeof e), pt.fromBase64String(e || "")) : (U(void 0 === e || e instanceof Uint8Array), 
+                return t.N ? (U(void 0 === e || "string" == typeof e), pt.fromBase64String(e || "")) : (U(void 0 === e || e instanceof Uint8Array), 
                 pt.fromUint8Array(e || new Uint8Array));
             }(t, e.targetChange.resumeToken), o = e.targetChange.cause, c = o && function(t) {
-                const e = void 0 === t.code ? j.UNKNOWN : gn(t.code);
-                return new Q(e, t.message || "");
+                const e = void 0 === t.code ? G.UNKNOWN : Tn(t.code);
+                return new j(e, t.message || "");
             }
             /**
      * Returns a value for a number (or null) that's appropriate to put into
@@ -6176,118 +6869,118 @@ var app = (function () {
      * our generated proto interfaces say Int32Value must be. But GRPC actually
      * expects a { value: <number> } struct.
      */ (o);
-            n = new Mn(s, i, r, c || null);
+            n = new qn(s, i, r, c || null);
         } else if ("documentChange" in e) {
             e.documentChange;
             const s = e.documentChange;
             s.document, s.document.name, s.document.updateTime;
-            const i = Xn(t, s.document.name), r = zn(s.document.updateTime), o = new Qt({
+            const i = ss(t, s.document.name), r = Zn(s.document.updateTime), o = new zt({
                 mapValue: {
                     fields: s.document.fields
                 }
-            }), c = Gt.newFoundDocument(i, r, o), a = s.targetIds || [], u = s.removedTargetIds || [];
-            n = new $n(a, u, c.key, c);
+            }), c = Jt.newFoundDocument(i, r, o), u = s.targetIds || [], a = s.removedTargetIds || [];
+            n = new Ln(u, a, c.key, c);
         } else if ("documentDelete" in e) {
             e.documentDelete;
             const s = e.documentDelete;
             s.document;
-            const i = Xn(t, s.document), r = s.readTime ? zn(s.readTime) : ut.min(), o = Gt.newNoDocument(i, r), c = s.removedTargetIds || [];
-            n = new $n([], c, o.key, o);
+            const i = ss(t, s.document), r = s.readTime ? Zn(s.readTime) : at.min(), o = Jt.newNoDocument(i, r), c = s.removedTargetIds || [];
+            n = new Ln([], c, o.key, o);
         } else if ("documentRemove" in e) {
             e.documentRemove;
             const s = e.documentRemove;
             s.document;
-            const i = Xn(t, s.document), r = s.removedTargetIds || [];
-            n = new $n([], r, i, null);
+            const i = ss(t, s.document), r = s.removedTargetIds || [];
+            n = new Ln([], r, i, null);
         } else {
-            if (!("filter" in e)) return B();
+            if (!("filter" in e)) return L();
             {
                 e.filter;
                 const t = e.filter;
                 t.targetId;
-                const s = t.count || 0, i = new dn(s), r = t.targetId;
-                n = new On(r, i);
+                const s = t.count || 0, i = new yn(s), r = t.targetId;
+                n = new Un(r, i);
             }
         }
         return n;
     }
 
-    function cs(t, e) {
+    function fs(t, e) {
         let n;
-        if (e instanceof on) n = {
-            update: ss(t, e.key, e.value)
-        }; else if (e instanceof ln) n = {
-            delete: Yn(t, e.key)
-        }; else if (e instanceof cn) n = {
-            update: ss(t, e.key, e.data),
-            updateMask: As(e.fieldMask)
+        if (e instanceof ln) n = {
+            update: us(t, e.key, e.value)
+        }; else if (e instanceof mn) n = {
+            delete: ns(t, e.key)
+        }; else if (e instanceof fn) n = {
+            update: us(t, e.key, e.data),
+            updateMask: bs(e.fieldMask)
         }; else {
-            if (!(e instanceof fn)) return B();
+            if (!(e instanceof gn)) return L();
             n = {
-                verify: Yn(t, e.key)
+                verify: ns(t, e.key)
             };
         }
         return e.fieldTransforms.length > 0 && (n.updateTransforms = e.fieldTransforms.map((t => function(t, e) {
             const n = e.transform;
-            if (n instanceof Be) return {
+            if (n instanceof je) return {
                 fieldPath: e.field.canonicalString(),
                 setToServerValue: "REQUEST_TIME"
             };
-            if (n instanceof Ue) return {
+            if (n instanceof Qe) return {
                 fieldPath: e.field.canonicalString(),
                 appendMissingElements: {
                     values: n.elements
                 }
             };
-            if (n instanceof Ke) return {
+            if (n instanceof ze) return {
                 fieldPath: e.field.canonicalString(),
                 removeAllFromArray: {
                     values: n.elements
                 }
             };
-            if (n instanceof Qe) return {
+            if (n instanceof Je) return {
                 fieldPath: e.field.canonicalString(),
-                increment: n.N
+                increment: n.k
             };
-            throw B();
+            throw L();
         }(0, t)))), e.precondition.isNone || (n.currentDocument = function(t, e) {
             return void 0 !== e.updateTime ? {
-                updateTime: Gn(t, e.updateTime)
+                updateTime: Xn(t, e.updateTime)
             } : void 0 !== e.exists ? {
                 exists: e.exists
-            } : B();
+            } : L();
         }(t, e.precondition)), n;
     }
 
-    function us(t, e) {
+    function _s(t, e) {
         return t && t.length > 0 ? (U(void 0 !== e), t.map((t => function(t, e) {
             // NOTE: Deletes don't have an updateTime.
-            let n = t.updateTime ? zn(t.updateTime) : zn(e);
-            return n.isEqual(ut.min()) && (
+            let n = t.updateTime ? Zn(t.updateTime) : Zn(e);
+            return n.isEqual(at.min()) && (
             // The Firestore Emulator currently returns an update time of 0 for
             // deletes of non-existing documents (rather than null). This breaks the
             // test "get deleted doc while offline with source=cache" as NoDocuments
             // with version 0 are filtered by IndexedDb's RemoteDocumentCache.
             // TODO(#2149): Remove this when Emulator is fixed
-            n = zn(e)), new Je(n, t.transformResults || []);
+            n = Zn(e)), new en(n, t.transformResults || []);
         }(t, e)))) : [];
     }
 
-    function hs(t, e) {
+    function ws(t, e) {
         return {
-            documents: [ Zn(t, e.path) ]
+            documents: [ is(t, e.path) ]
         };
     }
 
-    function ls(t, e) {
+    function ms(t, e) {
         // Dissect the path into parent, collectionId, and optional key filter.
         const n = {
             structuredQuery: {}
         }, s = e.path;
-        null !== e.collectionGroup ? (n.parent = Zn(t, s), n.structuredQuery.from = [ {
+        null !== e.collectionGroup ? (n.parent = is(t, s), n.structuredQuery.from = [ {
             collectionId: e.collectionGroup,
             allDescendants: !0
-        } ]) : (n.parent = Zn(t, s.popLast()), n.structuredQuery.from = [ {
+        } ]) : (n.parent = is(t, s.popLast()), n.structuredQuery.from = [ {
             collectionId: s.lastSegment()
         } ]);
         const i = function(t) {
@@ -6296,36 +6989,36 @@ var app = (function () {
             // visible for testing
             function(t) {
                 if ("==" /* EQUAL */ === t.op) {
-                    if (qt(t.value)) return {
+                    if (jt(t.value)) return {
                         unaryFilter: {
-                            field: ps(t.field),
+                            field: Ts(t.field),
                             op: "IS_NAN"
                         }
                     };
-                    if (Ut(t.value)) return {
+                    if (Gt(t.value)) return {
                         unaryFilter: {
-                            field: ps(t.field),
+                            field: Ts(t.field),
                             op: "IS_NULL"
                         }
                     };
                 } else if ("!=" /* NOT_EQUAL */ === t.op) {
-                    if (qt(t.value)) return {
+                    if (jt(t.value)) return {
                         unaryFilter: {
-                            field: ps(t.field),
+                            field: Ts(t.field),
                             op: "IS_NOT_NAN"
                         }
                     };
-                    if (Ut(t.value)) return {
+                    if (Gt(t.value)) return {
                         unaryFilter: {
-                            field: ps(t.field),
+                            field: Ts(t.field),
                             op: "IS_NOT_NULL"
                         }
                     };
                 }
                 return {
                     fieldFilter: {
-                        field: ps(t.field),
-                        op: ys(t.op),
+                        field: Ts(t.field),
+                        op: Es(t.op),
                         value: t.value
                     }
                 };
@@ -6345,26 +7038,34 @@ var app = (function () {
             // visible for testing
             function(t) {
                 return {
-                    field: ps(t.field),
-                    direction: gs(t.dir)
+                    field: Ts(t.field),
+                    direction: Is(t.dir)
                 };
             }(t)));
         }(e.orderBy);
         r && (n.structuredQuery.orderBy = r);
         const o = function(t, e) {
-            return t.C || vt(e) ? e : {
+            return t.N || St(e) ? e : {
                 value: e
             };
         }
         /**
      * Returns a number (or null) from a google.protobuf.Int32Value proto.
      */ (t, e.limit);
-        return null !== o && (n.structuredQuery.limit = o), e.startAt && (n.structuredQuery.startAt = _s(e.startAt)), 
-        e.endAt && (n.structuredQuery.endAt = _s(e.endAt)), n;
+        var c;
+        return null !== o && (n.structuredQuery.limit = o), e.startAt && (n.structuredQuery.startAt = {
+            before: (c = e.startAt).inclusive,
+            values: c.position
+        }), e.endAt && (n.structuredQuery.endAt = function(t) {
+            return {
+                before: !t.inclusive,
+                values: t.position
+            };
+        }(e.endAt)), n;
     }
 
-    function fs(t) {
-        let e = ts(t.parent);
+    function gs(t) {
+        let e = rs(t.parent);
         const n = t.structuredQuery, s = n.from ? n.from.length : 0;
         let i = null;
         if (s > 0) {
@@ -6373,10 +7074,10 @@ var app = (function () {
             t.allDescendants ? i = t.collectionId : e = e.child(t.collectionId);
         }
         let r = [];
-        n.where && (r = ws(n.where));
+        n.where && (r = ps(n.where));
         let o = [];
         n.orderBy && (o = n.orderBy.map((t => function(t) {
-            return new fe(Ts(t.field), 
+            return new ge(As(t.field), 
             // visible for testing
             function(t) {
                 switch (t) {
@@ -6396,15 +7097,23 @@ var app = (function () {
         let c = null;
         n.limit && (c = function(t) {
             let e;
-            return e = "object" == typeof t ? t.value : t, vt(e) ? null : e;
+            return e = "object" == typeof t ? t.value : t, St(e) ? null : e;
         }(n.limit));
-        let a = null;
-        n.startAt && (a = ms(n.startAt));
         let u = null;
-        return n.endAt && (u = ms(n.endAt)), ge(e, i, o, r, c, "F" /* First */ , a, u);
+        n.startAt && (u = function(t) {
+            const e = !!t.before, n = t.values || [];
+            return new me(n, e);
+        }(n.startAt));
+        let a = null;
+        return n.endAt && (a = function(t) {
+            const e = !t.before, n = t.values || [];
+            return new me(n, e);
+        }
+        // visible for testing
+        (n.endAt)), Te(e, i, o, r, c, "F" /* First */ , u, a);
     }
 
-    function ds(t, e) {
+    function ys(t, e) {
         const n = function(t, e) {
             switch (e) {
               case 0 /* Listen */ :
@@ -6417,7 +7126,7 @@ var app = (function () {
                 return "limbo-document";
 
               default:
-                return B();
+                return L();
             }
         }(0, e.purpose);
         return null == n ? null : {
@@ -6425,43 +7134,30 @@ var app = (function () {
         };
     }
 
-    function ws(t) {
-        return t ? void 0 !== t.unaryFilter ? [ Is(t) ] : void 0 !== t.fieldFilter ? [ Es(t) ] : void 0 !== t.compositeFilter ? t.compositeFilter.filters.map((t => ws(t))).reduce(((t, e) => t.concat(e))) : B() : [];
-    }
-
-    function _s(t) {
-        return {
-            before: t.before,
-            values: t.position
-        };
-    }
-
-    function ms(t) {
-        const e = !!t.before, n = t.values || [];
-        return new he(n, e);
-    }
-
-    // visible for testing
-    function gs(t) {
-        return qn[t];
-    }
-
-    function ys(t) {
-        return Kn[t];
-    }
-
     function ps(t) {
+        return t ? void 0 !== t.unaryFilter ? [ Ps(t) ] : void 0 !== t.fieldFilter ? [ Rs(t) ] : void 0 !== t.compositeFilter ? t.compositeFilter.filters.map((t => ps(t))).reduce(((t, e) => t.concat(e))) : L() : [];
+    }
+
+    function Is(t) {
+        return Wn[t];
+    }
+
+    function Es(t) {
+        return zn[t];
+    }
+
+    function Ts(t) {
         return {
             fieldPath: t.canonicalString()
         };
     }
 
-    function Ts(t) {
+    function As(t) {
         return mt.fromServerFormat(t.fieldPath);
     }
 
-    function Es(t) {
-        return te.create(Ts(t.fieldFilter.field), function(t) {
+    function Rs(t) {
+        return ce.create(As(t.fieldFilter.field), function(t) {
             switch (t) {
               case "EQUAL":
                 return "==" /* EQUAL */;
@@ -6494,59 +7190,74 @@ var app = (function () {
                 return "array-contains-any" /* ARRAY_CONTAINS_ANY */;
 
               default:
-                return B();
+                return L();
             }
         }(t.fieldFilter.op), t.fieldFilter.value);
     }
 
-    function Is(t) {
+    function Ps(t) {
         switch (t.unaryFilter.op) {
           case "IS_NAN":
-            const e = Ts(t.unaryFilter.field);
-            return te.create(e, "==" /* EQUAL */ , {
+            const e = As(t.unaryFilter.field);
+            return ce.create(e, "==" /* EQUAL */ , {
                 doubleValue: NaN
             });
 
           case "IS_NULL":
-            const n = Ts(t.unaryFilter.field);
-            return te.create(n, "==" /* EQUAL */ , {
+            const n = As(t.unaryFilter.field);
+            return ce.create(n, "==" /* EQUAL */ , {
                 nullValue: "NULL_VALUE"
             });
 
           case "IS_NOT_NAN":
-            const s = Ts(t.unaryFilter.field);
-            return te.create(s, "!=" /* NOT_EQUAL */ , {
+            const s = As(t.unaryFilter.field);
+            return ce.create(s, "!=" /* NOT_EQUAL */ , {
                 doubleValue: NaN
             });
 
           case "IS_NOT_NULL":
-            const i = Ts(t.unaryFilter.field);
-            return te.create(i, "!=" /* NOT_EQUAL */ , {
+            const i = As(t.unaryFilter.field);
+            return ce.create(i, "!=" /* NOT_EQUAL */ , {
                 nullValue: "NULL_VALUE"
             });
 
           default:
-            return B();
+            return L();
         }
     }
 
-    function As(t) {
+    function bs(t) {
         const e = [];
         return t.fields.forEach((t => e.push(t.canonicalString()))), {
             fieldPaths: e
         };
     }
 
-    function Rs(t) {
+    function vs(t) {
         // Resource names have at least 4 components (project ID, database ID)
         return t.length >= 4 && "projects" === t.get(0) && "databases" === t.get(2);
     }
 
-    // Visible for testing
-    const Ws = "The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab.";
-
     // V2 is no longer usable (see comment at top of file)
     // Visible for testing
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const ei = "The current tab is not in the required state to perform this operation. It might be necessary to refresh the browser tab.";
+
     /**
      * A base class representing a persistence transaction, encapsulating both the
      * transaction's sequence numbers as well as a list of onCommitted listeners.
@@ -6554,8 +7265,7 @@ var app = (function () {
      * When you call Persistence.runTransaction(), it will create a transaction and
      * pass it to your callback. You then pass it to any method that operates
      * on persistence.
-     */
-    class Gs {
+     */ class ni {
         constructor() {
             this.onCommittedListeners = [];
         }
@@ -6595,7 +7305,7 @@ var app = (function () {
      *
      * NOTE: .then() and .catch() only allow a single consumer, unlike normal
      * Promises.
-     */ class zs {
+     */ class si {
         constructor(t) {
             // NOTE: next/catchCallback will always point to our own wrapper functions,
             // not the user's raw next() or catch() callbacks.
@@ -6617,7 +7327,7 @@ var app = (function () {
             return this.next(void 0, t);
         }
         next(t, e) {
-            return this.callbackAttached && B(), this.callbackAttached = !0, this.isDone ? this.error ? this.wrapFailure(e, this.error) : this.wrapSuccess(t, this.result) : new zs(((n, s) => {
+            return this.callbackAttached && L(), this.callbackAttached = !0, this.isDone ? this.error ? this.wrapFailure(e, this.error) : this.wrapSuccess(t, this.result) : new si(((n, s) => {
                 this.nextCallback = e => {
                     this.wrapSuccess(t, e).next(n, s);
                 }, this.catchCallback = t => {
@@ -6633,24 +7343,24 @@ var app = (function () {
         wrapUserFunction(t) {
             try {
                 const e = t();
-                return e instanceof zs ? e : zs.resolve(e);
+                return e instanceof si ? e : si.resolve(e);
             } catch (t) {
-                return zs.reject(t);
+                return si.reject(t);
             }
         }
         wrapSuccess(t, e) {
-            return t ? this.wrapUserFunction((() => t(e))) : zs.resolve(e);
+            return t ? this.wrapUserFunction((() => t(e))) : si.resolve(e);
         }
         wrapFailure(t, e) {
-            return t ? this.wrapUserFunction((() => t(e))) : zs.reject(e);
+            return t ? this.wrapUserFunction((() => t(e))) : si.reject(e);
         }
         static resolve(t) {
-            return new zs(((e, n) => {
+            return new si(((e, n) => {
                 e(t);
             }));
         }
         static reject(t) {
-            return new zs(((e, n) => {
+            return new si(((e, n) => {
                 n(t);
             }));
         }
@@ -6658,7 +7368,7 @@ var app = (function () {
         // Accept all Promise types in waitFor().
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         t) {
-            return new zs(((e, n) => {
+            return new si(((e, n) => {
                 let s = 0, i = 0, r = !1;
                 t.forEach((t => {
                     ++s, t.next((() => {
@@ -6673,8 +7383,8 @@ var app = (function () {
          * will be evaluated until one of them returns `true`, then stop. The final
          * result will be whether any of them returned `true`.
          */    static or(t) {
-            let e = zs.resolve(!1);
-            for (const n of t) e = e.next((t => t ? zs.resolve(t) : n()));
+            let e = si.resolve(!1);
+            for (const n of t) e = e.next((t => t ? si.resolve(t) : n()));
             return e;
         }
         static forEach(t, e) {
@@ -6685,7 +7395,7 @@ var app = (function () {
         }
     }
 
-    /** Verifies whether `e` is an IndexedDbTransactionError. */ function Zs(t) {
+    /** Verifies whether `e` is an IndexedDbTransactionError. */ function ui(t) {
         // Use name equality, as instanceof checks on errors don't work with errors
         // that wrap other errors.
         return "IndexedDbTransactionError" === t.name;
@@ -6709,7 +7419,7 @@ var app = (function () {
      */
     /**
      * A batch of mutations that will be sent as one unit to the backend.
-     */ class oi {
+     */ class wi {
         /**
          * @param batchId - The unique ID of this mutation batch.
          * @param localWriteTime - The original write time of this mutation.
@@ -6736,7 +7446,7 @@ var app = (function () {
             for (let e = 0; e < this.mutations.length; e++) {
                 const s = this.mutations[e];
                 if (s.key.isEqual(t.key)) {
-                    tn(s, t, n[e]);
+                    on(s, t, n[e]);
                 }
             }
         }
@@ -6748,9 +7458,9 @@ var app = (function () {
          */    applyToLocalView(t) {
             // First, apply the base state. This allows us to apply non-idempotent
             // transform against a consistent set of values.
-            for (const e of this.baseMutations) e.key.isEqual(t.key) && en(e, t, this.localWriteTime);
+            for (const e of this.baseMutations) e.key.isEqual(t.key) && cn(e, t, this.localWriteTime);
             // Second, apply all user-provided mutations.
-                    for (const e of this.mutations) e.key.isEqual(t.key) && en(e, t, this.localWriteTime);
+                    for (const e of this.mutations) e.key.isEqual(t.key) && cn(e, t, this.localWriteTime);
         }
         /**
          * Computes the local view for all provided documents given the mutations in
@@ -6763,18 +7473,18 @@ var app = (function () {
                 const n = t.get(e.key), s = n;
                 // TODO(mutabledocuments): This method should take a MutableDocumentMap
                 // and we should remove this cast.
-                            this.applyToLocalView(s), n.isValidDocument() || s.convertToNoDocument(ut.min());
+                            this.applyToLocalView(s), n.isValidDocument() || s.convertToNoDocument(at.min());
             }));
         }
         keys() {
-            return this.mutations.reduce(((t, e) => t.add(e.key)), Dn());
+            return this.mutations.reduce(((t, e) => t.add(e.key)), On());
         }
         isEqual(t) {
-            return this.batchId === t.batchId && ot(this.mutations, t.mutations, ((t, e) => sn(t, e))) && ot(this.baseMutations, t.baseMutations, ((t, e) => sn(t, e)));
+            return this.batchId === t.batchId && ot(this.mutations, t.mutations, ((t, e) => an(t, e))) && ot(this.baseMutations, t.baseMutations, ((t, e) => an(t, e)));
         }
     }
 
-    /** The result of applying a mutation batch to the backend. */ class ci {
+    /** The result of applying a mutation batch to the backend. */ class mi {
         constructor(t, e, n, 
         /**
          * A pre-computed mapping from each mutated document to the resulting
@@ -6789,10 +7499,46 @@ var app = (function () {
          * caches a document=&gt;version mapping (docVersions).
          */    static from(t, e, n) {
             U(t.mutations.length === n.length);
-            let s = Vn();
+            let s = xn;
             const i = t.mutations;
             for (let t = 0; t < i.length; t++) s = s.insert(i[t].key, n[t].version);
-            return new ci(t, e, n, s);
+            return new mi(t, e, n, s);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2022 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Representation of an overlay computed by Firestore.
+     *
+     * Holds information about a mutation and the largest batch id in Firestore when
+     * the mutation was created.
+     */ class gi {
+        constructor(t, e) {
+            this.largestBatchId = t, this.mutation = e;
+        }
+        getKey() {
+            return this.mutation.key;
+        }
+        isEqual(t) {
+            return null !== t && this.mutation === t.mutation;
+        }
+        toString() {
+            return `Overlay{\n      largestBatchId: ${this.largestBatchId},\n      mutation: ${this.mutation.toString()}\n    }`;
         }
     }
 
@@ -6814,7 +7560,7 @@ var app = (function () {
      */
     /**
      * An immutable set of metadata that the local store tracks for each target.
-     */ class ai {
+     */ class yi {
         constructor(
         /** The target being listened to. */
         t, 
@@ -6831,11 +7577,11 @@ var app = (function () {
          */
         s, 
         /** The latest snapshot version seen for this target. */
-        i = ut.min()
+        i = at.min()
         /**
          * The maximum snapshot version at which the associated view
          * contained no limbo documents.
-         */ , r = ut.min()
+         */ , r = at.min()
         /**
          * An opaque, server-assigned token that allows watching a target to be
          * resumed after disconnecting without retransmitting all the data that
@@ -6846,19 +7592,19 @@ var app = (function () {
             this.lastLimboFreeSnapshotVersion = r, this.resumeToken = o;
         }
         /** Creates a new target data instance with an updated sequence number. */    withSequenceNumber(t) {
-            return new ai(this.target, this.targetId, this.purpose, t, this.snapshotVersion, this.lastLimboFreeSnapshotVersion, this.resumeToken);
+            return new yi(this.target, this.targetId, this.purpose, t, this.snapshotVersion, this.lastLimboFreeSnapshotVersion, this.resumeToken);
         }
         /**
          * Creates a new target data instance with an updated resume token and
          * snapshot version.
          */    withResumeToken(t, e) {
-            return new ai(this.target, this.targetId, this.purpose, this.sequenceNumber, e, this.lastLimboFreeSnapshotVersion, t);
+            return new yi(this.target, this.targetId, this.purpose, this.sequenceNumber, e, this.lastLimboFreeSnapshotVersion, t);
         }
         /**
          * Creates a new target data instance with an updated last limbo free
          * snapshot version number.
          */    withLastLimboFreeSnapshotVersion(t) {
-            return new ai(this.target, this.targetId, this.purpose, this.sequenceNumber, this.snapshotVersion, t, this.resumeToken);
+            return new yi(this.target, this.targetId, this.purpose, this.sequenceNumber, this.snapshotVersion, t, this.resumeToken);
         }
     }
 
@@ -6878,9 +7624,9 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    /** Serializer for values stored in the LocalStore. */ class ui {
+    /** Serializer for values stored in the LocalStore. */ class pi {
         constructor(t) {
-            this.Gt = t;
+            this.Ht = t;
         }
     }
 
@@ -6893,12 +7639,12 @@ var app = (function () {
      * This reconstructs the original query used to build the bundle being loaded,
      * including features exists only in SDKs (for example: limit-to-last).
      */
-    function pi(t) {
-        const e = fs({
+    function Si(t) {
+        const e = gs({
             parent: t.parent,
             structuredQuery: t.structuredQuery
         });
-        return "LAST" === t.limitType ? Pe(e, e.limit, "L" /* Last */) : e;
+        return "LAST" === t.limitType ? Ce(e, e.limit, "L" /* Last */) : e;
     }
 
     /**
@@ -6919,15 +7665,47 @@ var app = (function () {
      */
     /**
      * An in-memory implementation of IndexManager.
-     */ class Ai {
+     */ class Wi {
         constructor() {
-            this.zt = new Ri;
+            this.xe = new zi;
         }
         addToCollectionParentIndex(t, e) {
-            return this.zt.add(e), zs.resolve();
+            return this.xe.add(e), si.resolve();
         }
         getCollectionParents(t, e) {
-            return zs.resolve(this.zt.getEntries(e));
+            return si.resolve(this.xe.getEntries(e));
+        }
+        addFieldIndex(t, e) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve();
+        }
+        deleteFieldIndex(t, e) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve();
+        }
+        getDocumentsMatchingTarget(t, e, n) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve(On());
+        }
+        getFieldIndex(t, e) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve(null);
+        }
+        getFieldIndexes(t, e) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve([]);
+        }
+        getNextCollectionGroupToUpdate(t) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve(null);
+        }
+        updateCollectionGroup(t, e, n) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve();
+        }
+        updateIndexEntries(t, e) {
+            // Field indices are not supported with memory persistence.
+            return si.resolve();
         }
     }
 
@@ -6935,13 +7713,13 @@ var app = (function () {
      * Internal implementation of the collection-parent index exposed by MemoryIndexManager.
      * Also used for in-memory caching by IndexedDbIndexManager and initial index population
      * in indexeddb_schema.ts
-     */ class Ri {
+     */ class zi {
         constructor() {
             this.index = {};
         }
         // Returns false if the entry already existed.
         add(t) {
-            const e = t.lastSegment(), n = t.popLast(), s = this.index[e] || new En(wt.comparator), i = !s.has(n);
+            const e = t.lastSegment(), n = t.popLast(), s = this.index[e] || new bn(_t.comparator), i = !s.has(n);
             return this.index[e] = s.add(n), i;
         }
         has(t) {
@@ -6949,7 +7727,7 @@ var app = (function () {
             return s && s.has(n);
         }
         getEntries(t) {
-            return (this.index[t] || new En(wt.comparator)).toArray();
+            return (this.index[t] || new bn(_t.comparator)).toArray();
         }
     }
 
@@ -6984,23 +7762,23 @@ var app = (function () {
      * generate in-memory target IDs that are transient and can be reused after a
      * restart.
      */
-    class Oi {
+    class ar {
         constructor(t) {
-            this.se = t;
+            this.ze = t;
         }
         next() {
-            return this.se += 2, this.se;
+            return this.ze += 2, this.ze;
         }
-        static ie() {
+        static He() {
             // The target cache generator must return '2' in its first call to `next()`
             // as there is no differentiation in the protocol layer between an unset
             // number and the number '0'. If we were to sent a target with target ID
             // '0', the backend would consider it unset and replace it with its own ID.
-            return new Oi(0);
+            return new ar(0);
         }
-        static re() {
+        static Je() {
             // Sync engine assigns target IDs for limbo document detection.
-            return new Oi(-1);
+            return new ar(-1);
         }
     }
 
@@ -7029,9 +7807,9 @@ var app = (function () {
      *
      * @param err - An error returned by a LocalStore operation.
      * @returns A Promise that resolves after we recovered, or the original error.
-     */ async function Ui(t) {
-        if (t.code !== j.FAILED_PRECONDITION || t.message !== Ws) throw t;
-        O("LocalStore", "Unexpectedly lost primary lease");
+     */ async function _r(t) {
+        if (t.code !== G.FAILED_PRECONDITION || t.message !== ei) throw t;
+        M("LocalStore", "Unexpectedly lost primary lease");
     }
 
     /**
@@ -7055,7 +7833,7 @@ var app = (function () {
      * associated equals function and must be immutable. Entries in the map are
      * stored together with the key being produced from the mapKeyFn. This map
      * automatically handles collisions of keys.
-     */ class zi {
+     */ class Er {
         constructor(t, e) {
             this.mapKeyFn = t, this.equalsFn = e, 
             /**
@@ -7128,37 +7906,26 @@ var app = (function () {
      * PORTING NOTE: This class was implemented then removed from other platforms.
      * If byte-counting ends up being needed on the other platforms, consider
      * porting this class as part of that implementation work.
-     */ class Hi {
+     */ class Tr {
         constructor() {
-            // A mapping of document key to the new cache entry that should be written (or null if any
-            // existing cache entry should be removed).
-            this.changes = new zi((t => t.toString()), ((t, e) => t.isEqual(e))), this.changesApplied = !1;
-        }
-        getReadTime(t) {
-            const e = this.changes.get(t);
-            return e ? e.readTime : ut.min();
+            // A mapping of document key to the new cache entry that should be written.
+            this.changes = new Er((t => t.toString()), ((t, e) => t.isEqual(e))), this.changesApplied = !1;
         }
         /**
          * Buffers a `RemoteDocumentCache.addEntry()` call.
          *
          * You can only modify documents that have already been retrieved via
          * `getEntry()/getEntries()` (enforced via IndexedDbs `apply()`).
-         */    addEntry(t, e) {
-            this.assertNotApplied(), this.changes.set(t.key, {
-                document: t,
-                readTime: e
-            });
+         */    addEntry(t) {
+            this.assertNotApplied(), this.changes.set(t.key, t);
         }
         /**
          * Buffers a `RemoteDocumentCache.removeEntry()` call.
          *
          * You can only remove documents that have already been retrieved via
          * `getEntry()/getEntries()` (enforced via IndexedDbs `apply()`).
-         */    removeEntry(t, e = null) {
-            this.assertNotApplied(), this.changes.set(t, {
-                document: Gt.newInvalidDocument(t),
-                readTime: e
-            });
+         */    removeEntry(t, e) {
+            this.assertNotApplied(), this.changes.set(t, Jt.newInvalidDocument(t).setReadTime(e));
         }
         /**
          * Looks up an entry in the cache. The buffered changes will first be checked,
@@ -7173,7 +7940,7 @@ var app = (function () {
          */    getEntry(t, e) {
             this.assertNotApplied();
             const n = this.changes.get(e);
-            return void 0 !== n ? zs.resolve(n.document) : this.getFromCache(t, e);
+            return void 0 !== n ? si.resolve(n) : this.getFromCache(t, e);
         }
         /**
          * Looks up several entries in the cache, forwarding to
@@ -7217,27 +7984,27 @@ var app = (function () {
      * have a cached version in remoteDocumentCache or local mutations for the
      * document). The view is computed by applying the mutations in the
      * MutationQueue to the RemoteDocumentCache.
-     */ class ur {
+     */ class Mr {
         constructor(t, e, n) {
-            this.Je = t, this.An = e, this.Jt = n;
+            this.qn = t, this.gs = e, this.indexManager = n;
         }
         /**
          * Get the local view of the document identified by `key`.
          *
          * @returns Local view of the document or null if we don't have any cached
          * state for it.
-         */    Rn(t, e) {
-            return this.An.getAllMutationBatchesAffectingDocumentKey(t, e).next((n => this.bn(t, e, n)));
+         */    ys(t, e) {
+            return this.gs.getAllMutationBatchesAffectingDocumentKey(t, e).next((n => this.ps(t, e, n)));
         }
-        /** Internal version of `getDocument` that allows reusing batches. */    bn(t, e, n) {
-            return this.Je.getEntry(t, e).next((t => {
+        /** Internal version of `getDocument` that allows reusing batches. */    ps(t, e, n) {
+            return this.qn.getEntry(t, e).next((t => {
                 for (const e of n) e.applyToLocalView(t);
                 return t;
             }));
         }
         // Returns the view of the given `docs` as they would appear after applying
         // all mutations in the given `batches`.
-        Pn(t, e) {
+        Is(t, e) {
             t.forEach(((t, n) => {
                 for (const t of e) t.applyToLocalView(n);
             }));
@@ -7247,14 +8014,14 @@ var app = (function () {
          *
          * If we don't have cached state for a document in `keys`, a NoDocument will
          * be stored for that key in the resulting set.
-         */    vn(t, e) {
-            return this.Je.getEntries(t, e).next((e => this.Vn(t, e).next((() => e))));
+         */    Es(t, e) {
+            return this.qn.getEntries(t, e).next((e => this.Ts(t, e).next((() => e))));
         }
         /**
          * Applies the local view the given `baseDocs` without retrieving documents
          * from the local store.
-         */    Vn(t, e) {
-            return this.An.getAllMutationBatchesAffectingDocumentKeys(t, e).next((t => this.Pn(e, t)));
+         */    Ts(t, e) {
+            return this.gs.getAllMutationBatchesAffectingDocumentKeys(t, e).next((t => this.Is(e, t)));
         }
         /**
          * Performs a query against the local view of all documents.
@@ -7263,68 +8030,58 @@ var app = (function () {
          * @param query - The query to match documents against.
          * @param sinceReadTime - If not set to SnapshotVersion.min(), return only
          *     documents that have been read since this snapshot version (exclusive).
-         */    getDocumentsMatchingQuery(t, e, n) {
+         */    As(t, e, n) {
             /**
      * Returns whether the query matches a single document by path (rather than a
      * collection).
      */
             return function(t) {
-                return Dt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
-            }(e) ? this.Sn(t, e.path) : Ae(e) ? this.Dn(t, e, n) : this.Cn(t, e, n);
+                return Nt.isDocumentKey(t.path) && null === t.collectionGroup && 0 === t.filters.length;
+            }(e) ? this.Rs(t, e.path) : Ve(e) ? this.Ps(t, e, n) : this.bs(t, e, n);
         }
-        Sn(t, e) {
+        Rs(t, e) {
             // Just do a simple document lookup.
-            return this.Rn(t, new Dt(e)).next((t => {
-                let e = Pn();
+            return this.ys(t, new Nt(e)).next((t => {
+                let e = Nn();
                 return t.isFoundDocument() && (e = e.insert(t.key, t)), e;
             }));
         }
-        Dn(t, e, n) {
+        Ps(t, e, n) {
             const s = e.collectionGroup;
-            let i = Pn();
-            return this.Jt.getCollectionParents(t, s).next((r => zs.forEach(r, (r => {
+            let i = Nn();
+            return this.indexManager.getCollectionParents(t, s).next((r => si.forEach(r, (r => {
                 const o = function(t, e) {
-                    return new me(e, 
+                    return new Ee(e, 
                     /*collectionGroup=*/ null, t.explicitOrderBy.slice(), t.filters.slice(), t.limit, t.limitType, t.startAt, t.endAt);
                 }
                 /**
      * Returns true if this query does not specify any query constraints that
      * could remove results.
      */ (e, r.child(s));
-                return this.Cn(t, o, n).next((t => {
+                return this.bs(t, o, n).next((t => {
                     t.forEach(((t, e) => {
                         i = i.insert(t, e);
                     }));
                 }));
             })).next((() => i))));
         }
-        Cn(t, e, n) {
+        bs(t, e, n) {
             // Query the remote documents and overlay mutations.
-            let s, i;
-            return this.Je.getDocumentsMatchingQuery(t, e, n).next((n => (s = n, this.An.getAllMutationBatchesAffectingQuery(t, e)))).next((e => (i = e, 
-            this.Nn(t, i, s).next((t => {
-                s = t;
-                for (const t of i) for (const e of t.mutations) {
-                    const n = e.key;
+            let s;
+            return this.qn.getAll(t, e.path, n).next((n => (s = n, this.gs.getAllMutationBatchesAffectingQuery(t, e)))).next((t => {
+                for (const e of t) for (const t of e.mutations) {
+                    const n = t.key;
                     let i = s.get(n);
                     null == i && (
                     // Create invalid document to apply mutations on top of
-                    i = Gt.newInvalidDocument(n), s = s.insert(n, i)), en(e, i, t.localWriteTime), i.isFoundDocument() || (s = s.remove(n));
+                    i = Jt.newInvalidDocument(n), s = s.insert(n, i)), cn(t, i, e.localWriteTime), i.isFoundDocument() || (s = s.remove(n));
                 }
-            }))))).next((() => (
+            })).next((() => (
             // Finally, filter out any documents that don't actually match
             // the query.
             s.forEach(((t, n) => {
-                De(e, n) || (s = s.remove(t));
+                Oe(e, n) || (s = s.remove(t));
             })), s)));
-        }
-        Nn(t, e, n) {
-            let s = Dn();
-            for (const t of e) for (const e of t.mutations) e instanceof cn && null === n.get(e.key) && (s = s.add(e.key));
-            let i = n;
-            return this.Je.getEntries(t, s).next((t => (t.forEach(((t, e) => {
-                e.isFoundDocument() && (i = i.insert(t, e));
-            })), i)));
         }
     }
 
@@ -7348,12 +8105,12 @@ var app = (function () {
      * A set of changes to what documents are currently in view and out of view for
      * a given query. These changes are sent to the LocalStore by the View (via
      * the SyncEngine) and are used to pin / unpin documents as appropriate.
-     */ class hr {
+     */ class $r {
         constructor(t, e, n, s) {
-            this.targetId = t, this.fromCache = e, this.kn = n, this.xn = s;
+            this.targetId = t, this.fromCache = e, this.vs = n, this.Vs = s;
         }
-        static $n(t, e) {
-            let n = Dn(), s = Dn();
+        static Ss(t, e) {
+            let n = On(), s = On();
             for (const t of e.docChanges) switch (t.type) {
               case 0 /* Added */ :
                 n = n.add(t.doc.key);
@@ -7363,7 +8120,7 @@ var app = (function () {
                 s = s.add(t.doc.key);
      // do nothing
                     }
-            return new hr(t, e.fromCache, n, s);
+            return new $r(t, e.fromCache, n, s);
         }
     }
 
@@ -7400,21 +8157,21 @@ var app = (function () {
      *   another document that is in the local cache.
      *
      * - Queries that have never been CURRENT or free of limbo documents.
-     */ class lr {
+     */ class Fr {
         /** Sets the document view to query against. */
-        On(t) {
-            this.Mn = t;
+        Ds(t) {
+            this.Cs = t;
         }
-        /** Returns all local documents matching the specified query. */    getDocumentsMatchingQuery(t, e, n, s) {
+        /** Returns all local documents matching the specified query. */    As(t, e, n, s) {
             // Queries that match all documents don't benefit from using
             // key-based lookups. It is more efficient to scan all documents in a
             // collection, rather than to perform individual lookups.
             return function(t) {
                 return 0 === t.filters.length && null === t.limit && null == t.startAt && null == t.endAt && (0 === t.explicitOrderBy.length || 1 === t.explicitOrderBy.length && t.explicitOrderBy[0].field.isKeyField());
-            }(e) || n.isEqual(ut.min()) ? this.Fn(t, e) : this.Mn.vn(t, s).next((i => {
-                const r = this.Ln(e, i);
-                return (pe(e) || Te(e)) && this.Bn(e.limitType, r, s, n) ? this.Fn(t, e) : (x() <= LogLevel.DEBUG && O("QueryEngine", "Re-using previous result from %s to execute query: %s", n.toString(), Se(e)), 
-                this.Mn.getDocumentsMatchingQuery(t, e, n).next((t => (
+            }(e) || n.isEqual(at.min()) ? this.Ns(t, e) : this.Cs.Es(t, s).next((i => {
+                const r = this.xs(e, i);
+                return (Re(e) || Pe(e)) && this.ks(e.limitType, r, s, n) ? this.Ns(t, e) : (k() <= LogLevel.DEBUG && M("QueryEngine", "Re-using previous result from %s to execute query: %s", n.toString(), ke(e)), 
+                this.Cs.As(t, e, n).next((t => (
                 // We merge `previousResults` into `updateResults`, since
                 // `updateResults` is already a DocumentMap. If a document is
                 // contained in both lists, then its contents are the same.
@@ -7425,12 +8182,12 @@ var app = (function () {
             // Queries that have never seen a snapshot without limbo free documents
             // should also be run as a full collection scan.
             }
-        /** Applies the query filter and sorting to the provided documents.  */    Ln(t, e) {
+        /** Applies the query filter and sorting to the provided documents.  */    xs(t, e) {
             // Sort the documents and re-apply the query filter since previously
             // matching documents do not necessarily still match the query.
-            let n = new En(Ce(t));
+            let n = new bn(Me(t));
             return e.forEach(((e, s) => {
-                De(t, s) && (n = n.add(s));
+                Oe(t, s) && (n = n.add(s));
             })), n;
         }
         /**
@@ -7443,7 +8200,7 @@ var app = (function () {
          * snapshot.
          * @param limboFreeSnapshotVersion - The version of the snapshot when the
          * query was last synchronized.
-         */    Bn(t, e, n, s) {
+         */    ks(t, e, n, s) {
             // The query needs to be refilled if a previously matching document no
             // longer matches.
             if (n.size !== e.size) return !0;
@@ -7458,9 +8215,9 @@ var app = (function () {
                     const i = "F" /* First */ === t ? e.last() : e.first();
             return !!i && (i.hasPendingWrites || i.version.compareTo(s) > 0);
         }
-        Fn(t, e) {
-            return x() <= LogLevel.DEBUG && O("QueryEngine", "Using full collection scan to execute query:", Se(e)), 
-            this.Mn.getDocumentsMatchingQuery(t, e, ut.min());
+        Ns(t, e) {
+            return k() <= LogLevel.DEBUG && M("QueryEngine", "Using full collection scan to execute query:", ke(e)), 
+            this.Cs.As(t, e, at.min());
         }
     }
 
@@ -7488,39 +8245,45 @@ var app = (function () {
      * This is useful to implement optional features (like bundles) in free
      * functions, such that they are tree-shakeable.
      */
-    class fr {
+    class Br {
         constructor(
         /** Manages our in-memory or durable persistence. */
         t, e, n, s) {
-            this.persistence = t, this.Un = e, this.k = s, 
+            this.persistence = t, this.Os = e, this.O = s, 
             /**
              * Maps a targetID to data about its target.
              *
              * PORTING NOTE: We are using an immutable data structure on Web to make re-runs
              * of `applyRemoteEvent()` idempotent.
              */
-            this.qn = new yn(rt), 
+            this.Ms = new An(rt), 
             /** Maps a target to its targetID. */
             // TODO(wuandy): Evaluate if TargetId can be part of Target.
-            this.Kn = new zi((t => Jt(t)), Xt), 
+            this.$s = new Er((t => se(t)), re), 
             /**
              * The read time of the last entry processed by `getNewDocumentChanges()`.
              *
              * PORTING NOTE: This is only used for multi-tab synchronization.
              */
-            this.jn = ut.min(), this.An = t.getMutationQueue(n), this.Qn = t.getRemoteDocumentCache(), 
-            this.He = t.getTargetCache(), this.Wn = new ur(this.Qn, this.An, this.persistence.getIndexManager()), 
-            this.Ye = t.getBundleCache(), this.Un.On(this.Wn);
+            this.Fs = at.min(), this.Bs = t.getRemoteDocumentCache(), this.Un = t.getTargetCache(), 
+            this.Kn = t.getBundleCache(), this.Ls(n);
+        }
+        Ls(t) {
+            // TODO(indexing): Add spec tests that test these components change after a
+            // user change
+            this.indexManager = this.persistence.getIndexManager(t), this.gs = this.persistence.getMutationQueue(t, this.indexManager), 
+            this.Us = new Mr(this.Bs, this.gs, this.indexManager), this.Bs.setIndexManager(this.indexManager), 
+            this.Os.Ds(this.Us);
         }
         collectGarbage(t) {
-            return this.persistence.runTransaction("Collect garbage", "readwrite-primary", (e => t.collect(e, this.qn)));
+            return this.persistence.runTransaction("Collect garbage", "readwrite-primary", (e => t.collect(e, this.Ms)));
         }
     }
 
-    function dr(
+    function Lr(
     /** Manages our in-memory or durable persistence. */
     t, e, n, s) {
-        return new fr(t, e, n, s);
+        return new Br(t, e, n, s);
     }
 
     /**
@@ -7531,38 +8294,33 @@ var app = (function () {
      */
     // PORTING NOTE: Android and iOS only return the documents affected by the
     // change.
-    async function wr(t, e) {
+    async function Ur(t, e) {
         const n = K(t);
-        let s = n.An, i = n.Wn;
-        const r = await n.persistence.runTransaction("Handle user change", "readonly", (t => {
+        return await n.persistence.runTransaction("Handle user change", "readonly", (t => {
             // Swap out the mutation queue, grabbing the pending mutation batches
             // before and after.
-            let r;
-            return n.An.getAllMutationBatches(t).next((o => (r = o, s = n.persistence.getMutationQueue(e), 
-            // Recreate our LocalDocumentsView using the new
-            // MutationQueue.
-            i = new ur(n.Qn, s, n.persistence.getIndexManager()), s.getAllMutationBatches(t)))).next((e => {
-                const n = [], s = [];
+            let s;
+            return n.gs.getAllMutationBatches(t).next((i => (s = i, n.Ls(e), n.gs.getAllMutationBatches(t)))).next((e => {
+                const i = [], r = [];
                 // Union the old/new changed keys.
-                let o = Dn();
-                for (const t of r) {
-                    n.push(t.batchId);
+                let o = On();
+                for (const t of s) {
+                    i.push(t.batchId);
                     for (const e of t.mutations) o = o.add(e.key);
                 }
                 for (const t of e) {
-                    s.push(t.batchId);
+                    r.push(t.batchId);
                     for (const e of t.mutations) o = o.add(e.key);
                 }
                 // Return the set of all (potentially) changed documents and the list
                 // of mutation batch IDs that were affected by change.
-                            return i.vn(t, o).next((t => ({
-                    Gn: t,
-                    removedBatchIds: n,
-                    addedBatchIds: s
+                            return n.Us.Es(t, o).next((t => ({
+                    qs: t,
+                    removedBatchIds: i,
+                    addedBatchIds: r
                 })));
             }));
         }));
-        return n.An = s, n.Wn = i, n.Un.On(n.Wn), r;
     }
 
     /* Accepts locally generated Mutations and commit them to storage. */
@@ -7580,29 +8338,29 @@ var app = (function () {
      *
      * @returns The resulting (modified) documents.
      */
-    function _r(t, e) {
+    function qr(t, e) {
         const n = K(t);
         return n.persistence.runTransaction("Acknowledge batch", "readwrite-primary", (t => {
-            const s = e.batch.keys(), i = n.Qn.newChangeBuffer({
+            const s = e.batch.keys(), i = n.Bs.newChangeBuffer({
                 trackRemovals: !0
             });
             return function(t, e, n, s) {
                 const i = n.batch, r = i.keys();
-                let o = zs.resolve();
+                let o = si.resolve();
                 return r.forEach((t => {
                     o = o.next((() => s.getEntry(e, t))).next((e => {
                         const r = n.docVersions.get(t);
-                        U(null !== r), e.version.compareTo(r) < 0 && (i.applyToRemoteDocument(e, n), e.isValidDocument() && 
+                        U(null !== r), e.version.compareTo(r) < 0 && (i.applyToRemoteDocument(e, n), e.isValidDocument() && (
                         // We use the commitVersion as the readTime rather than the
                         // document's updateTime since the updateTime is not advanced
                         // for updates that do not modify the underlying document.
-                        s.addEntry(e, n.commitVersion));
+                        e.setReadTime(n.commitVersion), s.addEntry(e)));
                     }));
-                })), o.next((() => t.An.removeMutationBatch(e, i)));
+                })), o.next((() => t.gs.removeMutationBatch(e, i)));
             }
             /** Returns the local view of the documents affected by a mutation batch. */
             // PORTING NOTE: Multi-Tab only.
-            (n, t, e, i).next((() => i.apply(t))).next((() => n.An.performConsistencyCheck(t))).next((() => n.Wn.vn(t, s)));
+            (n, t, e, i).next((() => i.apply(t))).next((() => n.gs.performConsistencyCheck(t))).next((() => n.Us.Es(t, s)));
         }));
     }
 
@@ -7616,9 +8374,9 @@ var app = (function () {
      * Returns the last consistent snapshot processed (used by the RemoteStore to
      * determine whether to buffer incoming snapshots from the backend).
      */
-    function mr(t) {
+    function Kr(t) {
         const e = K(t);
-        return e.persistence.runTransaction("Get last remote snapshot version", "readonly", (t => e.He.getLastRemoteSnapshotVersion(t)));
+        return e.persistence.runTransaction("Get last remote snapshot version", "readonly", (t => e.Un.getLastRemoteSnapshotVersion(t)));
     }
 
     /**
@@ -7628,26 +8386,26 @@ var app = (function () {
      *
      * LocalDocuments are re-calculated if there are remaining mutations in the
      * queue.
-     */ function gr(t, e) {
+     */ function Gr(t, e) {
         const n = K(t), s = e.snapshotVersion;
-        let i = n.qn;
+        let i = n.Ms;
         return n.persistence.runTransaction("Apply remote event", "readwrite-primary", (t => {
-            const r = n.Qn.newChangeBuffer({
+            const r = n.Bs.newChangeBuffer({
                 trackRemovals: !0
             });
             // Reset newTargetDataByTargetMap in case this transaction gets re-run.
-                    i = n.qn;
+                    i = n.Ms;
             const o = [];
             e.targetChanges.forEach(((r, c) => {
-                const a = i.get(c);
-                if (!a) return;
+                const u = i.get(c);
+                if (!u) return;
                 // Only update the remote keys if the target is still active. This
                 // ensures that we can persist the updated target data along with
                 // the updated assignment.
-                            o.push(n.He.removeMatchingKeys(t, r.removedDocuments, c).next((() => n.He.addMatchingKeys(t, r.addedDocuments, c))));
-                let u = a.withSequenceNumber(t.currentSequenceNumber);
-                e.targetMismatches.has(c) ? u = u.withResumeToken(pt.EMPTY_BYTE_STRING, ut.min()).withLastLimboFreeSnapshotVersion(ut.min()) : r.resumeToken.approximateByteSize() > 0 && (u = u.withResumeToken(r.resumeToken, s)), 
-                i = i.insert(c, u), 
+                            o.push(n.Un.removeMatchingKeys(t, r.removedDocuments, c).next((() => n.Un.addMatchingKeys(t, r.addedDocuments, c))));
+                let a = u.withSequenceNumber(t.currentSequenceNumber);
+                e.targetMismatches.has(c) ? a = a.withResumeToken(pt.EMPTY_BYTE_STRING, at.min()).withLastLimboFreeSnapshotVersion(at.min()) : r.resumeToken.approximateByteSize() > 0 && (a = a.withResumeToken(r.resumeToken, s)), 
+                i = i.insert(c, a), 
                 // Update the target data if there are target changes (or if
                 // sufficient time has passed since the last update).
                 /**
@@ -7679,26 +8437,26 @@ var app = (function () {
                 }
                 /**
      * Notifies local store of the changed views to locally pin documents.
-     */ (a, u, r) && o.push(n.He.updateTargetData(t, u));
+     */ (u, a, r) && o.push(n.Un.updateTargetData(t, a));
             }));
-            let c = Rn();
+            let c = Dn();
             // HACK: The only reason we allow a null snapshot version is so that we
             // can synthesize remote events when we get permission denied errors while
             // trying to resolve the state of a locally cached document that is in
             // limbo.
-            if (e.documentUpdates.forEach(((s, i) => {
+            if (e.documentUpdates.forEach((s => {
                 e.resolvedLimboDocuments.has(s) && o.push(n.persistence.referenceDelegate.updateLimboDocument(t, s));
             })), 
             // Each loop iteration only affects its "own" doc, so it's safe to get all the remote
             // documents in advance in a single call.
-            o.push(yr(t, r, e.documentUpdates, s, void 0).next((t => {
+            o.push(jr(t, r, e.documentUpdates).next((t => {
                 c = t;
-            }))), !s.isEqual(ut.min())) {
-                const e = n.He.getLastRemoteSnapshotVersion(t).next((e => n.He.setTargetsMetadata(t, t.currentSequenceNumber, s)));
+            }))), !s.isEqual(at.min())) {
+                const e = n.Un.getLastRemoteSnapshotVersion(t).next((e => n.Un.setTargetsMetadata(t, t.currentSequenceNumber, s)));
                 o.push(e);
             }
-            return zs.waitFor(o).next((() => r.apply(t))).next((() => n.Wn.Vn(t, c))).next((() => c));
-        })).then((t => (n.qn = i, t)));
+            return si.waitFor(o).next((() => r.apply(t))).next((() => n.Us.Ts(t, c))).next((() => c));
+        })).then((t => (n.Ms = i, t)));
     }
 
     /**
@@ -7716,26 +8474,23 @@ var app = (function () {
      *
      * Note: this function will use `documentVersions` if it is defined;
      * when it is not defined, resorts to `globalVersion`.
-     */ function yr(t, e, n, s, 
-    // TODO(wuandy): We could add `readTime` to MaybeDocument instead to remove
-    // this parameter.
-    i) {
-        let r = Dn();
-        return n.forEach((t => r = r.add(t))), e.getEntries(t, r).next((t => {
-            let r = Rn();
-            return n.forEach(((n, o) => {
-                const c = t.get(n), a = (null == i ? void 0 : i.get(n)) || s;
+     */ function jr(t, e, n) {
+        let s = On();
+        return n.forEach((t => s = s.add(t))), e.getEntries(t, s).next((t => {
+            let s = Dn();
+            return n.forEach(((n, i) => {
+                const r = t.get(n);
                 // Note: The order of the steps below is important, since we want
                 // to ensure that rejected limbo resolutions (which fabricate
                 // NoDocuments with SnapshotVersion.min()) never add documents to
                 // cache.
-                o.isNoDocument() && o.version.isEqual(ut.min()) ? (
+                            i.isNoDocument() && i.version.isEqual(at.min()) ? (
                 // NoDocuments with SnapshotVersion.min() are used in manufactured
                 // events. We remove these documents from cache since we lost
                 // access.
-                e.removeEntry(n, a), r = r.insert(n, o)) : !c.isValidDocument() || o.version.compareTo(c.version) > 0 || 0 === o.version.compareTo(c.version) && c.hasPendingWrites ? (e.addEntry(o, a), 
-                r = r.insert(n, o)) : O("LocalStore", "Ignoring outdated watch update for ", n, ". Current version:", c.version, " Watch version:", o.version);
-            })), r;
+                e.removeEntry(n, i.readTime), s = s.insert(n, i)) : !r.isValidDocument() || i.version.compareTo(r.version) > 0 || 0 === i.version.compareTo(r.version) && r.hasPendingWrites ? (e.addEntry(i), 
+                s = s.insert(n, i)) : M("LocalStore", "Ignoring outdated watch update for ", n, ". Current version:", r.version, " Watch version:", i.version);
+            })), s;
         }));
     }
 
@@ -7745,10 +8500,10 @@ var app = (function () {
      * @param afterBatchId - If provided, the batch to search after.
      * @returns The next mutation or null if there wasn't one.
      */
-    function pr(t, e) {
+    function Qr(t, e) {
         const n = K(t);
         return n.persistence.runTransaction("Get next mutation batch", "readonly", (t => (void 0 === e && (e = -1), 
-        n.An.getNextMutationBatchAfterBatchId(t, e))));
+        n.gs.getNextMutationBatchAfterBatchId(t, e))));
     }
 
     /**
@@ -7763,22 +8518,22 @@ var app = (function () {
      * Allocating an already allocated `Target` will return the existing `TargetData`
      * for that `Target`.
      */
-    function Tr(t, e) {
+    function Wr(t, e) {
         const n = K(t);
         return n.persistence.runTransaction("Allocate target", "readwrite", (t => {
             let s;
-            return n.He.getTargetData(t, e).next((i => i ? (
+            return n.Un.getTargetData(t, e).next((i => i ? (
             // This target has been listened to previously, so reuse the
             // previous targetID.
             // TODO(mcg): freshen last accessed date?
-            s = i, zs.resolve(s)) : n.He.allocateTargetId(t).next((i => (s = new ai(e, i, 0 /* Listen */ , t.currentSequenceNumber), 
-            n.He.addTargetData(t, s).next((() => s)))))));
+            s = i, si.resolve(s)) : n.Un.allocateTargetId(t).next((i => (s = new yi(e, i, 0 /* Listen */ , t.currentSequenceNumber), 
+            n.Un.addTargetData(t, s).next((() => s)))))));
         })).then((t => {
             // If Multi-Tab is enabled, the existing target data may be newer than
             // the in-memory data
-            const s = n.qn.get(t.targetId);
-            return (null === s || t.snapshotVersion.compareTo(s.snapshotVersion) > 0) && (n.qn = n.qn.insert(t.targetId, t), 
-            n.Kn.set(e, t.targetId)), t;
+            const s = n.Ms.get(t.targetId);
+            return (null === s || t.snapshotVersion.compareTo(s.snapshotVersion) > 0) && (n.Ms = n.Ms.insert(t.targetId, t), 
+            n.$s.set(e, t.targetId)), t;
         }));
     }
 
@@ -7795,20 +8550,20 @@ var app = (function () {
      * Releasing a non-existing `Target` is a no-op.
      */
     // PORTING NOTE: `keepPersistedTargetData` is multi-tab only.
-    async function Er(t, e, n) {
-        const s = K(t), i = s.qn.get(e), r = n ? "readwrite" : "readwrite-primary";
+    async function zr(t, e, n) {
+        const s = K(t), i = s.Ms.get(e), r = n ? "readwrite" : "readwrite-primary";
         try {
             n || await s.persistence.runTransaction("Release target", r, (t => s.persistence.referenceDelegate.removeTarget(t, i)));
         } catch (t) {
-            if (!Zs(t)) throw t;
+            if (!ui(t)) throw t;
             // All `releaseTarget` does is record the final metadata state for the
             // target, but we've been recording this periodically during target
             // activity. If we lose this write this could cause a very slight
             // difference in the order of target deletion during GC, but we
             // don't define exact LRU semantics so this is acceptable.
-            O("LocalStore", `Failed to update sequence numbers for target ${e}: ${t}`);
+            M("LocalStore", `Failed to update sequence numbers for target ${e}: ${t}`);
         }
-        s.qn = s.qn.remove(e), s.Kn.delete(i.target);
+        s.Ms = s.Ms.remove(e), s.$s.delete(i.target);
     }
 
     /**
@@ -7818,19 +8573,19 @@ var app = (function () {
      *
      * @param usePreviousResults - Whether results from previous executions can
      * be used to optimize this query execution.
-     */ function Ir(t, e, n) {
+     */ function Hr(t, e, n) {
         const s = K(t);
-        let i = ut.min(), r = Dn();
+        let i = at.min(), r = On();
         return s.persistence.runTransaction("Execute query", "readonly", (t => function(t, e, n) {
-            const s = K(t), i = s.Kn.get(n);
-            return void 0 !== i ? zs.resolve(s.qn.get(i)) : s.He.getTargetData(e, n);
-        }(s, t, be(e)).next((e => {
-            if (e) return i = e.lastLimboFreeSnapshotVersion, s.He.getMatchingKeysForTargetId(t, e.targetId).next((t => {
+            const s = K(t), i = s.$s.get(n);
+            return void 0 !== i ? si.resolve(s.Ms.get(i)) : s.Un.getTargetData(e, n);
+        }(s, t, De(e)).next((e => {
+            if (e) return i = e.lastLimboFreeSnapshotVersion, s.Un.getMatchingKeysForTargetId(t, e.targetId).next((t => {
                 r = t;
             }));
-        })).next((() => s.Un.getDocumentsMatchingQuery(t, e, n ? i : ut.min(), n ? r : Dn()))).next((t => ({
+        })).next((() => s.Os.As(t, e, n ? i : at.min(), n ? r : On()))).next((t => ({
             documents: t,
-            zn: r
+            Ks: r
         })))));
     }
 
@@ -7849,33 +8604,107 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class Vr {
+     */ class eo {
         constructor(t) {
-            this.k = t, this.Xn = new Map, this.Zn = new Map;
+            this.O = t, this.Ws = new Map, this.zs = new Map;
         }
         getBundleMetadata(t, e) {
-            return zs.resolve(this.Xn.get(e));
+            return si.resolve(this.Ws.get(e));
         }
         saveBundleMetadata(t, e) {
             /** Decodes a BundleMetadata proto into a BundleMetadata object. */
             var n;
-            return this.Xn.set(e.id, {
+            return this.Ws.set(e.id, {
                 id: (n = e).id,
                 version: n.version,
-                createTime: zn(n.createTime)
-            }), zs.resolve();
+                createTime: Zn(n.createTime)
+            }), si.resolve();
         }
         getNamedQuery(t, e) {
-            return zs.resolve(this.Zn.get(e));
+            return si.resolve(this.zs.get(e));
         }
         saveNamedQuery(t, e) {
-            return this.Zn.set(e.name, function(t) {
+            return this.zs.set(e.name, function(t) {
                 return {
                     name: t.name,
-                    query: pi(t.bundledQuery),
-                    readTime: zn(t.readTime)
+                    query: Si(t.bundledQuery),
+                    readTime: Zn(t.readTime)
                 };
-            }(e)), zs.resolve();
+            }(e)), si.resolve();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2022 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * An in-memory implementation of DocumentOverlayCache.
+     */ class no {
+        constructor() {
+            // A map sorted by DocumentKey, whose value is a pair of the largest batch id
+            // for the overlay and the overlay itself.
+            this.overlays = new An(Nt.comparator), this.Hs = new Map;
+        }
+        getOverlay(t, e) {
+            return si.resolve(this.overlays.get(e));
+        }
+        saveOverlays(t, e, n) {
+            return n.forEach((n => {
+                this.Yt(t, e, n);
+            })), si.resolve();
+        }
+        removeOverlaysForBatchId(t, e, n) {
+            const s = this.Hs.get(n);
+            return void 0 !== s && (s.forEach((t => this.overlays = this.overlays.remove(t))), 
+            this.Hs.delete(n)), si.resolve();
+        }
+        getOverlaysForCollection(t, e, n) {
+            const s = new Map, i = e.length + 1, r = new Nt(e.child("")), o = this.overlays.getIteratorFrom(r);
+            for (;o.hasNext(); ) {
+                const t = o.getNext().value, r = t.getKey();
+                if (!e.isPrefixOf(r.path)) break;
+                // Documents from sub-collections
+                            r.path.length === i && (t.largestBatchId > n && s.set(t.getKey(), t));
+            }
+            return si.resolve(s);
+        }
+        getOverlaysForCollectionGroup(t, e, n, s) {
+            let i = new An(((t, e) => t - e));
+            const r = this.overlays.getIterator();
+            for (;r.hasNext(); ) {
+                const t = r.getNext().value;
+                if (t.getKey().getCollectionGroup() === e && t.largestBatchId > n) {
+                    let e = i.get(t.largestBatchId);
+                    null === e && (e = new Map, i = i.insert(t.largestBatchId, e)), e.set(t.getKey(), t);
+                }
+            }
+            const o = new Map, c = i.getIterator();
+            for (;c.hasNext(); ) {
+                if (c.getNext().value.forEach(((t, e) => o.set(e, t))), o.size >= s) break;
+            }
+            return si.resolve(o);
+        }
+        Yt(t, e, n) {
+            if (null === n) return;
+            // Remove the association of the overlay to its batch id.
+                    const s = this.overlays.get(n.key);
+            null !== s && this.Hs.get(s.largestBatchId).delete(n.key), this.overlays = this.overlays.insert(n.key, new gi(e, n));
+            // Create the association of this overlay to the given largestBatchId.
+            let i = this.Hs.get(e);
+            void 0 === i && (i = new Set, this.Hs.set(e, i)), i.add(n.key);
         }
     }
 
@@ -7909,69 +8738,69 @@ var app = (function () {
      * ReferenceSet also keeps a secondary set that contains references sorted by
      * IDs. This one is used to efficiently implement removal of all references by
      * some target ID.
-     */ class Sr {
+     */ class so {
         constructor() {
             // A set of outstanding references to a document sorted by key.
-            this.ts = new En(Dr.es), 
+            this.Js = new bn(io.Ys), 
             // A set of outstanding references to a document sorted by target id.
-            this.ns = new En(Dr.ss);
+            this.Xs = new bn(io.Zs);
         }
         /** Returns true if the reference set contains no references. */    isEmpty() {
-            return this.ts.isEmpty();
+            return this.Js.isEmpty();
         }
         /** Adds a reference to the given document key for the given ID. */    addReference(t, e) {
-            const n = new Dr(t, e);
-            this.ts = this.ts.add(n), this.ns = this.ns.add(n);
+            const n = new io(t, e);
+            this.Js = this.Js.add(n), this.Xs = this.Xs.add(n);
         }
-        /** Add references to the given document keys for the given ID. */    rs(t, e) {
+        /** Add references to the given document keys for the given ID. */    ti(t, e) {
             t.forEach((t => this.addReference(t, e)));
         }
         /**
          * Removes a reference to the given document key for the given
          * ID.
          */    removeReference(t, e) {
-            this.os(new Dr(t, e));
+            this.ei(new io(t, e));
         }
-        cs(t, e) {
+        ni(t, e) {
             t.forEach((t => this.removeReference(t, e)));
         }
         /**
          * Clears all references with a given ID. Calls removeRef() for each key
          * removed.
-         */    us(t) {
-            const e = new Dt(new wt([])), n = new Dr(e, t), s = new Dr(e, t + 1), i = [];
-            return this.ns.forEachInRange([ n, s ], (t => {
-                this.os(t), i.push(t.key);
+         */    si(t) {
+            const e = new Nt(new _t([])), n = new io(e, t), s = new io(e, t + 1), i = [];
+            return this.Xs.forEachInRange([ n, s ], (t => {
+                this.ei(t), i.push(t.key);
             })), i;
         }
-        hs() {
-            this.ts.forEach((t => this.os(t)));
+        ii() {
+            this.Js.forEach((t => this.ei(t)));
         }
-        os(t) {
-            this.ts = this.ts.delete(t), this.ns = this.ns.delete(t);
+        ei(t) {
+            this.Js = this.Js.delete(t), this.Xs = this.Xs.delete(t);
         }
-        ls(t) {
-            const e = new Dt(new wt([])), n = new Dr(e, t), s = new Dr(e, t + 1);
-            let i = Dn();
-            return this.ns.forEachInRange([ n, s ], (t => {
+        ri(t) {
+            const e = new Nt(new _t([])), n = new io(e, t), s = new io(e, t + 1);
+            let i = On();
+            return this.Xs.forEachInRange([ n, s ], (t => {
                 i = i.add(t.key);
             })), i;
         }
         containsKey(t) {
-            const e = new Dr(t, 0), n = this.ts.firstAfterOrEqual(e);
+            const e = new io(t, 0), n = this.Js.firstAfterOrEqual(e);
             return null !== n && t.isEqual(n.key);
         }
     }
 
-    class Dr {
+    class io {
         constructor(t, e) {
-            this.key = t, this.fs = e;
+            this.key = t, this.oi = e;
         }
-        /** Compare by key then by ID */    static es(t, e) {
-            return Dt.comparator(t.key, e.key) || rt(t.fs, e.fs);
+        /** Compare by key then by ID */    static Ys(t, e) {
+            return Nt.comparator(t.key, e.key) || rt(t.oi, e.oi);
         }
-        /** Compare by ID then by key */    static ss(t, e) {
-            return rt(t.fs, e.fs) || Dt.comparator(t.key, e.key);
+        /** Compare by ID then by key */    static Zs(t, e) {
+            return rt(t.oi, e.oi) || Nt.comparator(t.key, e.key);
         }
     }
 
@@ -7990,61 +8819,61 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class Cr {
+     */ class ro {
         constructor(t, e) {
-            this.Jt = t, this.referenceDelegate = e, 
+            this.indexManager = t, this.referenceDelegate = e, 
             /**
              * The set of all mutations that have been sent but not yet been applied to
              * the backend.
              */
-            this.An = [], 
+            this.gs = [], 
             /** Next value to use when assigning sequential IDs to each mutation batch. */
-            this.ds = 1, 
+            this.ci = 1, 
             /** An ordered mapping between documents and the mutations batch IDs. */
-            this.ws = new En(Dr.es);
+            this.ui = new bn(io.Ys);
         }
         checkEmpty(t) {
-            return zs.resolve(0 === this.An.length);
+            return si.resolve(0 === this.gs.length);
         }
         addMutationBatch(t, e, n, s) {
-            const i = this.ds;
-            this.ds++, this.An.length > 0 && this.An[this.An.length - 1];
-            const r = new oi(i, e, n, s);
-            this.An.push(r);
+            const i = this.ci;
+            this.ci++, this.gs.length > 0 && this.gs[this.gs.length - 1];
+            const r = new wi(i, e, n, s);
+            this.gs.push(r);
             // Track references by document key and index collection parents.
-            for (const e of s) this.ws = this.ws.add(new Dr(e.key, i)), this.Jt.addToCollectionParentIndex(t, e.key.path.popLast());
-            return zs.resolve(r);
+            for (const e of s) this.ui = this.ui.add(new io(e.key, i)), this.indexManager.addToCollectionParentIndex(t, e.key.path.popLast());
+            return si.resolve(r);
         }
         lookupMutationBatch(t, e) {
-            return zs.resolve(this._s(e));
+            return si.resolve(this.ai(e));
         }
         getNextMutationBatchAfterBatchId(t, e) {
-            const n = e + 1, s = this.gs(n), i = s < 0 ? 0 : s;
+            const n = e + 1, s = this.hi(n), i = s < 0 ? 0 : s;
             // The requested batchId may still be out of range so normalize it to the
             // start of the queue.
-                    return zs.resolve(this.An.length > i ? this.An[i] : null);
+                    return si.resolve(this.gs.length > i ? this.gs[i] : null);
         }
         getHighestUnacknowledgedBatchId() {
-            return zs.resolve(0 === this.An.length ? -1 : this.ds - 1);
+            return si.resolve(0 === this.gs.length ? -1 : this.ci - 1);
         }
         getAllMutationBatches(t) {
-            return zs.resolve(this.An.slice());
+            return si.resolve(this.gs.slice());
         }
         getAllMutationBatchesAffectingDocumentKey(t, e) {
-            const n = new Dr(e, 0), s = new Dr(e, Number.POSITIVE_INFINITY), i = [];
-            return this.ws.forEachInRange([ n, s ], (t => {
-                const e = this._s(t.fs);
+            const n = new io(e, 0), s = new io(e, Number.POSITIVE_INFINITY), i = [];
+            return this.ui.forEachInRange([ n, s ], (t => {
+                const e = this.ai(t.oi);
                 i.push(e);
-            })), zs.resolve(i);
+            })), si.resolve(i);
         }
         getAllMutationBatchesAffectingDocumentKeys(t, e) {
-            let n = new En(rt);
+            let n = new bn(rt);
             return e.forEach((t => {
-                const e = new Dr(t, 0), s = new Dr(t, Number.POSITIVE_INFINITY);
-                this.ws.forEachInRange([ e, s ], (t => {
-                    n = n.add(t.fs);
+                const e = new io(t, 0), s = new io(t, Number.POSITIVE_INFINITY);
+                this.ui.forEachInRange([ e, s ], (t => {
+                    n = n.add(t.oi);
                 }));
-            })), zs.resolve(this.ys(n));
+            })), si.resolve(this.li(n));
         }
         getAllMutationBatchesAffectingQuery(t, e) {
             // Use the query path as a prefix for testing if a document matches the
@@ -8055,12 +8884,12 @@ var app = (function () {
             // segments. The empty segment can be used a suffix of the query path
             // because it precedes all other segments in an ordered traversal.
             let i = n;
-            Dt.isDocumentKey(i) || (i = i.child(""));
-            const r = new Dr(new Dt(i), 0);
+            Nt.isDocumentKey(i) || (i = i.child(""));
+            const r = new io(new Nt(i), 0);
             // Find unique batchIDs referenced by all documents potentially matching the
             // query.
-                    let o = new En(rt);
-            return this.ws.forEachWhile((t => {
+                    let o = new bn(rt);
+            return this.ui.forEachWhile((t => {
                 const e = t.key.path;
                 return !!n.isPrefixOf(e) && (
                 // Rows with document keys more than one segment longer than the query
@@ -8068,37 +8897,37 @@ var app = (function () {
                 // the document /rooms/abc/messages/xyx.
                 // TODO(mcg): we'll need a different scanner when we implement
                 // ancestor queries.
-                e.length === s && (o = o.add(t.fs)), !0);
-            }), r), zs.resolve(this.ys(o));
+                e.length === s && (o = o.add(t.oi)), !0);
+            }), r), si.resolve(this.li(o));
         }
-        ys(t) {
+        li(t) {
             // Construct an array of matching batches, sorted by batchID to ensure that
             // multiple mutations affecting the same document key are applied in order.
             const e = [];
             return t.forEach((t => {
-                const n = this._s(t);
+                const n = this.ai(t);
                 null !== n && e.push(n);
             })), e;
         }
         removeMutationBatch(t, e) {
-            U(0 === this.ps(e.batchId, "removed")), this.An.shift();
-            let n = this.ws;
-            return zs.forEach(e.mutations, (s => {
-                const i = new Dr(s.key, e.batchId);
+            U(0 === this.fi(e.batchId, "removed")), this.gs.shift();
+            let n = this.ui;
+            return si.forEach(e.mutations, (s => {
+                const i = new io(s.key, e.batchId);
                 return n = n.delete(i), this.referenceDelegate.markPotentiallyOrphaned(t, s.key);
             })).next((() => {
-                this.ws = n;
+                this.ui = n;
             }));
         }
-        ee(t) {
+        Qe(t) {
             // No-op since the memory mutation queue does not maintain a separate cache.
         }
         containsKey(t, e) {
-            const n = new Dr(e, 0), s = this.ws.firstAfterOrEqual(n);
-            return zs.resolve(e.isEqual(s && s.key));
+            const n = new io(e, 0), s = this.ui.firstAfterOrEqual(n);
+            return si.resolve(e.isEqual(s && s.key));
         }
         performConsistencyCheck(t) {
-            return this.An.length, zs.resolve();
+            return this.gs.length, si.resolve();
         }
         /**
          * Finds the index of the given batchId in the mutation queue and asserts that
@@ -8107,8 +8936,8 @@ var app = (function () {
          * @param batchId - The batchId to search for
          * @param action - A description of what the caller is doing, phrased in passive
          * form (e.g. "acknowledged" in a routine that acknowledges batches).
-         */    ps(t, e) {
-            return this.gs(t);
+         */    fi(t, e) {
+            return this.hi(t);
         }
         /**
          * Finds the index of the given batchId in the mutation queue. This operation
@@ -8118,23 +8947,23 @@ var app = (function () {
          * the state of the queue. Note this index can be negative if the requested
          * batchId has already been remvoed from the queue or past the end of the
          * queue if the batchId is larger than the last added batch.
-         */    gs(t) {
-            if (0 === this.An.length) 
+         */    hi(t) {
+            if (0 === this.gs.length) 
             // As an index this is past the end of the queue
             return 0;
             // Examine the front of the queue to figure out the difference between the
             // batchId and indexes in the array. Note that since the queue is ordered
             // by batchId, if the first batch has a larger batchId then the requested
             // batchId doesn't exist in the queue.
-                    return t - this.An[0].batchId;
+                    return t - this.gs[0].batchId;
         }
         /**
          * A version of lookupMutationBatch that doesn't return a promise, this makes
          * other functions that uses this code easier to read and more efficent.
-         */    _s(t) {
-            const e = this.gs(t);
-            if (e < 0 || e >= this.An.length) return null;
-            return this.An[e];
+         */    ai(t) {
+            const e = this.hi(t);
+            if (e < 0 || e >= this.gs.length) return null;
+            return this.gs[e];
         }
     }
 
@@ -8158,31 +8987,33 @@ var app = (function () {
      * The memory-only RemoteDocumentCache for IndexedDb. To construct, invoke
      * `newMemoryRemoteDocumentCache()`.
      */
-    class Nr {
+    class oo {
         /**
          * @param sizer - Used to assess the size of a document. For eager GC, this is
          * expected to just return 0 to avoid unnecessarily doing the work of
          * calculating the size.
          */
-        constructor(t, e) {
-            this.Jt = t, this.Ts = e, 
+        constructor(t) {
+            this.di = t, 
             /** Underlying cache of documents and their read times. */
-            this.docs = new yn(Dt.comparator), 
+            this.docs = new An(Nt.comparator), 
             /** Size of all cached documents. */
             this.size = 0;
+        }
+        setIndexManager(t) {
+            this.indexManager = t;
         }
         /**
          * Adds the supplied entry to the cache and updates the cache size as appropriate.
          *
          * All calls of `addEntry`  are required to go through the RemoteDocumentChangeBuffer
          * returned by `newChangeBuffer()`.
-         */    addEntry(t, e, n) {
-            const s = e.key, i = this.docs.get(s), r = i ? i.size : 0, o = this.Ts(e);
-            return this.docs = this.docs.insert(s, {
+         */    addEntry(t, e) {
+            const n = e.key, s = this.docs.get(n), i = s ? s.size : 0, r = this.di(e);
+            return this.docs = this.docs.insert(n, {
                 document: e.mutableCopy(),
-                size: o,
-                readTime: n
-            }), this.size += o - r, this.Jt.addToCollectionParentIndex(t, s.path.popLast());
+                size: r
+            }), this.size += r - i, this.indexManager.addToCollectionParentIndex(t, n.path.popLast());
         }
         /**
          * Removes the specified entry from the cache and updates the cache size as appropriate.
@@ -8195,44 +9026,43 @@ var app = (function () {
         }
         getEntry(t, e) {
             const n = this.docs.get(e);
-            return zs.resolve(n ? n.document.mutableCopy() : Gt.newInvalidDocument(e));
+            return si.resolve(n ? n.document.mutableCopy() : Jt.newInvalidDocument(e));
         }
         getEntries(t, e) {
-            let n = Rn();
+            let n = Dn();
             return e.forEach((t => {
                 const e = this.docs.get(t);
-                n = n.insert(t, e ? e.document.mutableCopy() : Gt.newInvalidDocument(t));
-            })), zs.resolve(n);
+                n = n.insert(t, e ? e.document.mutableCopy() : Jt.newInvalidDocument(t));
+            })), si.resolve(n);
         }
-        getDocumentsMatchingQuery(t, e, n) {
-            let s = Rn();
+        getAll(t, e, n) {
+            let s = Dn();
             // Documents are ordered by key, so we can use a prefix scan to narrow down
             // the documents we need to match the query against.
-                    const i = new Dt(e.path.child("")), r = this.docs.getIteratorFrom(i);
+                    const i = new Nt(e.child("")), r = this.docs.getIteratorFrom(i);
             for (;r.hasNext(); ) {
-                const {key: t, value: {document: i, readTime: o}} = r.getNext();
-                if (!e.path.isPrefixOf(t.path)) break;
-                o.compareTo(n) <= 0 || De(e, i) && (s = s.insert(i.key, i.mutableCopy()));
+                const {key: t, value: {document: i}} = r.getNext();
+                if (!e.isPrefixOf(t.path)) break;
+                t.path.length > e.length + 1 || (i.readTime.compareTo(n) <= 0 || (s = s.insert(i.key, i.mutableCopy())));
             }
-            return zs.resolve(s);
+            return si.resolve(s);
         }
-        Es(t, e) {
-            return zs.forEach(this.docs, (t => e(t)));
+        _i(t, e) {
+            return si.forEach(this.docs, (t => e(t)));
         }
         newChangeBuffer(t) {
             // `trackRemovals` is ignores since the MemoryRemoteDocumentCache keeps
             // a separate changelog and does not need special handling for removals.
-            return new kr(this);
+            return new co(this);
         }
         getSize(t) {
-            return zs.resolve(this.size);
+            return si.resolve(this.size);
         }
     }
 
     /**
      * Creates a new memory-only RemoteDocumentCache.
      *
-     * @param indexManager - A class that manages collection group indices.
      * @param sizer - Used to assess the size of a document. For eager GC, this is
      * expected to just return 0 to avoid unnecessarily doing the work of
      * calculating the size.
@@ -8240,21 +9070,21 @@ var app = (function () {
     /**
      * Handles the details of adding and updating documents in the MemoryRemoteDocumentCache.
      */
-    class kr extends Hi {
+    class co extends Tr {
         constructor(t) {
-            super(), this.De = t;
+            super(), this.Tn = t;
         }
         applyChanges(t) {
             const e = [];
             return this.changes.forEach(((n, s) => {
-                s.document.isValidDocument() ? e.push(this.De.addEntry(t, s.document, this.getReadTime(n))) : this.De.removeEntry(n);
-            })), zs.waitFor(e);
+                s.isValidDocument() ? e.push(this.Tn.addEntry(t, s)) : this.Tn.removeEntry(n);
+            })), si.waitFor(e);
         }
         getFromCache(t, e) {
-            return this.De.getEntry(t, e);
+            return this.Tn.getEntry(t, e);
         }
         getAllFromCache(t, e) {
-            return this.De.getEntries(t, e);
+            return this.Tn.getEntries(t, e);
         }
     }
 
@@ -8273,90 +9103,90 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class xr {
+     */ class uo {
         constructor(t) {
             this.persistence = t, 
             /**
              * Maps a target to the data about that target
              */
-            this.Is = new zi((t => Jt(t)), Xt), 
+            this.wi = new Er((t => se(t)), re), 
             /** The last received snapshot version. */
-            this.lastRemoteSnapshotVersion = ut.min(), 
+            this.lastRemoteSnapshotVersion = at.min(), 
             /** The highest numbered target ID encountered. */
             this.highestTargetId = 0, 
             /** The highest sequence number encountered. */
-            this.As = 0, 
+            this.mi = 0, 
             /**
              * A ordered bidirectional mapping between documents and the remote target
              * IDs.
              */
-            this.Rs = new Sr, this.targetCount = 0, this.bs = Oi.ie();
+            this.gi = new so, this.targetCount = 0, this.yi = ar.He();
         }
         forEachTarget(t, e) {
-            return this.Is.forEach(((t, n) => e(n))), zs.resolve();
+            return this.wi.forEach(((t, n) => e(n))), si.resolve();
         }
         getLastRemoteSnapshotVersion(t) {
-            return zs.resolve(this.lastRemoteSnapshotVersion);
+            return si.resolve(this.lastRemoteSnapshotVersion);
         }
         getHighestSequenceNumber(t) {
-            return zs.resolve(this.As);
+            return si.resolve(this.mi);
         }
         allocateTargetId(t) {
-            return this.highestTargetId = this.bs.next(), zs.resolve(this.highestTargetId);
+            return this.highestTargetId = this.yi.next(), si.resolve(this.highestTargetId);
         }
         setTargetsMetadata(t, e, n) {
-            return n && (this.lastRemoteSnapshotVersion = n), e > this.As && (this.As = e), 
-            zs.resolve();
+            return n && (this.lastRemoteSnapshotVersion = n), e > this.mi && (this.mi = e), 
+            si.resolve();
         }
-        ae(t) {
-            this.Is.set(t.target, t);
+        Ze(t) {
+            this.wi.set(t.target, t);
             const e = t.targetId;
-            e > this.highestTargetId && (this.bs = new Oi(e), this.highestTargetId = e), t.sequenceNumber > this.As && (this.As = t.sequenceNumber);
+            e > this.highestTargetId && (this.yi = new ar(e), this.highestTargetId = e), t.sequenceNumber > this.mi && (this.mi = t.sequenceNumber);
         }
         addTargetData(t, e) {
-            return this.ae(e), this.targetCount += 1, zs.resolve();
+            return this.Ze(e), this.targetCount += 1, si.resolve();
         }
         updateTargetData(t, e) {
-            return this.ae(e), zs.resolve();
+            return this.Ze(e), si.resolve();
         }
         removeTargetData(t, e) {
-            return this.Is.delete(e.target), this.Rs.us(e.targetId), this.targetCount -= 1, 
-            zs.resolve();
+            return this.wi.delete(e.target), this.gi.si(e.targetId), this.targetCount -= 1, 
+            si.resolve();
         }
         removeTargets(t, e, n) {
             let s = 0;
             const i = [];
-            return this.Is.forEach(((r, o) => {
-                o.sequenceNumber <= e && null === n.get(o.targetId) && (this.Is.delete(r), i.push(this.removeMatchingKeysForTargetId(t, o.targetId)), 
+            return this.wi.forEach(((r, o) => {
+                o.sequenceNumber <= e && null === n.get(o.targetId) && (this.wi.delete(r), i.push(this.removeMatchingKeysForTargetId(t, o.targetId)), 
                 s++);
-            })), zs.waitFor(i).next((() => s));
+            })), si.waitFor(i).next((() => s));
         }
         getTargetCount(t) {
-            return zs.resolve(this.targetCount);
+            return si.resolve(this.targetCount);
         }
         getTargetData(t, e) {
-            const n = this.Is.get(e) || null;
-            return zs.resolve(n);
+            const n = this.wi.get(e) || null;
+            return si.resolve(n);
         }
         addMatchingKeys(t, e, n) {
-            return this.Rs.rs(e, n), zs.resolve();
+            return this.gi.ti(e, n), si.resolve();
         }
         removeMatchingKeys(t, e, n) {
-            this.Rs.cs(e, n);
+            this.gi.ni(e, n);
             const s = this.persistence.referenceDelegate, i = [];
             return s && e.forEach((e => {
                 i.push(s.markPotentiallyOrphaned(t, e));
-            })), zs.waitFor(i);
+            })), si.waitFor(i);
         }
         removeMatchingKeysForTargetId(t, e) {
-            return this.Rs.us(e), zs.resolve();
+            return this.gi.si(e), si.resolve();
         }
         getMatchingKeysForTargetId(t, e) {
-            const n = this.Rs.ls(e);
-            return zs.resolve(n);
+            const n = this.gi.ri(e);
+            return si.resolve(n);
         }
         containsKey(t, e) {
-            return zs.resolve(this.Rs.containsKey(e));
+            return si.resolve(this.gi.containsKey(e));
         }
     }
 
@@ -8380,7 +9210,7 @@ var app = (function () {
      * A memory-backed instance of Persistence. Data is stored only in RAM and
      * not persisted across sessions.
      */
-    class $r {
+    class ao {
         /**
          * The constructor accepts a factory for creating a reference delegate. This
          * allows both the delegate and this instance to have strong references to
@@ -8388,21 +9218,21 @@ var app = (function () {
          * checked or asserted on every access.
          */
         constructor(t, e) {
-            this.Ps = {}, this.Be = new nt(0), this.Ue = !1, this.Ue = !0, this.referenceDelegate = t(this), 
-            this.He = new xr(this);
-            this.Jt = new Ai, this.Je = function(t, e) {
-                return new Nr(t, e);
-            }(this.Jt, (t => this.referenceDelegate.vs(t))), this.k = new ui(e), this.Ye = new Vr(this.k);
+            this.pi = {}, this.overlays = {}, this.Nn = new nt(0), this.xn = !1, this.xn = !0, 
+            this.referenceDelegate = t(this), this.Un = new uo(this);
+            this.indexManager = new Wi, this.qn = function(t) {
+                return new oo(t);
+            }((t => this.referenceDelegate.Ii(t))), this.O = new pi(e), this.Kn = new eo(this.O);
         }
         start() {
             return Promise.resolve();
         }
         shutdown() {
             // No durable state to ensure is closed on shutdown.
-            return this.Ue = !1, Promise.resolve();
+            return this.xn = !1, Promise.resolve();
         }
         get started() {
-            return this.Ue;
+            return this.xn;
         }
         setDatabaseDeletedListener() {
             // No op.
@@ -8410,98 +9240,103 @@ var app = (function () {
         setNetworkEnabled() {
             // No op.
         }
-        getIndexManager() {
-            return this.Jt;
+        getIndexManager(t) {
+            // We do not currently support indices for memory persistence, so we can
+            // return the same shared instance of the memory index manager.
+            return this.indexManager;
         }
-        getMutationQueue(t) {
-            let e = this.Ps[t.toKey()];
-            return e || (e = new Cr(this.Jt, this.referenceDelegate), this.Ps[t.toKey()] = e), 
-            e;
+        getDocumentOverlayCache(t) {
+            let e = this.overlays[t.toKey()];
+            return e || (e = new no, this.overlays[t.toKey()] = e), e;
+        }
+        getMutationQueue(t, e) {
+            let n = this.pi[t.toKey()];
+            return n || (n = new ro(e, this.referenceDelegate), this.pi[t.toKey()] = n), n;
         }
         getTargetCache() {
-            return this.He;
+            return this.Un;
         }
         getRemoteDocumentCache() {
-            return this.Je;
+            return this.qn;
         }
         getBundleCache() {
-            return this.Ye;
+            return this.Kn;
         }
         runTransaction(t, e, n) {
-            O("MemoryPersistence", "Starting transaction:", t);
-            const s = new Or(this.Be.next());
-            return this.referenceDelegate.Vs(), n(s).next((t => this.referenceDelegate.Ss(s).next((() => t)))).toPromise().then((t => (s.raiseOnCommittedEvent(), 
+            M("MemoryPersistence", "Starting transaction:", t);
+            const s = new ho(this.Nn.next());
+            return this.referenceDelegate.Ei(), n(s).next((t => this.referenceDelegate.Ti(s).next((() => t)))).toPromise().then((t => (s.raiseOnCommittedEvent(), 
             t)));
         }
-        Ds(t, e) {
-            return zs.or(Object.values(this.Ps).map((n => () => n.containsKey(t, e))));
+        Ai(t, e) {
+            return si.or(Object.values(this.pi).map((n => () => n.containsKey(t, e))));
         }
     }
 
     /**
      * Memory persistence is not actually transactional, but future implementations
      * may have transaction-scoped state.
-     */ class Or extends Gs {
+     */ class ho extends ni {
         constructor(t) {
             super(), this.currentSequenceNumber = t;
         }
     }
 
-    class Mr {
+    class lo {
         constructor(t) {
             this.persistence = t, 
             /** Tracks all documents that are active in Query views. */
-            this.Cs = new Sr, 
+            this.Ri = new so, 
             /** The list of documents that are potentially GCed after each transaction. */
-            this.Ns = null;
+            this.Pi = null;
         }
-        static ks(t) {
-            return new Mr(t);
+        static bi(t) {
+            return new lo(t);
         }
-        get xs() {
-            if (this.Ns) return this.Ns;
-            throw B();
+        get vi() {
+            if (this.Pi) return this.Pi;
+            throw L();
         }
         addReference(t, e, n) {
-            return this.Cs.addReference(n, e), this.xs.delete(n.toString()), zs.resolve();
+            return this.Ri.addReference(n, e), this.vi.delete(n.toString()), si.resolve();
         }
         removeReference(t, e, n) {
-            return this.Cs.removeReference(n, e), this.xs.add(n.toString()), zs.resolve();
+            return this.Ri.removeReference(n, e), this.vi.add(n.toString()), si.resolve();
         }
         markPotentiallyOrphaned(t, e) {
-            return this.xs.add(e.toString()), zs.resolve();
+            return this.vi.add(e.toString()), si.resolve();
         }
         removeTarget(t, e) {
-            this.Cs.us(e.targetId).forEach((t => this.xs.add(t.toString())));
+            this.Ri.si(e.targetId).forEach((t => this.vi.add(t.toString())));
             const n = this.persistence.getTargetCache();
             return n.getMatchingKeysForTargetId(t, e.targetId).next((t => {
-                t.forEach((t => this.xs.add(t.toString())));
+                t.forEach((t => this.vi.add(t.toString())));
             })).next((() => n.removeTargetData(t, e)));
         }
-        Vs() {
-            this.Ns = new Set;
+        Ei() {
+            this.Pi = new Set;
         }
-        Ss(t) {
+        Ti(t) {
             // Remove newly orphaned documents.
             const e = this.persistence.getRemoteDocumentCache().newChangeBuffer();
-            return zs.forEach(this.xs, (n => {
-                const s = Dt.fromPath(n);
-                return this.$s(t, s).next((t => {
-                    t || e.removeEntry(s);
+            return si.forEach(this.vi, (n => {
+                const s = Nt.fromPath(n);
+                return this.Vi(t, s).next((t => {
+                    t || e.removeEntry(s, at.min());
                 }));
-            })).next((() => (this.Ns = null, e.apply(t))));
+            })).next((() => (this.Pi = null, e.apply(t))));
         }
         updateLimboDocument(t, e) {
-            return this.$s(t, e).next((t => {
-                t ? this.xs.delete(e.toString()) : this.xs.add(e.toString());
+            return this.Vi(t, e).next((t => {
+                t ? this.vi.delete(e.toString()) : this.vi.add(e.toString());
             }));
         }
-        vs(t) {
+        Ii(t) {
             // For eager GC, we don't care about the document size, there are no size thresholds.
             return 0;
         }
-        $s(t, e) {
-            return zs.or([ () => zs.resolve(this.Cs.containsKey(e)), () => this.persistence.getTargetCache().containsKey(t, e), () => this.persistence.Ds(t, e) ]);
+        Vi(t, e) {
+            return si.or([ () => si.resolve(this.Ri.containsKey(e)), () => this.persistence.getTargetCache().containsKey(t, e), () => this.persistence.Ai(t, e) ]);
         }
     }
 
@@ -8516,20 +9351,20 @@ var app = (function () {
      * `toWebStorageJSON()`.
      */
     // Visible for testing.
-    class Qr {
+    class Io {
         constructor() {
-            this.activeTargetIds = Nn();
+            this.activeTargetIds = $n();
         }
-        Fs(t) {
+        Ci(t) {
             this.activeTargetIds = this.activeTargetIds.add(t);
         }
-        Ls(t) {
+        Ni(t) {
             this.activeTargetIds = this.activeTargetIds.delete(t);
         }
         /**
          * Converts this entry into a JSON-encoded format we can use for WebStorage.
          * Does not encode `clientId` as it is part of the key in WebStorage.
-         */    Ms() {
+         */    Di() {
             const t = {
                 activeTargetIds: this.activeTargetIds.toArray(),
                 updateTimeMs: Date.now()
@@ -8538,9 +9373,9 @@ var app = (function () {
         }
     }
 
-    class Gr {
+    class To {
         constructor() {
-            this.pi = new Qr, this.Ti = {}, this.onlineStateHandler = null, this.sequenceNumberHandler = null;
+            this._r = new Io, this.wr = {}, this.onlineStateHandler = null, this.sequenceNumberHandler = null;
         }
         addPendingMutation(t) {
             // No op.
@@ -8549,28 +9384,28 @@ var app = (function () {
             // No op.
         }
         addLocalQueryTarget(t) {
-            return this.pi.Fs(t), this.Ti[t] || "not-current";
+            return this._r.Ci(t), this.wr[t] || "not-current";
         }
         updateQueryState(t, e, n) {
-            this.Ti[t] = e;
+            this.wr[t] = e;
         }
         removeLocalQueryTarget(t) {
-            this.pi.Ls(t);
+            this._r.Ni(t);
         }
         isLocalQueryTarget(t) {
-            return this.pi.activeTargetIds.has(t);
+            return this._r.activeTargetIds.has(t);
         }
         clearQueryState(t) {
-            delete this.Ti[t];
+            delete this.wr[t];
         }
         getAllActiveQueryTargets() {
-            return this.pi.activeTargetIds;
+            return this._r.activeTargetIds;
         }
         isActiveQueryTarget(t) {
-            return this.pi.activeTargetIds.has(t);
+            return this._r.activeTargetIds.has(t);
         }
         start() {
-            return this.pi = new Qr, Promise.resolve();
+            return this._r = new Io, Promise.resolve();
         }
         handleUserChange(t, e, n) {
             // No op.
@@ -8600,8 +9435,8 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class zr {
-        Ei(t) {
+     */ class Ao {
+        mr(t) {
             // No-op.
         }
         shutdown() {
@@ -8630,31 +9465,31 @@ var app = (function () {
     /**
      * Browser implementation of ConnectivityMonitor.
      */
-    class Hr {
+    class Ro {
         constructor() {
-            this.Ii = () => this.Ai(), this.Ri = () => this.bi(), this.Pi = [], this.vi();
+            this.gr = () => this.yr(), this.pr = () => this.Ir(), this.Er = [], this.Tr();
         }
-        Ei(t) {
-            this.Pi.push(t);
+        mr(t) {
+            this.Er.push(t);
         }
         shutdown() {
-            window.removeEventListener("online", this.Ii), window.removeEventListener("offline", this.Ri);
+            window.removeEventListener("online", this.gr), window.removeEventListener("offline", this.pr);
         }
-        vi() {
-            window.addEventListener("online", this.Ii), window.addEventListener("offline", this.Ri);
+        Tr() {
+            window.addEventListener("online", this.gr), window.addEventListener("offline", this.pr);
         }
-        Ai() {
-            O("ConnectivityMonitor", "Network connectivity changed: AVAILABLE");
-            for (const t of this.Pi) t(0 /* AVAILABLE */);
+        yr() {
+            M("ConnectivityMonitor", "Network connectivity changed: AVAILABLE");
+            for (const t of this.Er) t(0 /* AVAILABLE */);
         }
-        bi() {
-            O("ConnectivityMonitor", "Network connectivity changed: UNAVAILABLE");
-            for (const t of this.Pi) t(1 /* UNAVAILABLE */);
+        Ir() {
+            M("ConnectivityMonitor", "Network connectivity changed: UNAVAILABLE");
+            for (const t of this.Er) t(1 /* UNAVAILABLE */);
         }
         // TODO(chenbrian): Consider passing in window either into this component or
         // here for testing via FakeWindow.
         /** Checks that all used attributes of window are available. */
-        static Pt() {
+        static Vt() {
             return "undefined" != typeof window && void 0 !== window.addEventListener && void 0 !== window.removeEventListener;
         }
     }
@@ -8674,7 +9509,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ const Jr = {
+     */ const Po = {
         BatchGetDocuments: "batchGet",
         Commit: "commit",
         RunQuery: "runQuery"
@@ -8706,33 +9541,33 @@ var app = (function () {
      * bridge to other implementations that are streams but do not implement the
      * interface. The stream callbacks are invoked with the callOn... methods.
      */
-    class Yr {
+    class bo {
         constructor(t) {
-            this.Vi = t.Vi, this.Si = t.Si;
+            this.Ar = t.Ar, this.Rr = t.Rr;
         }
-        Di(t) {
-            this.Ci = t;
+        Pr(t) {
+            this.br = t;
         }
-        Ni(t) {
-            this.ki = t;
+        vr(t) {
+            this.Vr = t;
         }
         onMessage(t) {
-            this.xi = t;
+            this.Sr = t;
         }
         close() {
-            this.Si();
+            this.Rr();
         }
         send(t) {
-            this.Vi(t);
+            this.Ar(t);
         }
-        $i() {
-            this.Ci();
+        Dr() {
+            this.br();
         }
-        Oi(t) {
-            this.ki(t);
+        Cr(t) {
+            this.Vr(t);
         }
-        Mi(t) {
-            this.xi(t);
+        Nr(t) {
+            this.Sr(t);
         }
     }
 
@@ -8751,7 +9586,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class Xr extends 
+     */ class vo extends 
     /**
      * Base class for all Rest-based connections to the backend (WebChannel and
      * HTTP).
@@ -8760,27 +9595,27 @@ var app = (function () {
         constructor(t) {
             this.databaseInfo = t, this.databaseId = t.databaseId;
             const e = t.ssl ? "https" : "http";
-            this.Fi = e + "://" + t.host, this.Li = "projects/" + this.databaseId.projectId + "/databases/" + this.databaseId.database + "/documents";
+            this.kr = e + "://" + t.host, this.Or = "projects/" + this.databaseId.projectId + "/databases/" + this.databaseId.database + "/documents";
         }
-        Bi(t, e, n, s, i) {
-            const r = this.Ui(t, e);
-            O("RestConnection", "Sending: ", r, n);
+        Mr(t, e, n, s, i) {
+            const r = this.$r(t, e);
+            M("RestConnection", "Sending: ", r, n);
             const o = {};
-            return this.qi(o, s, i), this.Ki(t, r, o, n).then((t => (O("RestConnection", "Received: ", t), 
+            return this.Fr(o, s, i), this.Br(t, r, o, n).then((t => (M("RestConnection", "Received: ", t), 
             t)), (e => {
                 throw F("RestConnection", `${t} failed with error: `, e, "url: ", r, "request:", n), 
                 e;
             }));
         }
-        ji(t, e, n, s, i) {
+        Lr(t, e, n, s, i) {
             // The REST API automatically aggregates all of the streamed results, so we
             // can just use the normal invoke() method.
-            return this.Bi(t, e, n, s, i);
+            return this.Mr(t, e, n, s, i);
         }
         /**
          * Modifies the headers for a request, adding any authorization token if
          * present and any additional headers for the request.
-         */    qi(t, e, n) {
+         */    Fr(t, e, n) {
             t["X-Goog-Api-Client"] = "gl-js/ fire/" + N, 
             // Content-Type: text/plain will avoid preflight requests which might
             // mess with CORS and redirects by proxies. If we add custom headers
@@ -8789,16 +9624,16 @@ var app = (function () {
             t["Content-Type"] = "text/plain", this.databaseInfo.appId && (t["X-Firebase-GMPID"] = this.databaseInfo.appId), 
             e && e.headers.forEach(((e, n) => t[n] = e)), n && n.headers.forEach(((e, n) => t[n] = e));
         }
-        Ui(t, e) {
-            const n = Jr[t];
-            return `${this.Fi}/v1/${e}:${n}`;
+        $r(t, e) {
+            const n = Po[t];
+            return `${this.kr}/v1/${e}:${n}`;
         }
     } {
         constructor(t) {
             super(t), this.forceLongPolling = t.forceLongPolling, this.autoDetectLongPolling = t.autoDetectLongPolling, 
             this.useFetchStreams = t.useFetchStreams;
         }
-        Ki(t, e, n, s) {
+        Br(t, e, n, s) {
             return new Promise(((i, r) => {
                 const o = new XhrIo;
                 o.listenOnce(EventType.COMPLETE, (() => {
@@ -8806,44 +9641,44 @@ var app = (function () {
                         switch (o.getLastErrorCode()) {
                           case ErrorCode.NO_ERROR:
                             const e = o.getResponseJson();
-                            O("Connection", "XHR received:", JSON.stringify(e)), i(e);
+                            M("Connection", "XHR received:", JSON.stringify(e)), i(e);
                             break;
 
                           case ErrorCode.TIMEOUT:
-                            O("Connection", 'RPC "' + t + '" timed out'), r(new Q(j.DEADLINE_EXCEEDED, "Request time out"));
+                            M("Connection", 'RPC "' + t + '" timed out'), r(new j(G.DEADLINE_EXCEEDED, "Request time out"));
                             break;
 
                           case ErrorCode.HTTP_ERROR:
                             const n = o.getStatus();
-                            if (O("Connection", 'RPC "' + t + '" failed with status:', n, "response text:", o.getResponseText()), 
+                            if (M("Connection", 'RPC "' + t + '" failed with status:', n, "response text:", o.getResponseText()), 
                             n > 0) {
                                 const t = o.getResponseJson().error;
                                 if (t && t.status && t.message) {
                                     const e = function(t) {
                                         const e = t.toLowerCase().replace(/_/g, "-");
-                                        return Object.values(j).indexOf(e) >= 0 ? e : j.UNKNOWN;
+                                        return Object.values(G).indexOf(e) >= 0 ? e : G.UNKNOWN;
                                     }(t.status);
-                                    r(new Q(e, t.message));
-                                } else r(new Q(j.UNKNOWN, "Server responded with status " + o.getStatus()));
+                                    r(new j(e, t.message));
+                                } else r(new j(G.UNKNOWN, "Server responded with status " + o.getStatus()));
                             } else 
                             // If we received an HTTP_ERROR but there's no status code,
                             // it's most probably a connection issue
-                            r(new Q(j.UNAVAILABLE, "Connection failed."));
+                            r(new j(G.UNAVAILABLE, "Connection failed."));
                             break;
 
                           default:
-                            B();
+                            L();
                         }
                     } finally {
-                        O("Connection", 'RPC "' + t + '" completed.');
+                        M("Connection", 'RPC "' + t + '" completed.');
                     }
                 }));
                 const c = JSON.stringify(s);
                 o.send(e, "POST", c, n, 15);
             }));
         }
-        Qi(t, e, n) {
-            const s = [ this.Fi, "/", "google.firestore.v1.Firestore", "/", t, "/channel" ], i = createWebChannelTransport(), r = getStatEventTarget(), o = {
+        Ur(t, e, n) {
+            const s = [ this.kr, "/", "google.firestore.v1.Firestore", "/", t, "/channel" ], i = createWebChannelTransport(), r = getStatEventTarget(), o = {
                 // Required for backend stickiness, routing behavior is based on this
                 // parameter.
                 httpSessionIdParam: "gsessionid",
@@ -8867,7 +9702,7 @@ var app = (function () {
                 forceLongPolling: this.forceLongPolling,
                 detectBufferingProxy: this.autoDetectLongPolling
             };
-            this.useFetchStreams && (o.xmlHttpFactory = new FetchXmlHttpFactory({})), this.qi(o.initMessageHeaders, e, n), 
+            this.useFetchStreams && (o.xmlHttpFactory = new FetchXmlHttpFactory({})), this.Fr(o.initMessageHeaders, e, n), 
             // Sending the custom headers we just added to request.initMessageHeaders
             // (Authorization, etc.) will trigger the browser to make a CORS preflight
             // request because the XHR will no longer meet the criteria for a "simple"
@@ -8885,23 +9720,23 @@ var app = (function () {
             // https://github.com/firebase/firebase-js-sdk/issues/1491.
             isMobileCordova() || isReactNative() || isElectron() || isIE() || isUWP() || isBrowserExtension() || (o.httpHeadersOverwriteParam = "$httpHeaders");
             const c = s.join("");
-            O("Connection", "Creating WebChannel: " + c, o);
-            const a = i.createWebChannel(c, o);
+            M("Connection", "Creating WebChannel: " + c, o);
+            const u = i.createWebChannel(c, o);
             // WebChannel supports sending the first message with the handshake - saving
             // a network round trip. However, it will have to call send in the same
             // JS event loop as open. In order to enforce this, we delay actually
             // opening the WebChannel until send is called. Whether we have called
             // open is tracked with this variable.
-                    let u = !1, h = !1;
+                    let a = !1, h = !1;
             // A flag to determine whether the stream was closed (by us or through an
             // error/close event) to avoid delivering multiple close events or sending
             // on a closed stream
-                    const l = new Yr({
-                Vi: t => {
-                    h ? O("Connection", "Not sending because WebChannel is closed:", t) : (u || (O("Connection", "Opening WebChannel transport."), 
-                    a.open(), u = !0), O("Connection", "WebChannel sending:", t), a.send(t));
+                    const l = new bo({
+                Ar: t => {
+                    h ? M("Connection", "Not sending because WebChannel is closed:", t) : (a || (M("Connection", "Opening WebChannel transport."), 
+                    u.open(), a = !0), M("Connection", "WebChannel sending:", t), u.send(t));
                 },
-                Si: () => a.close()
+                Rr: () => u.close()
             }), y = (t, e, n) => {
                 // TODO(dimond): closure typing seems broken because WebChannel does
                 // not implement goog.events.Listenable
@@ -8919,13 +9754,13 @@ var app = (function () {
             // exception and rethrow using a setTimeout so they become visible again.
             // Note that eventually this function could go away if we are confident
             // enough the code is exception free.
-                    return y(a, WebChannel.EventType.OPEN, (() => {
-                h || O("Connection", "WebChannel transport opened.");
-            })), y(a, WebChannel.EventType.CLOSE, (() => {
-                h || (h = !0, O("Connection", "WebChannel transport closed"), l.Oi());
-            })), y(a, WebChannel.EventType.ERROR, (t => {
-                h || (h = !0, F("Connection", "WebChannel transport errored:", t), l.Oi(new Q(j.UNAVAILABLE, "The operation could not be completed")));
-            })), y(a, WebChannel.EventType.MESSAGE, (t => {
+                    return y(u, WebChannel.EventType.OPEN, (() => {
+                h || M("Connection", "WebChannel transport opened.");
+            })), y(u, WebChannel.EventType.CLOSE, (() => {
+                h || (h = !0, M("Connection", "WebChannel transport closed"), l.Cr());
+            })), y(u, WebChannel.EventType.ERROR, (t => {
+                h || (h = !0, F("Connection", "WebChannel transport errored:", t), l.Cr(new j(G.UNAVAILABLE, "The operation could not be completed")));
+            })), y(u, WebChannel.EventType.MESSAGE, (t => {
                 var e;
                 if (!h) {
                     const n = t.data[0];
@@ -8937,7 +9772,7 @@ var app = (function () {
                     // Use any because msgData.error is not typed.
                     const s = n, i = s.error || (null === (e = s[0]) || void 0 === e ? void 0 : e.error);
                     if (i) {
-                        O("Connection", "WebChannel received error:", i);
+                        M("Connection", "WebChannel received error:", i);
                         // error.status will be a string like 'OK' or 'NOT_FOUND'.
                         const t = i.status;
                         let e = 
@@ -8950,27 +9785,27 @@ var app = (function () {
                         function(t) {
                             // lookup by string
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const e = wn[t];
-                            if (void 0 !== e) return gn(e);
+                            const e = pn[t];
+                            if (void 0 !== e) return Tn(e);
                         }(t), n = i.message;
-                        void 0 === e && (e = j.INTERNAL, n = "Unknown error status: " + t + " with message " + i.message), 
+                        void 0 === e && (e = G.INTERNAL, n = "Unknown error status: " + t + " with message " + i.message), 
                         // Mark closed so no further events are propagated
-                        h = !0, l.Oi(new Q(e, n)), a.close();
-                    } else O("Connection", "WebChannel received:", n), l.Mi(n);
+                        h = !0, l.Cr(new j(e, n)), u.close();
+                    } else M("Connection", "WebChannel received:", n), l.Nr(n);
                 }
             })), y(r, Event.STAT_EVENT, (t => {
-                t.stat === Stat.PROXY ? O("Connection", "Detected buffering proxy") : t.stat === Stat.NOPROXY && O("Connection", "Detected no buffering proxy");
+                t.stat === Stat.PROXY ? M("Connection", "Detected buffering proxy") : t.stat === Stat.NOPROXY && M("Connection", "Detected no buffering proxy");
             })), setTimeout((() => {
                 // Technically we could/should wait for the WebChannel opened event,
                 // but because we want to send the first message with the WebChannel
                 // handshake we pretend the channel opened here (asynchronously), and
                 // then delay the actual open until the first message is sent.
-                l.$i();
+                l.Dr();
             }), 0), l;
         }
     }
 
-    /** The Platform's 'document' implementation or null if not available. */ function to() {
+    /** The Platform's 'document' implementation or null if not available. */ function So() {
         // `document` is not always available, e.g. in ReactNative and WebWorkers.
         // eslint-disable-next-line no-restricted-globals
         return "undefined" != typeof document ? document : null;
@@ -8991,8 +9826,8 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ function eo(t) {
-        return new jn(t, /* useProto3Json= */ !0);
+     */ function Do(t) {
+        return new Hn(t, /* useProto3Json= */ !0);
     }
 
     /**
@@ -9007,7 +9842,7 @@ var app = (function () {
      * base delay. This prevents clients from accidentally synchronizing their
      * delays causing spikes of load to the backend.
      */
-    class no {
+    class Co {
         constructor(
         /**
          * The AsyncQueue to run backoff operations on.
@@ -9032,10 +9867,10 @@ var app = (function () {
          * Note that jitter will still be applied, so the actual delay could be as
          * much as 1.5*maxDelayMs.
          */ , i = 6e4) {
-            this.Me = t, this.timerId = e, this.Wi = n, this.Gi = s, this.zi = i, this.Hi = 0, 
-            this.Ji = null, 
+            this.Sn = t, this.timerId = e, this.qr = n, this.Kr = s, this.Gr = i, this.jr = 0, 
+            this.Qr = null, 
             /** The last backoff attempt, as epoch milliseconds. */
-            this.Yi = Date.now(), this.reset();
+            this.Wr = Date.now(), this.reset();
         }
         /**
          * Resets the backoff delay.
@@ -9044,40 +9879,40 @@ var app = (function () {
          * (i.e. due to an error), initialDelayMs (plus jitter) will be used, and
          * subsequent ones will increase according to the backoffFactor.
          */    reset() {
-            this.Hi = 0;
+            this.jr = 0;
         }
         /**
          * Resets the backoff delay to the maximum delay (e.g. for use after a
          * RESOURCE_EXHAUSTED error).
-         */    Xi() {
-            this.Hi = this.zi;
+         */    zr() {
+            this.jr = this.Gr;
         }
         /**
          * Returns a promise that resolves after currentDelayMs, and increases the
          * delay for any subsequent attempts. If there was a pending backoff operation
          * already, it will be canceled.
-         */    Zi(t) {
+         */    Hr(t) {
             // Cancel any pending backoff operation.
             this.cancel();
             // First schedule using the current base (which may be 0 and should be
             // honored as such).
-            const e = Math.floor(this.Hi + this.tr()), n = Math.max(0, Date.now() - this.Yi), s = Math.max(0, e - n);
+            const e = Math.floor(this.jr + this.Jr()), n = Math.max(0, Date.now() - this.Wr), s = Math.max(0, e - n);
             // Guard against lastAttemptTime being in the future due to a clock change.
-                    s > 0 && O("ExponentialBackoff", `Backing off for ${s} ms (base delay: ${this.Hi} ms, delay with jitter: ${e} ms, last attempt: ${n} ms ago)`), 
-            this.Ji = this.Me.enqueueAfterDelay(this.timerId, s, (() => (this.Yi = Date.now(), 
+                    s > 0 && M("ExponentialBackoff", `Backing off for ${s} ms (base delay: ${this.jr} ms, delay with jitter: ${e} ms, last attempt: ${n} ms ago)`), 
+            this.Qr = this.Sn.enqueueAfterDelay(this.timerId, s, (() => (this.Wr = Date.now(), 
             t()))), 
             // Apply backoff factor to determine next delay and ensure it is within
             // bounds.
-            this.Hi *= this.Gi, this.Hi < this.Wi && (this.Hi = this.Wi), this.Hi > this.zi && (this.Hi = this.zi);
+            this.jr *= this.Kr, this.jr < this.qr && (this.jr = this.qr), this.jr > this.Gr && (this.jr = this.Gr);
         }
-        er() {
-            null !== this.Ji && (this.Ji.skipDelay(), this.Ji = null);
+        Yr() {
+            null !== this.Qr && (this.Qr.skipDelay(), this.Qr = null);
         }
         cancel() {
-            null !== this.Ji && (this.Ji.cancel(), this.Ji = null);
+            null !== this.Qr && (this.Qr.cancel(), this.Qr = null);
         }
-        /** Returns a random value in the range [-currentBaseMs/2, currentBaseMs/2] */    tr() {
-            return (Math.random() - .5) * this.Hi;
+        /** Returns a random value in the range [-currentBaseMs/2, currentBaseMs/2] */    Jr() {
+            return (Math.random() - .5) * this.jr;
         }
     }
 
@@ -9129,16 +9964,16 @@ var app = (function () {
      *    connection stream
      *  ListenerType: The type of the listener that will be used for callbacks
      */
-    class so {
+    class No {
         constructor(t, e, n, s, i, r, o, c) {
-            this.Me = t, this.nr = n, this.sr = s, this.ir = i, this.authCredentialsProvider = r, 
+            this.Sn = t, this.Xr = n, this.Zr = s, this.eo = i, this.authCredentialsProvider = r, 
             this.appCheckCredentialsProvider = o, this.listener = c, this.state = 0 /* Initial */ , 
             /**
              * A close count that's incremented every time the stream is closed; used by
              * getCloseGuardedDispatcher() to invalidate callbacks that happen after
              * close.
              */
-            this.rr = 0, this.cr = null, this.ar = null, this.stream = null, this.ur = new no(t, e);
+            this.no = 0, this.so = null, this.io = null, this.stream = null, this.ro = new Co(t, e);
         }
         /**
          * Returns true if start() has been called and no error has occurred. True
@@ -9146,13 +9981,13 @@ var app = (function () {
          * encompasses respecting backoff, getting auth tokens, and starting the
          * actual RPC). Use isOpen() to determine if the stream is open and ready for
          * outbound requests.
-         */    hr() {
-            return 1 /* Starting */ === this.state || 5 /* Backoff */ === this.state || this.lr();
+         */    oo() {
+            return 1 /* Starting */ === this.state || 5 /* Backoff */ === this.state || this.co();
         }
         /**
          * Returns true if the underlying RPC is open (the onOpen() listener has been
          * called) and the stream is ready for outbound requests.
-         */    lr() {
+         */    co() {
             return 2 /* Open */ === this.state || 3 /* Healthy */ === this.state;
         }
         /**
@@ -9162,7 +9997,7 @@ var app = (function () {
          *
          * When start returns, isStarted() will return true.
          */    start() {
-            4 /* Error */ !== this.state ? this.auth() : this.dr();
+            4 /* Error */ !== this.state ? this.auth() : this.uo();
         }
         /**
          * Stops the RPC. This call is idempotent and allowed regardless of the
@@ -9170,7 +10005,7 @@ var app = (function () {
          *
          * When stop returns, isStarted() and isOpen() will both return false.
          */    async stop() {
-            this.hr() && await this.close(0 /* Initial */);
+            this.oo() && await this.close(0 /* Initial */);
         }
         /**
          * After an error the stream will usually back off on the next attempt to
@@ -9179,8 +10014,8 @@ var app = (function () {
          *
          * Each error will call the onClose() listener. That function can decide to
          * inhibit backoff if required.
-         */    wr() {
-            this.state = 0 /* Initial */ , this.ur.reset();
+         */    ao() {
+            this.state = 0 /* Initial */ , this.ro.reset();
         }
         /**
          * Marks this stream as idle. If no further actions are performed on the
@@ -9191,25 +10026,25 @@ var app = (function () {
          *
          * Only streams that are in state 'Open' can be marked idle, as all other
          * states imply pending network operations.
-         */    _r() {
+         */    ho() {
             // Starts the idle time if we are in state 'Open' and are not yet already
             // running a timer (in which case the previous idle timeout still applies).
-            this.lr() && null === this.cr && (this.cr = this.Me.enqueueAfterDelay(this.nr, 6e4, (() => this.mr())));
+            this.co() && null === this.so && (this.so = this.Sn.enqueueAfterDelay(this.Xr, 6e4, (() => this.lo())));
         }
-        /** Sends a message to the underlying stream. */    gr(t) {
-            this.yr(), this.stream.send(t);
+        /** Sends a message to the underlying stream. */    fo(t) {
+            this._o(), this.stream.send(t);
         }
-        /** Called by the idle timer when the stream should close due to inactivity. */    async mr() {
-            if (this.lr()) 
+        /** Called by the idle timer when the stream should close due to inactivity. */    async lo() {
+            if (this.co()) 
             // When timing out an idle stream there's no reason to force the stream into backoff when
             // it restarts so set the stream state to Initial instead of Error.
             return this.close(0 /* Initial */);
         }
-        /** Marks the stream as active again. */    yr() {
-            this.cr && (this.cr.cancel(), this.cr = null);
+        /** Marks the stream as active again. */    _o() {
+            this.so && (this.so.cancel(), this.so = null);
         }
-        /** Cancels the health check delayed operation. */    pr() {
-            this.ar && (this.ar.cancel(), this.ar = null);
+        /** Cancels the health check delayed operation. */    wo() {
+            this.io && (this.io.cancel(), this.io = null);
         }
         /**
          * Closes the stream and cleans up as necessary:
@@ -9225,15 +10060,15 @@ var app = (function () {
          * @param error - the error the connection was closed with.
          */    async close(t, e) {
             // Cancel any outstanding timers (they're guaranteed not to execute).
-            this.yr(), this.pr(), this.ur.cancel(), 
+            this._o(), this.wo(), this.ro.cancel(), 
             // Invalidates any stream-related callbacks (e.g. from auth or the
             // underlying stream), guaranteeing they won't execute.
-            this.rr++, 4 /* Error */ !== t ? 
+            this.no++, 4 /* Error */ !== t ? 
             // If this is an intentional close ensure we don't delay our next connection attempt.
-            this.ur.reset() : e && e.code === j.RESOURCE_EXHAUSTED ? (
+            this.ro.reset() : e && e.code === G.RESOURCE_EXHAUSTED ? (
             // Log the error. (Probably either 'quota exceeded' or 'max queue length reached'.)
-            M(e.toString()), M("Using maximum backoff delay to prevent overloading the backend."), 
-            this.ur.Xi()) : e && e.code === j.UNAUTHENTICATED && 3 /* Healthy */ !== this.state && (
+            $(e.toString()), $("Using maximum backoff delay to prevent overloading the backend."), 
+            this.ro.zr()) : e && e.code === G.UNAUTHENTICATED && 3 /* Healthy */ !== this.state && (
             // "unauthenticated" error means the token was rejected. This should rarely
             // happen since both Auth and AppCheck ensure a sufficient TTL when we
             // request a token. If a user manually resets their system clock this can
@@ -9242,70 +10077,70 @@ var app = (function () {
             // to ensure that we fetch a new token.
             this.authCredentialsProvider.invalidateToken(), this.appCheckCredentialsProvider.invalidateToken()), 
             // Clean up the underlying stream because we are no longer interested in events.
-            null !== this.stream && (this.Tr(), this.stream.close(), this.stream = null), 
+            null !== this.stream && (this.mo(), this.stream.close(), this.stream = null), 
             // This state must be assigned before calling onClose() to allow the callback to
             // inhibit backoff or otherwise manipulate the state in its non-started state.
             this.state = t, 
             // Notify the listener that the stream closed.
-            await this.listener.Ni(e);
+            await this.listener.vr(e);
         }
         /**
          * Can be overridden to perform additional cleanup before the stream is closed.
          * Calling super.tearDown() is not required.
-         */    Tr() {}
+         */    mo() {}
         auth() {
             this.state = 1 /* Starting */;
-            const t = this.Er(this.rr), e = this.rr;
+            const t = this.yo(this.no), e = this.no;
             // TODO(mikelehen): Just use dispatchIfNotClosed, but see TODO below.
                     Promise.all([ this.authCredentialsProvider.getToken(), this.appCheckCredentialsProvider.getToken() ]).then((([t, n]) => {
                 // Stream can be stopped while waiting for authentication.
                 // TODO(mikelehen): We really should just use dispatchIfNotClosed
                 // and let this dispatch onto the queue, but that opened a spec test can
                 // of worms that I don't want to deal with in this PR.
-                this.rr === e && 
+                this.no === e && 
                 // Normally we'd have to schedule the callback on the AsyncQueue.
                 // However, the following calls are safe to be called outside the
                 // AsyncQueue since they don't chain asynchronous calls
-                this.Ir(t, n);
+                this.po(t, n);
             }), (e => {
                 t((() => {
-                    const t = new Q(j.UNKNOWN, "Fetching auth token failed: " + e.message);
-                    return this.Ar(t);
+                    const t = new j(G.UNKNOWN, "Fetching auth token failed: " + e.message);
+                    return this.Io(t);
                 }));
             }));
         }
-        Ir(t, e) {
-            const n = this.Er(this.rr);
-            this.stream = this.Rr(t, e), this.stream.Di((() => {
-                n((() => (this.state = 2 /* Open */ , this.ar = this.Me.enqueueAfterDelay(this.sr, 1e4, (() => (this.lr() && (this.state = 3 /* Healthy */), 
-                Promise.resolve()))), this.listener.Di())));
-            })), this.stream.Ni((t => {
-                n((() => this.Ar(t)));
+        po(t, e) {
+            const n = this.yo(this.no);
+            this.stream = this.Eo(t, e), this.stream.Pr((() => {
+                n((() => (this.state = 2 /* Open */ , this.io = this.Sn.enqueueAfterDelay(this.Zr, 1e4, (() => (this.co() && (this.state = 3 /* Healthy */), 
+                Promise.resolve()))), this.listener.Pr())));
+            })), this.stream.vr((t => {
+                n((() => this.Io(t)));
             })), this.stream.onMessage((t => {
                 n((() => this.onMessage(t)));
             }));
         }
-        dr() {
-            this.state = 5 /* Backoff */ , this.ur.Zi((async () => {
+        uo() {
+            this.state = 5 /* Backoff */ , this.ro.Hr((async () => {
                 this.state = 0 /* Initial */ , this.start();
             }));
         }
         // Visible for tests
-        Ar(t) {
+        Io(t) {
             // In theory the stream could close cleanly, however, in our current model
             // we never expect this to happen because if we stop a stream ourselves,
             // this callback will never be called. To prevent cases where we retry
             // without a backoff accidentally, we set the stream to error in all cases.
-            return O("PersistentStream", `close with error: ${t}`), this.stream = null, this.close(4 /* Error */ , t);
+            return M("PersistentStream", `close with error: ${t}`), this.stream = null, this.close(4 /* Error */ , t);
         }
         /**
          * Returns a "dispatcher" function that dispatches operations onto the
          * AsyncQueue but only runs them if closeCount remains unchanged. This allows
          * us to turn auth / stream callbacks into no-ops if the stream is closed /
          * re-opened, etc.
-         */    Er(t) {
+         */    yo(t) {
             return e => {
-                this.Me.enqueueAndForget((() => this.rr === t ? e() : (O("PersistentStream", "stream callback skipped by getCloseGuardedDispatcher."), 
+                this.Sn.enqueueAndForget((() => this.no === t ? e() : (M("PersistentStream", "stream callback skipped by getCloseGuardedDispatcher."), 
                 Promise.resolve())));
             };
         }
@@ -9317,56 +10152,56 @@ var app = (function () {
      * Once the Listen stream has called the onOpen() listener, any number of
      * listen() and unlisten() calls can be made to control what changes will be
      * sent from the server for ListenResponses.
-     */ class io extends so {
+     */ class xo extends No {
         constructor(t, e, n, s, i, r) {
             super(t, "listen_stream_connection_backoff" /* ListenStreamConnectionBackoff */ , "listen_stream_idle" /* ListenStreamIdle */ , "health_check_timeout" /* HealthCheckTimeout */ , e, n, s, r), 
-            this.k = i;
+            this.O = i;
         }
-        Rr(t, e) {
-            return this.ir.Qi("Listen", t, e);
+        Eo(t, e) {
+            return this.eo.Ur("Listen", t, e);
         }
         onMessage(t) {
             // A successful response means the stream is healthy
-            this.ur.reset();
-            const e = os(this.k, t), n = function(t) {
+            this.ro.reset();
+            const e = ls(this.O, t), n = function(t) {
                 // We have only reached a consistent snapshot for the entire stream if there
                 // is a read_time set and it applies to all targets (i.e. the list of
                 // targets is empty). The backend is guaranteed to send such responses.
-                if (!("targetChange" in t)) return ut.min();
+                if (!("targetChange" in t)) return at.min();
                 const e = t.targetChange;
-                return e.targetIds && e.targetIds.length ? ut.min() : e.readTime ? zn(e.readTime) : ut.min();
+                return e.targetIds && e.targetIds.length ? at.min() : e.readTime ? Zn(e.readTime) : at.min();
             }(t);
-            return this.listener.br(e, n);
+            return this.listener.To(e, n);
         }
         /**
          * Registers interest in the results of the given target. If the target
          * includes a resumeToken it will be included in the request. Results that
          * affect the target will be streamed back as WatchChange messages that
          * reference the targetId.
-         */    Pr(t) {
+         */    Ao(t) {
             const e = {};
-            e.database = es(this.k), e.addTarget = function(t, e) {
+            e.database = os(this.O), e.addTarget = function(t, e) {
                 let n;
                 const s = e.target;
-                return n = Zt(s) ? {
-                    documents: hs(t, s)
+                return n = oe(s) ? {
+                    documents: ws(t, s)
                 } : {
-                    query: ls(t, s)
-                }, n.targetId = e.targetId, e.resumeToken.approximateByteSize() > 0 ? n.resumeToken = Wn(t, e.resumeToken) : e.snapshotVersion.compareTo(ut.min()) > 0 && (
+                    query: ms(t, s)
+                }, n.targetId = e.targetId, e.resumeToken.approximateByteSize() > 0 ? n.resumeToken = Yn(t, e.resumeToken) : e.snapshotVersion.compareTo(at.min()) > 0 && (
                 // TODO(wuandy): Consider removing above check because it is most likely true.
                 // Right now, many tests depend on this behaviour though (leaving min() out
                 // of serialization).
-                n.readTime = Qn(t, e.snapshotVersion.toTimestamp())), n;
-            }(this.k, t);
-            const n = ds(this.k, t);
-            n && (e.labels = n), this.gr(e);
+                n.readTime = Jn(t, e.snapshotVersion.toTimestamp())), n;
+            }(this.O, t);
+            const n = ys(this.O, t);
+            n && (e.labels = n), this.fo(e);
         }
         /**
          * Unregisters interest in the results of the target associated with the
          * given targetId.
-         */    vr(t) {
+         */    Ro(t) {
             const e = {};
-            e.database = es(this.k), e.removeTarget = t, this.gr(e);
+            e.database = os(this.O), e.removeTarget = t, this.fo(e);
         }
     }
 
@@ -9386,57 +10221,57 @@ var app = (function () {
      * okay to use the same streamToken for the calls to writeMutations.
      *
      * TODO(b/33271235): Use proto types
-     */ class ro extends so {
+     */ class ko extends No {
         constructor(t, e, n, s, i, r) {
             super(t, "write_stream_connection_backoff" /* WriteStreamConnectionBackoff */ , "write_stream_idle" /* WriteStreamIdle */ , "health_check_timeout" /* HealthCheckTimeout */ , e, n, s, r), 
-            this.k = i, this.Vr = !1;
+            this.O = i, this.Po = !1;
         }
         /**
          * Tracks whether or not a handshake has been successfully exchanged and
          * the stream is ready to accept mutations.
-         */    get Sr() {
-            return this.Vr;
+         */    get bo() {
+            return this.Po;
         }
         // Override of PersistentStream.start
         start() {
-            this.Vr = !1, this.lastStreamToken = void 0, super.start();
+            this.Po = !1, this.lastStreamToken = void 0, super.start();
         }
-        Tr() {
-            this.Vr && this.Dr([]);
+        mo() {
+            this.Po && this.vo([]);
         }
-        Rr(t, e) {
-            return this.ir.Qi("Write", t, e);
+        Eo(t, e) {
+            return this.eo.Ur("Write", t, e);
         }
         onMessage(t) {
             if (
             // Always capture the last stream token.
-            U(!!t.streamToken), this.lastStreamToken = t.streamToken, this.Vr) {
+            U(!!t.streamToken), this.lastStreamToken = t.streamToken, this.Po) {
                 // A successful first write response means the stream is healthy,
                 // Note, that we could consider a successful handshake healthy, however,
                 // the write itself might be causing an error we want to back off from.
-                this.ur.reset();
-                const e = us(t.writeResults, t.commitTime), n = zn(t.commitTime);
-                return this.listener.Cr(n, e);
+                this.ro.reset();
+                const e = _s(t.writeResults, t.commitTime), n = Zn(t.commitTime);
+                return this.listener.Vo(n, e);
             }
             // The first response is always the handshake response
-            return U(!t.writeResults || 0 === t.writeResults.length), this.Vr = !0, this.listener.Nr();
+            return U(!t.writeResults || 0 === t.writeResults.length), this.Po = !0, this.listener.So();
         }
         /**
          * Sends an initial streamToken to the server, performing the handshake
          * required to make the StreamingWrite RPC work. Subsequent
          * calls should wait until onHandshakeComplete was called.
-         */    kr() {
+         */    Do() {
             // TODO(dimond): Support stream resumption. We intentionally do not set the
             // stream token on the handshake, ignoring any stream token we might have.
             const t = {};
-            t.database = es(this.k), this.gr(t);
+            t.database = os(this.O), this.fo(t);
         }
-        /** Sends a group of mutations to the Firestore backend to apply. */    Dr(t) {
+        /** Sends a group of mutations to the Firestore backend to apply. */    vo(t) {
             const e = {
                 streamToken: this.lastStreamToken,
-                writes: t.map((t => cs(this.k, t)))
+                writes: t.map((t => fs(this.O, t)))
             };
-            this.gr(e);
+            this.fo(e);
         }
     }
 
@@ -9465,28 +10300,28 @@ var app = (function () {
      * An implementation of Datastore that exposes additional state for internal
      * consumption.
      */
-    class oo extends class {} {
+    class Oo extends class {} {
         constructor(t, e, n, s) {
-            super(), this.authCredentials = t, this.appCheckCredentials = e, this.ir = n, this.k = s, 
-            this.$r = !1;
+            super(), this.authCredentials = t, this.appCheckCredentials = e, this.eo = n, this.O = s, 
+            this.Co = !1;
         }
-        Or() {
-            if (this.$r) throw new Q(j.FAILED_PRECONDITION, "The client has already been terminated.");
+        No() {
+            if (this.Co) throw new j(G.FAILED_PRECONDITION, "The client has already been terminated.");
         }
-        /** Invokes the provided RPC with auth and AppCheck tokens. */    Bi(t, e, n) {
-            return this.Or(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.ir.Bi(t, e, n, s, i))).catch((t => {
-                throw "FirebaseError" === t.name ? (t.code === j.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
-                this.appCheckCredentials.invalidateToken()), t) : new Q(j.UNKNOWN, t.toString());
+        /** Invokes the provided RPC with auth and AppCheck tokens. */    Mr(t, e, n) {
+            return this.No(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.eo.Mr(t, e, n, s, i))).catch((t => {
+                throw "FirebaseError" === t.name ? (t.code === G.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
+                this.appCheckCredentials.invalidateToken()), t) : new j(G.UNKNOWN, t.toString());
             }));
         }
-        /** Invokes the provided RPC with streamed results with auth and AppCheck tokens. */    ji(t, e, n) {
-            return this.Or(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.ir.ji(t, e, n, s, i))).catch((t => {
-                throw "FirebaseError" === t.name ? (t.code === j.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
-                this.appCheckCredentials.invalidateToken()), t) : new Q(j.UNKNOWN, t.toString());
+        /** Invokes the provided RPC with streamed results with auth and AppCheck tokens. */    Lr(t, e, n) {
+            return this.No(), Promise.all([ this.authCredentials.getToken(), this.appCheckCredentials.getToken() ]).then((([s, i]) => this.eo.Lr(t, e, n, s, i))).catch((t => {
+                throw "FirebaseError" === t.name ? (t.code === G.UNAUTHENTICATED && (this.authCredentials.invalidateToken(), 
+                this.appCheckCredentials.invalidateToken()), t) : new j(G.UNKNOWN, t.toString());
             }));
         }
         terminate() {
-            this.$r = !0;
+            this.Co = !0;
         }
     }
 
@@ -9503,7 +10338,7 @@ var app = (function () {
      * then we set the OnlineState to Offline, and the client will behave as if
      * it is offline (get()s will return cached data, etc.).
      */
-    class co {
+    class Mo {
         constructor(t, e) {
             this.asyncQueue = t, this.onlineStateHandler = e, 
             /** The current OnlineState. */
@@ -9513,19 +10348,19 @@ var app = (function () {
              * maximum defined by MAX_WATCH_STREAM_FAILURES, we'll set the OnlineState to
              * Offline.
              */
-            this.Mr = 0, 
+            this.xo = 0, 
             /**
              * A timer that elapses after ONLINE_STATE_TIMEOUT_MS, at which point we
              * transition from OnlineState.Unknown to OnlineState.Offline without waiting
              * for the stream to actually fail (MAX_WATCH_STREAM_FAILURES times).
              */
-            this.Fr = null, 
+            this.ko = null, 
             /**
              * Whether the client should log a warning message if it fails to connect to
              * the backend (initially true, cleared after a successful stream, or if we've
              * logged the message already).
              */
-            this.Lr = !0;
+            this.Oo = !0;
         }
         /**
          * Called by RemoteStore when a watch stream is started (including on each
@@ -9533,9 +10368,9 @@ var app = (function () {
          *
          * If this is the first attempt, it sets the OnlineState to Unknown and starts
          * the onlineStateTimer.
-         */    Br() {
-            0 === this.Mr && (this.Ur("Unknown" /* Unknown */), this.Fr = this.asyncQueue.enqueueAfterDelay("online_state_timeout" /* OnlineStateTimeout */ , 1e4, (() => (this.Fr = null, 
-            this.qr("Backend didn't respond within 10 seconds."), this.Ur("Offline" /* Offline */), 
+         */    Mo() {
+            0 === this.xo && (this.$o("Unknown" /* Unknown */), this.ko = this.asyncQueue.enqueueAfterDelay("online_state_timeout" /* OnlineStateTimeout */ , 1e4, (() => (this.ko = null, 
+            this.Fo("Backend didn't respond within 10 seconds."), this.$o("Offline" /* Offline */), 
             Promise.resolve()))));
         }
         /**
@@ -9543,10 +10378,10 @@ var app = (function () {
          * failure. The first failure moves us to the 'Unknown' state. We then may
          * allow multiple failures (based on MAX_WATCH_STREAM_FAILURES) before we
          * actually transition to the 'Offline' state.
-         */    Kr(t) {
-            "Online" /* Online */ === this.state ? this.Ur("Unknown" /* Unknown */) : (this.Mr++, 
-            this.Mr >= 1 && (this.jr(), this.qr(`Connection failed 1 times. Most recent error: ${t.toString()}`), 
-            this.Ur("Offline" /* Offline */)));
+         */    Bo(t) {
+            "Online" /* Online */ === this.state ? this.$o("Unknown" /* Unknown */) : (this.xo++, 
+            this.xo >= 1 && (this.Lo(), this.Fo(`Connection failed 1 times. Most recent error: ${t.toString()}`), 
+            this.$o("Offline" /* Offline */)));
         }
         /**
          * Explicitly sets the OnlineState to the specified state.
@@ -9555,20 +10390,20 @@ var app = (function () {
          * Offline heuristics, so must not be used in place of
          * handleWatchStreamStart() and handleWatchStreamFailure().
          */    set(t) {
-            this.jr(), this.Mr = 0, "Online" /* Online */ === t && (
+            this.Lo(), this.xo = 0, "Online" /* Online */ === t && (
             // We've connected to watch at least once. Don't warn the developer
             // about being offline going forward.
-            this.Lr = !1), this.Ur(t);
+            this.Oo = !1), this.$o(t);
         }
-        Ur(t) {
+        $o(t) {
             t !== this.state && (this.state = t, this.onlineStateHandler(t));
         }
-        qr(t) {
+        Fo(t) {
             const e = `Could not reach Cloud Firestore backend. ${t}\nThis typically indicates that your device does not have a healthy Internet connection at the moment. The client will operate in offline mode until it is able to successfully connect to the backend.`;
-            this.Lr ? (M(e), this.Lr = !1) : O("OnlineStateTracker", e);
+            this.Oo ? ($(e), this.Oo = !1) : M("OnlineStateTracker", e);
         }
-        jr() {
-            null !== this.Fr && (this.Fr.cancel(), this.Fr = null);
+        Lo() {
+            null !== this.ko && (this.ko.cancel(), this.ko = null);
         }
     }
 
@@ -9587,7 +10422,7 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class ao {
+     */ class $o {
         constructor(
         /**
          * The local store, used to fill the write pipeline with outbound mutations.
@@ -9613,7 +10448,7 @@ var app = (function () {
              * purely based on order, and so we can just shift() writes from the front of
              * the writePipeline as we receive responses.
              */
-            this.Qr = [], 
+            this.Uo = [], 
             /**
              * A mapping of watched targets that the client cares about tracking and the
              * user has explicitly called a 'listen' for this target.
@@ -9623,12 +10458,12 @@ var app = (function () {
              * to the server. The targets removed with unlistens are removed eagerly
              * without waiting for confirmation from the listen stream.
              */
-            this.Wr = new Map, 
+            this.qo = new Map, 
             /**
              * A set of reasons for why the RemoteStore may be offline. If empty, the
              * RemoteStore may start its network connections.
              */
-            this.Gr = new Set, 
+            this.Ko = new Set, 
             /**
              * Event handlers that get called when the network is disabled or enabled.
              *
@@ -9636,115 +10471,115 @@ var app = (function () {
              * underlying streams (to support tree-shakeable streams). On Android and iOS,
              * the streams are created during construction of RemoteStore.
              */
-            this.zr = [], this.Hr = i, this.Hr.Ei((t => {
+            this.Go = [], this.jo = i, this.jo.mr((t => {
                 n.enqueueAndForget((async () => {
                     // Porting Note: Unlike iOS, `restartNetwork()` is called even when the
                     // network becomes unreachable as we don't have any other way to tear
                     // down our streams.
-                    yo(this) && (O("RemoteStore", "Restarting streams for network reachability change."), 
+                    Qo(this) && (M("RemoteStore", "Restarting streams for network reachability change."), 
                     await async function(t) {
                         const e = K(t);
-                        e.Gr.add(4 /* ConnectivityChange */), await ho(e), e.Jr.set("Unknown" /* Unknown */), 
-                        e.Gr.delete(4 /* ConnectivityChange */), await uo(e);
+                        e.Ko.add(4 /* ConnectivityChange */), await Bo(e), e.Qo.set("Unknown" /* Unknown */), 
+                        e.Ko.delete(4 /* ConnectivityChange */), await Fo(e);
                     }(this));
                 }));
-            })), this.Jr = new co(n, s);
+            })), this.Qo = new Mo(n, s);
         }
     }
 
-    async function uo(t) {
-        if (yo(t)) for (const e of t.zr) await e(/* enabled= */ !0);
+    async function Fo(t) {
+        if (Qo(t)) for (const e of t.Go) await e(/* enabled= */ !0);
     }
 
     /**
      * Temporarily disables the network. The network can be re-enabled using
      * enableNetwork().
-     */ async function ho(t) {
-        for (const e of t.zr) await e(/* enabled= */ !1);
+     */ async function Bo(t) {
+        for (const e of t.Go) await e(/* enabled= */ !1);
     }
 
     /**
      * Starts new listen for the given target. Uses resume token if provided. It
      * is a no-op if the target of given `TargetData` is already being listened to.
      */
-    function lo(t, e) {
+    function Lo(t, e) {
         const n = K(t);
-        n.Wr.has(e.targetId) || (
+        n.qo.has(e.targetId) || (
         // Mark this as something the client is currently listening for.
-        n.Wr.set(e.targetId, e), go(n) ? 
+        n.qo.set(e.targetId, e), jo(n) ? 
         // The listen will be sent in onWatchStreamOpen
-        mo(n) : $o(n).lr() && wo(n, e));
+        Go(n) : hc(n).co() && qo(n, e));
     }
 
     /**
      * Removes the listen from server. It is a no-op if the given target id is
      * not being listened to.
-     */ function fo(t, e) {
-        const n = K(t), s = $o(n);
-        n.Wr.delete(e), s.lr() && _o(n, e), 0 === n.Wr.size && (s.lr() ? s._r() : yo(n) && 
+     */ function Uo(t, e) {
+        const n = K(t), s = hc(n);
+        n.qo.delete(e), s.co() && Ko(n, e), 0 === n.qo.size && (s.co() ? s.ho() : Qo(n) && 
         // Revert to OnlineState.Unknown if the watch stream is not open and we
         // have no listeners, since without any listens to send we cannot
         // confirm if the stream is healthy and upgrade to OnlineState.Online.
-        n.Jr.set("Unknown" /* Unknown */));
+        n.Qo.set("Unknown" /* Unknown */));
     }
 
     /**
      * We need to increment the the expected number of pending responses we're due
      * from watch so we wait for the ack to process any messages from this target.
-     */ function wo(t, e) {
-        t.Yr.X(e.targetId), $o(t).Pr(e);
+     */ function qo(t, e) {
+        t.Wo.Z(e.targetId), hc(t).Ao(e);
     }
 
     /**
      * We need to increment the expected number of pending responses we're due
      * from watch so we wait for the removal on the server before we process any
      * messages from this target.
-     */ function _o(t, e) {
-        t.Yr.X(e), $o(t).vr(e);
+     */ function Ko(t, e) {
+        t.Wo.Z(e), hc(t).Ro(e);
     }
 
-    function mo(t) {
-        t.Yr = new Ln({
+    function Go(t) {
+        t.Wo = new Gn({
             getRemoteKeysForTarget: e => t.remoteSyncer.getRemoteKeysForTarget(e),
-            Et: e => t.Wr.get(e) || null
-        }), $o(t).start(), t.Jr.Br();
+            Tt: e => t.qo.get(e) || null
+        }), hc(t).start(), t.Qo.Mo();
     }
 
     /**
      * Returns whether the watch stream should be started because it's necessary
      * and has not yet been started.
-     */ function go(t) {
-        return yo(t) && !$o(t).hr() && t.Wr.size > 0;
+     */ function jo(t) {
+        return Qo(t) && !hc(t).oo() && t.qo.size > 0;
     }
 
-    function yo(t) {
-        return 0 === K(t).Gr.size;
+    function Qo(t) {
+        return 0 === K(t).Ko.size;
     }
 
-    function po(t) {
-        t.Yr = void 0;
+    function Wo(t) {
+        t.Wo = void 0;
     }
 
-    async function To(t) {
-        t.Wr.forEach(((e, n) => {
-            wo(t, e);
+    async function zo(t) {
+        t.qo.forEach(((e, n) => {
+            qo(t, e);
         }));
     }
 
-    async function Eo(t, e) {
-        po(t), 
+    async function Ho(t, e) {
+        Wo(t), 
         // If we still need the watch stream, retry the connection.
-        go(t) ? (t.Jr.Kr(e), mo(t)) : 
+        jo(t) ? (t.Qo.Bo(e), Go(t)) : 
         // No need to restart watch stream because there are no active targets.
         // The online state is set to unknown because there is no active attempt
         // at establishing a connection
-        t.Jr.set("Unknown" /* Unknown */);
+        t.Qo.set("Unknown" /* Unknown */);
     }
 
-    async function Io(t, e, n) {
+    async function Jo(t, e, n) {
         if (
         // Mark the client as online since we got a message from the server
-        t.Jr.set("Online" /* Online */), e instanceof Mn && 2 /* Removed */ === e.state && e.cause) 
+        t.Qo.set("Online" /* Online */), e instanceof qn && 2 /* Removed */ === e.state && e.cause) 
         // There was an error on a target, don't wait for a consistent snapshot
         // to raise events
         try {
@@ -9754,7 +10589,7 @@ var app = (function () {
                 const n = e.cause;
                 for (const s of e.targetIds) 
                 // A watched target might have been removed already.
-                t.Wr.has(s) && (await t.remoteSyncer.rejectListen(s, n), t.Wr.delete(s), t.Yr.removeTarget(s));
+                t.qo.has(s) && (await t.remoteSyncer.rejectListen(s, n), t.qo.delete(s), t.Wo.removeTarget(s));
             }
             /**
      * Attempts to fill our write pipeline with writes from the LocalStore.
@@ -9765,11 +10600,11 @@ var app = (function () {
      * Starts the write stream if necessary.
      */ (t, e);
         } catch (n) {
-            O("RemoteStore", "Failed to remove targets %s: %s ", e.targetIds.join(","), n), 
-            await Ao(t, n);
-        } else if (e instanceof $n ? t.Yr.ot(e) : e instanceof On ? t.Yr.dt(e) : t.Yr.ut(e), 
-        !n.isEqual(ut.min())) try {
-            const e = await mr(t.localStore);
+            M("RemoteStore", "Failed to remove targets %s: %s ", e.targetIds.join(","), n), 
+            await Yo(t, n);
+        } else if (e instanceof Ln ? t.Wo.ct(e) : e instanceof Un ? t.Wo._t(e) : t.Wo.ht(e), 
+        !n.isEqual(at.min())) try {
+            const e = await Kr(t.localStore);
             n.compareTo(e) >= 0 && 
             // We have received a target change with a global snapshot if the snapshot
             // version is not equal to SnapshotVersion.min().
@@ -9780,39 +10615,39 @@ var app = (function () {
      * SyncEngine.
      */
             function(t, e) {
-                const n = t.Yr.gt(e);
+                const n = t.Wo.yt(e);
                 // Update in-memory resume tokens. LocalStore will update the
                 // persistent view of these when applying the completed RemoteEvent.
                             return n.targetChanges.forEach(((n, s) => {
                     if (n.resumeToken.approximateByteSize() > 0) {
-                        const i = t.Wr.get(s);
+                        const i = t.qo.get(s);
                         // A watched target might have been removed already.
-                                            i && t.Wr.set(s, i.withResumeToken(n.resumeToken, e));
+                                            i && t.qo.set(s, i.withResumeToken(n.resumeToken, e));
                     }
                 })), 
                 // Re-establish listens for the targets that have been invalidated by
                 // existence filter mismatches.
                 n.targetMismatches.forEach((e => {
-                    const n = t.Wr.get(e);
+                    const n = t.qo.get(e);
                     if (!n) 
                     // A watched target might have been removed already.
                     return;
                     // Clear the resume token for the target, since we're in a known mismatch
                     // state.
-                                    t.Wr.set(e, n.withResumeToken(pt.EMPTY_BYTE_STRING, n.snapshotVersion)), 
+                                    t.qo.set(e, n.withResumeToken(pt.EMPTY_BYTE_STRING, n.snapshotVersion)), 
                     // Cause a hard reset by unwatching and rewatching immediately, but
                     // deliberately don't send a resume token so that we get a full update.
-                    _o(t, e);
+                    Ko(t, e);
                     // Mark the target we send as being on behalf of an existence filter
                     // mismatch, but don't actually retain that in listenTargets. This ensures
                     // that we flag the first re-listen this way without impacting future
                     // listens of this target (that might happen e.g. on reconnect).
-                    const s = new ai(n.target, e, 1 /* ExistenceFilterMismatch */ , n.sequenceNumber);
-                    wo(t, s);
+                    const s = new yi(n.target, e, 1 /* ExistenceFilterMismatch */ , n.sequenceNumber);
+                    qo(t, s);
                 })), t.remoteSyncer.applyRemoteEvent(n);
             }(t, n);
         } catch (e) {
-            O("RemoteStore", "Failed to raise snapshot:", e), await Ao(t, e);
+            M("RemoteStore", "Failed to raise snapshot:", e), await Yo(t, e);
         }
     }
 
@@ -9824,121 +10659,133 @@ var app = (function () {
      *
      * The returned Promise is resolved once the network is disabled and before
      * any retry attempt.
-     */ async function Ao(t, e, n) {
-        if (!Zs(e)) throw e;
-        t.Gr.add(1 /* IndexedDbFailed */), 
+     */ async function Yo(t, e, n) {
+        if (!ui(e)) throw e;
+        t.Ko.add(1 /* IndexedDbFailed */), 
         // Disable network and raise offline snapshots
-        await ho(t), t.Jr.set("Offline" /* Offline */), n || (
+        await Bo(t), t.Qo.set("Offline" /* Offline */), n || (
         // Use a simple read operation to determine if IndexedDB recovered.
         // Ideally, we would expose a health check directly on SimpleDb, but
         // RemoteStore only has access to persistence through LocalStore.
-        n = () => mr(t.localStore)), 
+        n = () => Kr(t.localStore)), 
         // Probe IndexedDB periodically and re-enable network
         t.asyncQueue.enqueueRetryable((async () => {
-            O("RemoteStore", "Retrying IndexedDB access"), await n(), t.Gr.delete(1 /* IndexedDbFailed */), 
-            await uo(t);
+            M("RemoteStore", "Retrying IndexedDB access"), await n(), t.Ko.delete(1 /* IndexedDbFailed */), 
+            await Fo(t);
         }));
     }
 
     /**
      * Executes `op`. If `op` fails, takes the network offline until `op`
      * succeeds. Returns after the first attempt.
-     */ function Ro(t, e) {
-        return e().catch((n => Ao(t, n, e)));
+     */ function Xo(t, e) {
+        return e().catch((n => Yo(t, n, e)));
     }
 
-    async function bo(t) {
-        const e = K(t), n = Oo(e);
-        let s = e.Qr.length > 0 ? e.Qr[e.Qr.length - 1].batchId : -1;
-        for (;Po(e); ) try {
-            const t = await pr(e.localStore, s);
+    async function Zo(t) {
+        const e = K(t), n = lc(e);
+        let s = e.Uo.length > 0 ? e.Uo[e.Uo.length - 1].batchId : -1;
+        for (;tc(e); ) try {
+            const t = await Qr(e.localStore, s);
             if (null === t) {
-                0 === e.Qr.length && n._r();
+                0 === e.Uo.length && n.ho();
                 break;
             }
-            s = t.batchId, vo(e, t);
+            s = t.batchId, ec(e, t);
         } catch (t) {
-            await Ao(e, t);
+            await Yo(e, t);
         }
-        Vo(e) && So(e);
+        nc(e) && sc(e);
     }
 
     /**
      * Returns true if we can add to the write pipeline (i.e. the network is
      * enabled and the write pipeline is not full).
-     */ function Po(t) {
-        return yo(t) && t.Qr.length < 10;
+     */ function tc(t) {
+        return Qo(t) && t.Uo.length < 10;
     }
 
     /**
      * Queues additional writes to be sent to the write stream, sending them
      * immediately if the write stream is established.
-     */ function vo(t, e) {
-        t.Qr.push(e);
-        const n = Oo(t);
-        n.lr() && n.Sr && n.Dr(e.mutations);
+     */ function ec(t, e) {
+        t.Uo.push(e);
+        const n = lc(t);
+        n.co() && n.bo && n.vo(e.mutations);
     }
 
-    function Vo(t) {
-        return yo(t) && !Oo(t).hr() && t.Qr.length > 0;
+    function nc(t) {
+        return Qo(t) && !lc(t).oo() && t.Uo.length > 0;
     }
 
-    function So(t) {
-        Oo(t).start();
+    function sc(t) {
+        lc(t).start();
     }
 
-    async function Do(t) {
-        Oo(t).kr();
+    async function ic(t) {
+        lc(t).Do();
     }
 
-    async function Co(t) {
-        const e = Oo(t);
+    async function rc(t) {
+        const e = lc(t);
         // Send the write pipeline now that the stream is established.
-            for (const n of t.Qr) e.Dr(n.mutations);
+            for (const n of t.Uo) e.vo(n.mutations);
     }
 
-    async function No(t, e, n) {
-        const s = t.Qr.shift(), i = ci.from(s, e, n);
-        await Ro(t, (() => t.remoteSyncer.applySuccessfulWrite(i))), 
+    async function oc(t, e, n) {
+        const s = t.Uo.shift(), i = mi.from(s, e, n);
+        await Xo(t, (() => t.remoteSyncer.applySuccessfulWrite(i))), 
         // It's possible that with the completion of this mutation another
         // slot has freed up.
-        await bo(t);
+        await Zo(t);
     }
 
-    async function ko(t, e) {
+    async function cc(t, e) {
         // If the write stream closed after the write handshake completes, a write
         // operation failed and we fail the pending operation.
-        e && Oo(t).Sr && 
+        e && lc(t).bo && 
         // This error affects the actual write.
         await async function(t, e) {
             // Only handle permanent errors here. If it's transient, just let the retry
             // logic kick in.
-            if (n = e.code, mn(n) && n !== j.ABORTED) {
+            if (n = e.code, En(n) && n !== G.ABORTED) {
                 // This was a permanent error, the request itself was the problem
                 // so it's not going to succeed if we resend it.
-                const n = t.Qr.shift();
+                const n = t.Uo.shift();
                 // In this case it's also unlikely that the server itself is melting
                 // down -- this was just a bad request so inhibit backoff on the next
                 // restart.
-                            Oo(t).wr(), await Ro(t, (() => t.remoteSyncer.rejectFailedWrite(n.batchId, e))), 
+                            lc(t).ao(), await Xo(t, (() => t.remoteSyncer.rejectFailedWrite(n.batchId, e))), 
                 // It's possible that with the completion of this mutation
                 // another slot has freed up.
-                await bo(t);
+                await Zo(t);
             }
             var n;
         }(t, e), 
         // The write stream might have been started by refilling the write
         // pipeline for failed writes
-        Vo(t) && So(t);
+        nc(t) && sc(t);
+    }
+
+    async function uc(t, e) {
+        const n = K(t);
+        n.asyncQueue.verifyOperationInProgress(), M("RemoteStore", "RemoteStore received new credentials");
+        const s = Qo(n);
+        // Tear down and re-create our network streams. This will ensure we get a
+        // fresh auth token for the new user and re-fill the write pipeline with
+        // new mutations from the LocalStore (since mutations are per-user).
+            n.Ko.add(3 /* CredentialChange */), await Bo(n), s && 
+        // Don't set the network status to Unknown if we are offline.
+        n.Qo.set("Unknown" /* Unknown */), await n.remoteSyncer.handleCredentialChange(e), 
+        n.Ko.delete(3 /* CredentialChange */), await Fo(n);
     }
 
     /**
      * Toggles the network state when the client gains or loses its primary lease.
-     */
-    async function xo(t, e) {
+     */ async function ac(t, e) {
         const n = K(t);
-        e ? (n.Gr.delete(2 /* IsSecondary */), await uo(n)) : e || (n.Gr.add(2 /* IsSecondary */), 
-        await ho(n), n.Jr.set("Unknown" /* Unknown */));
+        e ? (n.Ko.delete(2 /* IsSecondary */), await Fo(n)) : e || (n.Ko.add(2 /* IsSecondary */), 
+        await Bo(n), n.Qo.set("Unknown" /* Unknown */));
     }
 
     /**
@@ -9948,12 +10795,12 @@ var app = (function () {
      *
      * PORTING NOTE: On iOS and Android, the WatchStream gets registered on startup.
      * This is not done on Web to allow it to be tree-shaken.
-     */ function $o(t) {
-        return t.Xr || (
+     */ function hc(t) {
+        return t.zo || (
         // Create stream (but note that it is not started yet).
-        t.Xr = function(t, e, n) {
+        t.zo = function(t, e, n) {
             const s = K(t);
-            return s.Or(), new io(e, s.ir, s.authCredentials, s.appCheckCredentials, s.k, n);
+            return s.No(), new xo(e, s.eo, s.authCredentials, s.appCheckCredentials, s.O, n);
         }
         /**
      * @license
@@ -9971,13 +10818,13 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */ (t.datastore, t.asyncQueue, {
-            Di: To.bind(null, t),
-            Ni: Eo.bind(null, t),
-            br: Io.bind(null, t)
-        }), t.zr.push((async e => {
-            e ? (t.Xr.wr(), go(t) ? mo(t) : t.Jr.set("Unknown" /* Unknown */)) : (await t.Xr.stop(), 
-            po(t));
-        }))), t.Xr;
+            Pr: zo.bind(null, t),
+            vr: Ho.bind(null, t),
+            To: Jo.bind(null, t)
+        }), t.Go.push((async e => {
+            e ? (t.zo.ao(), jo(t) ? Go(t) : t.Qo.set("Unknown" /* Unknown */)) : (await t.zo.stop(), 
+            Wo(t));
+        }))), t.zo;
     }
 
     /**
@@ -9987,23 +10834,23 @@ var app = (function () {
      *
      * PORTING NOTE: On iOS and Android, the WriteStream gets registered on startup.
      * This is not done on Web to allow it to be tree-shaken.
-     */ function Oo(t) {
-        return t.Zr || (
+     */ function lc(t) {
+        return t.Ho || (
         // Create stream (but note that it is not started yet).
-        t.Zr = function(t, e, n) {
+        t.Ho = function(t, e, n) {
             const s = K(t);
-            return s.Or(), new ro(e, s.ir, s.authCredentials, s.appCheckCredentials, s.k, n);
+            return s.No(), new ko(e, s.eo, s.authCredentials, s.appCheckCredentials, s.O, n);
         }(t.datastore, t.asyncQueue, {
-            Di: Do.bind(null, t),
-            Ni: ko.bind(null, t),
-            Nr: Co.bind(null, t),
-            Cr: No.bind(null, t)
-        }), t.zr.push((async e => {
-            e ? (t.Zr.wr(), 
+            Pr: ic.bind(null, t),
+            vr: cc.bind(null, t),
+            So: rc.bind(null, t),
+            Vo: oc.bind(null, t)
+        }), t.Go.push((async e => {
+            e ? (t.Ho.ao(), 
             // This will start the write stream if necessary.
-            await bo(t)) : (await t.Zr.stop(), t.Qr.length > 0 && (O("RemoteStore", `Stopping write stream with ${t.Qr.length} pending writes`), 
-            t.Qr = []));
-        }))), t.Zr;
+            await Zo(t)) : (await t.Ho.stop(), t.Uo.length > 0 && (M("RemoteStore", `Stopping write stream with ${t.Uo.length} pending writes`), 
+            t.Uo = []));
+        }))), t.Ho;
     }
 
     /**
@@ -10033,10 +10880,10 @@ var app = (function () {
      * in newer versions of TypeScript defines `finally`, which is not available in
      * IE.
      */
-    class Mo {
+    class fc {
         constructor(t, e, n, s, i) {
             this.asyncQueue = t, this.timerId = e, this.targetTimeMs = n, this.op = s, this.removalCallback = i, 
-            this.deferred = new W, this.then = this.deferred.promise.then.bind(this.deferred.promise), 
+            this.deferred = new Q, this.then = this.deferred.promise.then.bind(this.deferred.promise), 
             // It's normal for the deferred promise to be canceled (due to cancellation)
             // and so we attach a dummy catch callback to avoid
             // 'UnhandledPromiseRejectionWarning' log spam.
@@ -10056,7 +10903,7 @@ var app = (function () {
          *   PORTING NOTE: This exists to prevent making removeDelayedOperation() and
          *   the DelayedOperation class public.
          */    static createAndSchedule(t, e, n, s, i) {
-            const r = Date.now() + n, o = new Mo(t, e, r, s, i);
+            const r = Date.now() + n, o = new fc(t, e, r, s, i);
             return o.start(n), o;
         }
         /**
@@ -10078,7 +10925,7 @@ var app = (function () {
          * As long as the operation has not yet been run, calling cancel() provides a
          * guarantee that the operation will not be run.
          */    cancel(t) {
-            null !== this.timerHandle && (this.clearTimeout(), this.deferred.reject(new Q(j.CANCELLED, "Operation cancelled" + (t ? ": " + t : ""))));
+            null !== this.timerHandle && (this.clearTimeout(), this.deferred.reject(new j(G.CANCELLED, "Operation cancelled" + (t ? ": " + t : ""))));
         }
         handleDelayElapsed() {
             this.asyncQueue.enqueueAndForget((() => null !== this.timerHandle ? (this.clearTimeout(), 
@@ -10093,8 +10940,8 @@ var app = (function () {
     /**
      * Returns a FirestoreError that can be surfaced to the user if the provided
      * error is an IndexedDbTransactionError. Re-throws the error otherwise.
-     */ function Fo(t, e) {
-        if (M("AsyncQueue", `${e}: ${t}`), Zs(t)) return new Q(j.UNAVAILABLE, `${e}: ${t}`);
+     */ function dc(t, e) {
+        if ($("AsyncQueue", `${e}: ${t}`), ui(t)) return new j(G.UNAVAILABLE, `${e}: ${t}`);
         throw t;
     }
 
@@ -10119,19 +10966,19 @@ var app = (function () {
      * in order specified by the provided comparator. We always add a document key
      * comparator on top of what is provided to guarantee document equality based on
      * the key.
-     */ class Lo {
+     */ class _c {
         /** The default ordering is by key if the comparator is omitted */
         constructor(t) {
             // We are adding document key comparator to the end as it's the only
             // guaranteed unique property of a document.
-            this.comparator = t ? (e, n) => t(e, n) || Dt.comparator(e.key, n.key) : (t, e) => Dt.comparator(t.key, e.key), 
-            this.keyedMap = Pn(), this.sortedSet = new yn(this.comparator);
+            this.comparator = t ? (e, n) => t(e, n) || Nt.comparator(e.key, n.key) : (t, e) => Nt.comparator(t.key, e.key), 
+            this.keyedMap = Nn(), this.sortedSet = new An(this.comparator);
         }
         /**
          * Returns an empty copy of the existing DocumentSet, using the same
          * comparator.
          */    static emptySet(t) {
-            return new Lo(t.comparator);
+            return new _c(t.comparator);
         }
         has(t) {
             return null != this.keyedMap.get(t);
@@ -10171,7 +11018,7 @@ var app = (function () {
             return e ? this.copy(this.keyedMap.remove(t), this.sortedSet.remove(e)) : this;
         }
         isEqual(t) {
-            if (!(t instanceof Lo)) return !1;
+            if (!(t instanceof _c)) return !1;
             if (this.size !== t.size) return !1;
             const e = this.sortedSet.getIterator(), n = t.sortedSet.getIterator();
             for (;e.hasNext(); ) {
@@ -10187,7 +11034,7 @@ var app = (function () {
             })), 0 === t.length ? "DocumentSet ()" : "DocumentSet (\n  " + t.join("  \n") + "\n)";
         }
         copy(t, e) {
-            const n = new Lo;
+            const n = new _c;
             return n.comparator = this.comparator, n.keyedMap = t, n.sortedSet = e, n;
         }
     }
@@ -10211,27 +11058,27 @@ var app = (function () {
     /**
      * DocumentChangeSet keeps track of a set of changes to docs in a query, merging
      * duplicate events for the same doc.
-     */ class Bo {
+     */ class wc {
         constructor() {
-            this.eo = new yn(Dt.comparator);
+            this.Jo = new An(Nt.comparator);
         }
         track(t) {
-            const e = t.doc.key, n = this.eo.get(e);
+            const e = t.doc.key, n = this.Jo.get(e);
             n ? 
             // Merge the new change with the existing change.
-            0 /* Added */ !== t.type && 3 /* Metadata */ === n.type ? this.eo = this.eo.insert(e, t) : 3 /* Metadata */ === t.type && 1 /* Removed */ !== n.type ? this.eo = this.eo.insert(e, {
+            0 /* Added */ !== t.type && 3 /* Metadata */ === n.type ? this.Jo = this.Jo.insert(e, t) : 3 /* Metadata */ === t.type && 1 /* Removed */ !== n.type ? this.Jo = this.Jo.insert(e, {
                 type: n.type,
                 doc: t.doc
-            }) : 2 /* Modified */ === t.type && 2 /* Modified */ === n.type ? this.eo = this.eo.insert(e, {
+            }) : 2 /* Modified */ === t.type && 2 /* Modified */ === n.type ? this.Jo = this.Jo.insert(e, {
                 type: 2 /* Modified */ ,
                 doc: t.doc
-            }) : 2 /* Modified */ === t.type && 0 /* Added */ === n.type ? this.eo = this.eo.insert(e, {
+            }) : 2 /* Modified */ === t.type && 0 /* Added */ === n.type ? this.Jo = this.Jo.insert(e, {
                 type: 0 /* Added */ ,
                 doc: t.doc
-            }) : 1 /* Removed */ === t.type && 0 /* Added */ === n.type ? this.eo = this.eo.remove(e) : 1 /* Removed */ === t.type && 2 /* Modified */ === n.type ? this.eo = this.eo.insert(e, {
+            }) : 1 /* Removed */ === t.type && 0 /* Added */ === n.type ? this.Jo = this.Jo.remove(e) : 1 /* Removed */ === t.type && 2 /* Modified */ === n.type ? this.Jo = this.Jo.insert(e, {
                 type: 1 /* Removed */ ,
                 doc: n.doc
-            }) : 0 /* Added */ === t.type && 1 /* Removed */ === n.type ? this.eo = this.eo.insert(e, {
+            }) : 0 /* Added */ === t.type && 1 /* Removed */ === n.type ? this.Jo = this.Jo.insert(e, {
                 type: 2 /* Modified */ ,
                 doc: t.doc
             }) : 
@@ -10242,17 +11089,17 @@ var app = (function () {
             // Removed->Modified
             // Metadata->Added
             // Removed->Metadata
-            B() : this.eo = this.eo.insert(e, t);
+            L() : this.Jo = this.Jo.insert(e, t);
         }
-        no() {
+        Yo() {
             const t = [];
-            return this.eo.inorderTraversal(((e, n) => {
+            return this.Jo.inorderTraversal(((e, n) => {
                 t.push(n);
             })), t;
         }
     }
 
-    class Uo {
+    class mc {
         constructor(t, e, n, s, i, r, o, c) {
             this.query = t, this.docs = e, this.oldDocs = n, this.docChanges = s, this.mutatedKeys = i, 
             this.fromCache = r, this.syncStateChanged = o, this.excludesMetadataChanges = c;
@@ -10264,7 +11111,7 @@ var app = (function () {
                     type: 0 /* Added */ ,
                     doc: t
                 });
-            })), new Uo(t, e, Lo.emptySet(e), i, n, s, 
+            })), new mc(t, e, _c.emptySet(e), i, n, s, 
             /* syncStateChanged= */ !0, 
             /* excludesMetadataChanges= */ !1);
         }
@@ -10272,7 +11119,7 @@ var app = (function () {
             return !this.mutatedKeys.isEmpty();
         }
         isEqual(t) {
-            if (!(this.fromCache === t.fromCache && this.syncStateChanged === t.syncStateChanged && this.mutatedKeys.isEqual(t.mutatedKeys) && ve(this.query, t.query) && this.docs.isEqual(t.docs) && this.oldDocs.isEqual(t.oldDocs))) return !1;
+            if (!(this.fromCache === t.fromCache && this.syncStateChanged === t.syncStateChanged && this.mutatedKeys.isEqual(t.mutatedKeys) && Ne(this.query, t.query) && this.docs.isEqual(t.docs) && this.oldDocs.isEqual(t.oldDocs))) return !1;
             const e = this.docChanges, n = t.docChanges;
             if (e.length !== n.length) return !1;
             for (let t = 0; t < e.length; t++) if (e[t].type !== n[t].type || !e[t].doc.isEqual(n[t].doc)) return !1;
@@ -10299,36 +11146,36 @@ var app = (function () {
     /**
      * Holds the listeners and the last received ViewSnapshot for a query being
      * tracked by EventManager.
-     */ class qo {
+     */ class gc {
         constructor() {
-            this.so = void 0, this.listeners = [];
+            this.Xo = void 0, this.listeners = [];
         }
     }
 
-    class Ko {
+    class yc {
         constructor() {
-            this.queries = new zi((t => Ve(t)), ve), this.onlineState = "Unknown" /* Unknown */ , 
-            this.io = new Set;
+            this.queries = new Er((t => xe(t)), Ne), this.onlineState = "Unknown" /* Unknown */ , 
+            this.Zo = new Set;
         }
     }
 
-    async function jo(t, e) {
+    async function pc(t, e) {
         const n = K(t), s = e.query;
         let i = !1, r = n.queries.get(s);
-        if (r || (i = !0, r = new qo), i) try {
-            r.so = await n.onListen(s);
+        if (r || (i = !0, r = new gc), i) try {
+            r.Xo = await n.onListen(s);
         } catch (t) {
-            const n = Fo(t, `Initialization of query '${Se(e.query)}' failed`);
+            const n = dc(t, `Initialization of query '${ke(e.query)}' failed`);
             return void e.onError(n);
         }
         if (n.queries.set(s, r), r.listeners.push(e), 
         // Run global snapshot listeners if a consistent snapshot has been emitted.
-        e.ro(n.onlineState), r.so) {
-            e.oo(r.so) && zo(n);
+        e.tc(n.onlineState), r.Xo) {
+            e.ec(r.Xo) && Ac(n);
         }
     }
 
-    async function Qo(t, e) {
+    async function Ic(t, e) {
         const n = K(t), s = e.query;
         let i = !1;
         const r = n.queries.get(s);
@@ -10339,20 +11186,20 @@ var app = (function () {
         if (i) return n.queries.delete(s), n.onUnlisten(s);
     }
 
-    function Wo(t, e) {
+    function Ec(t, e) {
         const n = K(t);
         let s = !1;
         for (const t of e) {
             const e = t.query, i = n.queries.get(e);
             if (i) {
-                for (const e of i.listeners) e.oo(t) && (s = !0);
-                i.so = t;
+                for (const e of i.listeners) e.ec(t) && (s = !0);
+                i.Xo = t;
             }
         }
-        s && zo(n);
+        s && Ac(n);
     }
 
-    function Go(t, e, n) {
+    function Tc(t, e, n) {
         const s = K(t), i = s.queries.get(e);
         if (i) for (const t of i.listeners) t.onError(n);
         // Remove all listeners. NOTE: We don't need to call syncEngine.unlisten()
@@ -10361,8 +11208,8 @@ var app = (function () {
     }
 
     // Call all global snapshot listeners that have been set.
-    function zo(t) {
-        t.io.forEach((t => {
+    function Ac(t) {
+        t.Zo.forEach((t => {
             t.next();
         }));
     }
@@ -10372,42 +11219,42 @@ var app = (function () {
      * when to raise the event.
      *
      * It uses an Observer to dispatch events.
-     */ class Ho {
+     */ class Rc {
         constructor(t, e, n) {
-            this.query = t, this.co = e, 
+            this.query = t, this.nc = e, 
             /**
              * Initial snapshots (e.g. from cache) may not be propagated to the wrapped
              * observer. This flag is set to true once we've actually raised an event.
              */
-            this.ao = !1, this.uo = null, this.onlineState = "Unknown" /* Unknown */ , this.options = n || {};
+            this.sc = !1, this.ic = null, this.onlineState = "Unknown" /* Unknown */ , this.options = n || {};
         }
         /**
          * Applies the new ViewSnapshot to this listener, raising a user-facing event
          * if applicable (depending on what changed, whether the user has opted into
          * metadata-only changes, etc.). Returns true if a user-facing event was
          * indeed raised.
-         */    oo(t) {
+         */    ec(t) {
             if (!this.options.includeMetadataChanges) {
                 // Remove the metadata only changes.
                 const e = [];
                 for (const n of t.docChanges) 3 /* Metadata */ !== n.type && e.push(n);
-                t = new Uo(t.query, t.docs, t.oldDocs, e, t.mutatedKeys, t.fromCache, t.syncStateChanged, 
+                t = new mc(t.query, t.docs, t.oldDocs, e, t.mutatedKeys, t.fromCache, t.syncStateChanged, 
                 /* excludesMetadataChanges= */ !0);
             }
             let e = !1;
-            return this.ao ? this.ho(t) && (this.co.next(t), e = !0) : this.lo(t, this.onlineState) && (this.fo(t), 
-            e = !0), this.uo = t, e;
+            return this.sc ? this.rc(t) && (this.nc.next(t), e = !0) : this.oc(t, this.onlineState) && (this.cc(t), 
+            e = !0), this.ic = t, e;
         }
         onError(t) {
-            this.co.error(t);
+            this.nc.error(t);
         }
-        /** Returns whether a snapshot was raised. */    ro(t) {
+        /** Returns whether a snapshot was raised. */    tc(t) {
             this.onlineState = t;
             let e = !1;
-            return this.uo && !this.ao && this.lo(this.uo, t) && (this.fo(this.uo), e = !0), 
+            return this.ic && !this.sc && this.oc(this.ic, t) && (this.cc(this.ic), e = !0), 
             e;
         }
-        lo(t, e) {
+        oc(t, e) {
             // Always raise the first event when we're synced
             if (!t.fromCache) return !0;
             // NOTE: We consider OnlineState.Unknown as online (it should become Offline
@@ -10415,24 +11262,24 @@ var app = (function () {
                     const n = "Offline" /* Offline */ !== e;
             // Don't raise the event if we're online, aren't synced yet (checked
             // above) and are waiting for a sync.
-                    return (!this.options.wo || !n) && (!t.docs.isEmpty() || "Offline" /* Offline */ === e);
+                    return (!this.options.uc || !n) && (!t.docs.isEmpty() || "Offline" /* Offline */ === e);
             // Raise data from cache if we have any documents or we are offline
             }
-        ho(t) {
+        rc(t) {
             // We don't need to handle includeDocumentMetadataChanges here because
             // the Metadata only changes have already been stripped out if needed.
             // At this point the only changes we will see are the ones we should
             // propagate.
             if (t.docChanges.length > 0) return !0;
-            const e = this.uo && this.uo.hasPendingWrites !== t.hasPendingWrites;
+            const e = this.ic && this.ic.hasPendingWrites !== t.hasPendingWrites;
             return !(!t.syncStateChanged && !e) && !0 === this.options.includeMetadataChanges;
             // Generally we should have hit one of the cases above, but it's possible
             // to get here if there were only metadata docChanges and they got
             // stripped out.
             }
-        fo(t) {
-            t = Uo.fromInitialDocuments(t.query, t.docs, t.mutatedKeys, t.fromCache), this.ao = !0, 
-            this.co.next(t);
+        cc(t) {
+            t = mc.fromInitialDocuments(t.query, t.docs, t.mutatedKeys, t.fromCache), this.sc = !0, 
+            this.nc.next(t);
         }
     }
 
@@ -10456,13 +11303,13 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    class tc {
+    class Sc {
         constructor(t) {
             this.key = t;
         }
     }
 
-    class ec {
+    class Dc {
         constructor(t) {
             this.key = t;
         }
@@ -10472,11 +11319,11 @@ var app = (function () {
      * View is responsible for computing the final merged truth of what docs are in
      * a query. It gets notified of local and remote changes to docs, and applies
      * the query filters and limits to determine the most correct possible results.
-     */ class nc {
+     */ class Cc {
         constructor(t, 
         /** Documents included in the remote target */
         e) {
-            this.query = t, this.To = e, this.Eo = null, 
+            this.query = t, this.dc = e, this._c = null, 
             /**
              * A flag whether the view is current with the backend. A view is considered
              * current after it has seen the current flag from the backend and did not
@@ -10485,15 +11332,15 @@ var app = (function () {
              */
             this.current = !1, 
             /** Documents in the view but not in the remote target */
-            this.Io = Dn(), 
+            this.wc = On(), 
             /** Document Keys that have local changes */
-            this.mutatedKeys = Dn(), this.Ao = Ce(t), this.Ro = new Lo(this.Ao);
+            this.mutatedKeys = On(), this.mc = Me(t), this.gc = new _c(this.mc);
         }
         /**
          * The set of remote documents that the server has told us belongs to the target associated with
          * this view.
-         */    get bo() {
-            return this.To;
+         */    get yc() {
+            return this.dc;
         }
         /**
          * Iterates over a set of doc changes, applies the query limit, and computes
@@ -10504,8 +11351,8 @@ var app = (function () {
          * @param previousChanges - If this is being called with a refill, then start
          *        with this set of docs and changes instead of the current view.
          * @returns a new set of docs, changes, and refill flag.
-         */    Po(t, e) {
-            const n = e ? e.vo : new Bo, s = e ? e.Ro : this.Ro;
+         */    Ic(t, e) {
+            const n = e ? e.Ec : new wc, s = e ? e.gc : this.gc;
             let i = e ? e.mutatedKeys : this.mutatedKeys, r = s, o = !1;
             // Track the last doc in a (full) limit. This is necessary, because some
             // update (a delete, or an update moving a doc past the old limit) might
@@ -10515,54 +11362,54 @@ var app = (function () {
             // deletes. So we keep this doc at the old limit to compare the updates to.
             // Note that this should never get used in a refill (when previousChanges is
             // set), because there will only be adds -- no deletes or updates.
-            const c = pe(this.query) && s.size === this.query.limit ? s.last() : null, a = Te(this.query) && s.size === this.query.limit ? s.first() : null;
+            const c = Re(this.query) && s.size === this.query.limit ? s.last() : null, u = Pe(this.query) && s.size === this.query.limit ? s.first() : null;
             // Drop documents out to meet limit/limitToLast requirement.
             if (t.inorderTraversal(((t, e) => {
-                const u = s.get(t), h = De(this.query, e) ? e : null, l = !!u && this.mutatedKeys.has(u.key), f = !!h && (h.hasLocalMutations || 
+                const a = s.get(t), h = Oe(this.query, e) ? e : null, l = !!a && this.mutatedKeys.has(a.key), f = !!h && (h.hasLocalMutations || 
                 // We only consider committed mutations for documents that were
                 // mutated during the lifetime of the view.
                 this.mutatedKeys.has(h.key) && h.hasCommittedMutations);
                 let d = !1;
                 // Calculate change
-                            if (u && h) {
-                    u.data.isEqual(h.data) ? l !== f && (n.track({
+                            if (a && h) {
+                    a.data.isEqual(h.data) ? l !== f && (n.track({
                         type: 3 /* Metadata */ ,
                         doc: h
-                    }), d = !0) : this.Vo(u, h) || (n.track({
+                    }), d = !0) : this.Tc(a, h) || (n.track({
                         type: 2 /* Modified */ ,
                         doc: h
-                    }), d = !0, (c && this.Ao(h, c) > 0 || a && this.Ao(h, a) < 0) && (
+                    }), d = !0, (c && this.mc(h, c) > 0 || u && this.mc(h, u) < 0) && (
                     // This doc moved from inside the limit to outside the limit.
                     // That means there may be some other doc in the local cache
                     // that should be included instead.
                     o = !0));
-                } else !u && h ? (n.track({
+                } else !a && h ? (n.track({
                     type: 0 /* Added */ ,
                     doc: h
-                }), d = !0) : u && !h && (n.track({
+                }), d = !0) : a && !h && (n.track({
                     type: 1 /* Removed */ ,
-                    doc: u
-                }), d = !0, (c || a) && (
+                    doc: a
+                }), d = !0, (c || u) && (
                 // A doc was removed from a full limit query. We'll need to
                 // requery from the local cache to see if we know about some other
                 // doc that should be in the results.
                 o = !0));
                 d && (h ? (r = r.add(h), i = f ? i.add(t) : i.delete(t)) : (r = r.delete(t), i = i.delete(t)));
-            })), pe(this.query) || Te(this.query)) for (;r.size > this.query.limit; ) {
-                const t = pe(this.query) ? r.last() : r.first();
+            })), Re(this.query) || Pe(this.query)) for (;r.size > this.query.limit; ) {
+                const t = Re(this.query) ? r.last() : r.first();
                 r = r.delete(t.key), i = i.delete(t.key), n.track({
                     type: 1 /* Removed */ ,
                     doc: t
                 });
             }
             return {
-                Ro: r,
-                vo: n,
-                Bn: o,
+                gc: r,
+                Ec: n,
+                ks: o,
                 mutatedKeys: i
             };
         }
-        Vo(t, e) {
+        Tc(t, e) {
             // We suppress the initial change event for documents that were modified as
             // part of a write acknowledgment (e.g. when the value of a server transform
             // is applied) as Watch will send us the same document again.
@@ -10584,10 +11431,10 @@ var app = (function () {
          */
         // PORTING NOTE: The iOS/Android clients always compute limbo document changes.
         applyChanges(t, e, n) {
-            const s = this.Ro;
-            this.Ro = t.Ro, this.mutatedKeys = t.mutatedKeys;
+            const s = this.gc;
+            this.gc = t.gc, this.mutatedKeys = t.mutatedKeys;
             // Sort changes based on type and query comparator
-            const i = t.vo.no();
+            const i = t.Ec.Yo();
             i.sort(((t, e) => function(t, e) {
                 const n = t => {
                     switch (t) {
@@ -10605,7 +11452,7 @@ var app = (function () {
                         return 0;
 
                       default:
-                        return B();
+                        return L();
                     }
                 };
                 return n(t) - n(e);
@@ -10625,69 +11472,69 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ (t.type, e.type) || this.Ao(t.doc, e.doc))), this.So(n);
-            const r = e ? this.Do() : [], o = 0 === this.Io.size && this.current ? 1 /* Synced */ : 0 /* Local */ , c = o !== this.Eo;
-            if (this.Eo = o, 0 !== i.length || c) {
+     */ (t.type, e.type) || this.mc(t.doc, e.doc))), this.Ac(n);
+            const r = e ? this.Rc() : [], o = 0 === this.wc.size && this.current ? 1 /* Synced */ : 0 /* Local */ , c = o !== this._c;
+            if (this._c = o, 0 !== i.length || c) {
                 return {
-                    snapshot: new Uo(this.query, t.Ro, s, i, t.mutatedKeys, 0 /* Local */ === o, c, 
+                    snapshot: new mc(this.query, t.gc, s, i, t.mutatedKeys, 0 /* Local */ === o, c, 
                     /* excludesMetadataChanges= */ !1),
-                    Co: r
+                    Pc: r
                 };
             }
             // no changes
             return {
-                Co: r
+                Pc: r
             };
         }
         /**
          * Applies an OnlineState change to the view, potentially generating a
          * ViewChange if the view's syncState changes as a result.
-         */    ro(t) {
+         */    tc(t) {
             return this.current && "Offline" /* Offline */ === t ? (
             // If we're offline, set `current` to false and then call applyChanges()
             // to refresh our syncState and generate a ViewChange as appropriate. We
             // are guaranteed to get a new TargetChange that sets `current` back to
             // true once the client is back online.
             this.current = !1, this.applyChanges({
-                Ro: this.Ro,
-                vo: new Bo,
+                gc: this.gc,
+                Ec: new wc,
                 mutatedKeys: this.mutatedKeys,
-                Bn: !1
+                ks: !1
             }, 
             /* updateLimboDocuments= */ !1)) : {
-                Co: []
+                Pc: []
             };
         }
         /**
          * Returns whether the doc for the given key should be in limbo.
-         */    No(t) {
+         */    bc(t) {
             // If the remote end says it's part of this query, it's not in limbo.
-            return !this.To.has(t) && (
+            return !this.dc.has(t) && (
             // The local store doesn't think it's a result, so it shouldn't be in limbo.
-            !!this.Ro.has(t) && !this.Ro.get(t).hasLocalMutations);
+            !!this.gc.has(t) && !this.gc.get(t).hasLocalMutations);
         }
         /**
          * Updates syncedDocuments, current, and limbo docs based on the given change.
          * Returns the list of changes to which docs are in limbo.
-         */    So(t) {
-            t && (t.addedDocuments.forEach((t => this.To = this.To.add(t))), t.modifiedDocuments.forEach((t => {})), 
-            t.removedDocuments.forEach((t => this.To = this.To.delete(t))), this.current = t.current);
+         */    Ac(t) {
+            t && (t.addedDocuments.forEach((t => this.dc = this.dc.add(t))), t.modifiedDocuments.forEach((t => {})), 
+            t.removedDocuments.forEach((t => this.dc = this.dc.delete(t))), this.current = t.current);
         }
-        Do() {
+        Rc() {
             // We can only determine limbo documents when we're in-sync with the server.
             if (!this.current) return [];
             // TODO(klimt): Do this incrementally so that it's not quadratic when
             // updating many documents.
-                    const t = this.Io;
-            this.Io = Dn(), this.Ro.forEach((t => {
-                this.No(t.key) && (this.Io = this.Io.add(t.key));
+                    const t = this.wc;
+            this.wc = On(), this.gc.forEach((t => {
+                this.bc(t.key) && (this.wc = this.wc.add(t.key));
             }));
             // Diff the new limbo docs with the old limbo docs.
             const e = [];
             return t.forEach((t => {
-                this.Io.has(t) || e.push(new ec(t));
-            })), this.Io.forEach((n => {
-                t.has(n) || e.push(new tc(n));
+                this.wc.has(t) || e.push(new Dc(t));
+            })), this.wc.forEach((n => {
+                t.has(n) || e.push(new Sc(n));
             })), e;
         }
         /**
@@ -10710,9 +11557,9 @@ var app = (function () {
          * @returns The ViewChange that resulted from this synchronization.
          */
         // PORTING NOTE: Multi-tab only.
-        ko(t) {
-            this.To = t.zn, this.Io = Dn();
-            const e = this.Po(t.documents);
+        vc(t) {
+            this.dc = t.Ks, this.wc = On();
+            const e = this.Ic(t.documents);
             return this.applyChanges(e, /*updateLimboDocuments=*/ !0);
         }
         /**
@@ -10721,8 +11568,8 @@ var app = (function () {
          * `hasPendingWrites` status of the already established view.
          */
         // PORTING NOTE: Multi-tab only.
-        xo() {
-            return Uo.fromInitialDocuments(this.query, this.Ro, this.mutatedKeys, 0 /* Local */ === this.Eo);
+        Vc() {
+            return mc.fromInitialDocuments(this.query, this.gc, this.mutatedKeys, 0 /* Local */ === this._c);
         }
     }
 
@@ -10730,7 +11577,7 @@ var app = (function () {
      * QueryView contains all of the data that SyncEngine needs to keep track of for
      * a particular query.
      */
-    class sc {
+    class Nc {
         constructor(
         /**
          * The query itself.
@@ -10752,7 +11599,7 @@ var app = (function () {
         }
     }
 
-    /** Tracks a limbo resolution. */ class ic {
+    /** Tracks a limbo resolution. */ class xc {
         constructor(t) {
             this.key = t, 
             /**
@@ -10761,7 +11608,7 @@ var app = (function () {
              * decide whether it needs to manufacture a delete event for the target once
              * the target is CURRENT.
              */
-            this.$o = !1;
+            this.Sc = !1;
         }
     }
 
@@ -10777,13 +11624,13 @@ var app = (function () {
      * the class is not exported so they are only accessible from this module.
      * This is useful to implement optional features (like bundles) in free
      * functions, such that they are tree-shakeable.
-     */ class rc {
+     */ class kc {
         constructor(t, e, n, 
         // PORTING NOTE: Manages state synchronization in multi-tab environments.
         s, i, r) {
             this.localStore = t, this.remoteStore = e, this.eventManager = n, this.sharedClientState = s, 
-            this.currentUser = i, this.maxConcurrentLimboResolutions = r, this.Oo = {}, this.Mo = new zi((t => Ve(t)), ve), 
-            this.Fo = new Map, 
+            this.currentUser = i, this.maxConcurrentLimboResolutions = r, this.Dc = {}, this.Cc = new Er((t => xe(t)), Ne), 
+            this.Nc = new Map, 
             /**
              * The keys of documents that are in limbo for which we haven't yet started a
              * limbo resolution query. The strings in this set are the result of calling
@@ -10793,28 +11640,28 @@ var app = (function () {
              * of arbitrary elements and it also maintains insertion order, providing the
              * desired queue-like FIFO semantics.
              */
-            this.Lo = new Set, 
+            this.xc = new Set, 
             /**
              * Keeps track of the target ID for each document that is in limbo with an
              * active target.
              */
-            this.Bo = new yn(Dt.comparator), 
+            this.kc = new An(Nt.comparator), 
             /**
              * Keeps track of the information about an active limbo resolution for each
              * active target ID that was started for the purpose of limbo resolution.
              */
-            this.Uo = new Map, this.qo = new Sr, 
+            this.Oc = new Map, this.Mc = new so, 
             /** Stores user completion handlers, indexed by User and BatchId. */
-            this.Ko = {}, 
+            this.$c = {}, 
             /** Stores user callbacks waiting for all pending writes to be acknowledged. */
-            this.jo = new Map, this.Qo = Oi.re(), this.onlineState = "Unknown" /* Unknown */ , 
+            this.Fc = new Map, this.Bc = ar.Je(), this.onlineState = "Unknown" /* Unknown */ , 
             // The primary state is set to `true` or `false` immediately after Firestore
             // startup. In the interim, a client should only be considered primary if
             // `isPrimary` is true.
-            this.Wo = void 0;
+            this.Lc = void 0;
         }
         get isPrimaryClient() {
-            return !0 === this.Wo;
+            return !0 === this.Lc;
         }
     }
 
@@ -10823,10 +11670,10 @@ var app = (function () {
      * server. All the subsequent view snapshots or errors are sent to the
      * subscribed handlers. Returns the initial snapshot.
      */
-    async function oc(t, e) {
-        const n = $c(t);
+    async function Oc(t, e) {
+        const n = hu(t);
         let s, i;
-        const r = n.Mo.get(e);
+        const r = n.Cc.get(e);
         if (r) 
         // PORTING NOTE: With Multi-Tab Web, it is possible that a query view
         // already exists when EventManager calls us for the first time. This
@@ -10834,9 +11681,11 @@ var app = (function () {
         // behalf of another tab and the user of the primary also starts listening
         // to the query. EventManager will not have an assigned target ID in this
         // case and calls `listen` to obtain this ID.
-        s = r.targetId, n.sharedClientState.addLocalQueryTarget(s), i = r.view.xo(); else {
-            const t = await Tr(n.localStore, be(e)), r = n.sharedClientState.addLocalQueryTarget(t.targetId);
-            s = t.targetId, i = await cc(n, e, s, "current" === r), n.isPrimaryClient && lo(n.remoteStore, t);
+        s = r.targetId, n.sharedClientState.addLocalQueryTarget(s), i = r.view.Vc(); else {
+            const t = await Wr(n.localStore, De(e));
+            n.isPrimaryClient && Lo(n.remoteStore, t);
+            const r = n.sharedClientState.addLocalQueryTarget(t.targetId);
+            s = t.targetId, i = await Mc(n, e, s, "current" === r);
         }
         return i;
     }
@@ -10844,44 +11693,44 @@ var app = (function () {
     /**
      * Registers a view for a previously unknown query and computes its initial
      * snapshot.
-     */ async function cc(t, e, n, s) {
+     */ async function Mc(t, e, n, s) {
         // PORTING NOTE: On Web only, we inject the code that registers new Limbo
         // targets based on view changes. This allows us to only depend on Limbo
         // changes when user code includes queries.
-        t.Go = (e, n, s) => async function(t, e, n, s) {
-            let i = e.view.Po(n);
-            i.Bn && (
+        t.Uc = (e, n, s) => async function(t, e, n, s) {
+            let i = e.view.Ic(n);
+            i.ks && (
             // The query has a limit and some docs were removed, so we need
             // to re-run the query against the local store to make sure we
             // didn't lose any good docs that had been past the limit.
-            i = await Ir(t.localStore, e.query, 
-            /* usePreviousResults= */ !1).then((({documents: t}) => e.view.Po(t, i))));
+            i = await Hr(t.localStore, e.query, 
+            /* usePreviousResults= */ !1).then((({documents: t}) => e.view.Ic(t, i))));
             const r = s && s.targetChanges.get(e.targetId), o = e.view.applyChanges(i, 
             /* updateLimboDocuments= */ t.isPrimaryClient, r);
-            return Tc(t, e.targetId, o.Co), o.snapshot;
+            return Hc(t, e.targetId, o.Pc), o.snapshot;
         }(t, e, n, s);
-        const i = await Ir(t.localStore, e, 
-        /* usePreviousResults= */ !0), r = new nc(e, i.zn), o = r.Po(i.documents), c = xn.createSynthesizedTargetChangeForCurrentChange(n, s && "Offline" /* Offline */ !== t.onlineState), a = r.applyChanges(o, 
+        const i = await Hr(t.localStore, e, 
+        /* usePreviousResults= */ !0), r = new Cc(e, i.Ks), o = r.Ic(i.documents), c = Bn.createSynthesizedTargetChangeForCurrentChange(n, s && "Offline" /* Offline */ !== t.onlineState), u = r.applyChanges(o, 
         /* updateLimboDocuments= */ t.isPrimaryClient, c);
-        Tc(t, n, a.Co);
-        const u = new sc(e, n, r);
-        return t.Mo.set(e, u), t.Fo.has(n) ? t.Fo.get(n).push(e) : t.Fo.set(n, [ e ]), a.snapshot;
+        Hc(t, n, u.Pc);
+        const a = new Nc(e, n, r);
+        return t.Cc.set(e, a), t.Nc.has(n) ? t.Nc.get(n).push(e) : t.Nc.set(n, [ e ]), u.snapshot;
     }
 
-    /** Stops listening to the query. */ async function ac(t, e) {
-        const n = K(t), s = n.Mo.get(e), i = n.Fo.get(s.targetId);
-        if (i.length > 1) return n.Fo.set(s.targetId, i.filter((t => !ve(t, e)))), void n.Mo.delete(e);
+    /** Stops listening to the query. */ async function $c(t, e) {
+        const n = K(t), s = n.Cc.get(e), i = n.Nc.get(s.targetId);
+        if (i.length > 1) return n.Nc.set(s.targetId, i.filter((t => !Ne(t, e)))), void n.Cc.delete(e);
         // No other queries are mapped to the target, clean up the query and the target.
             if (n.isPrimaryClient) {
             // We need to remove the local query target first to allow us to verify
             // whether any other client is still interested in this target.
             n.sharedClientState.removeLocalQueryTarget(s.targetId);
-            n.sharedClientState.isActiveQueryTarget(s.targetId) || await Er(n.localStore, s.targetId, 
+            n.sharedClientState.isActiveQueryTarget(s.targetId) || await zr(n.localStore, s.targetId, 
             /*keepPersistedTargetData=*/ !1).then((() => {
-                n.sharedClientState.clearQueryState(s.targetId), fo(n.remoteStore, s.targetId), 
-                yc(n, s.targetId);
-            })).catch(Ui);
-        } else yc(n, s.targetId), await Er(n.localStore, s.targetId, 
+                n.sharedClientState.clearQueryState(s.targetId), Uo(n.remoteStore, s.targetId), 
+                Wc(n, s.targetId);
+            })).catch(_r);
+        } else Wc(n, s.targetId), await zr(n.localStore, s.targetId, 
         /*keepPersistedTargetData=*/ !0);
     }
 
@@ -10894,13 +11743,13 @@ var app = (function () {
      * have completed, *not* when the write was acked by the backend. The
      * userCallback is resolved once the write was acked/rejected by the
      * backend (or failed locally for any other reason).
-     */ async function uc(t, e, n) {
-        const s = Oc(t);
+     */ async function Fc(t, e, n) {
+        const s = lu(t);
         try {
             const t = await function(t, e) {
-                const n = K(t), s = at.now(), i = e.reduce(((t, e) => t.add(e.key)), Dn());
+                const n = K(t), s = ut.now(), i = e.reduce(((t, e) => t.add(e.key)), On());
                 let r;
-                return n.persistence.runTransaction("Locally write mutations", "readwrite", (t => n.Wn.vn(t, i).next((i => {
+                return n.persistence.runTransaction("Locally write mutations", "readwrite", (t => n.Us.Es(t, i).next((i => {
                     r = i;
                     // For non-idempotent mutations (such as `FieldValue.increment()`),
                     // we record the base state in a separate patch mutation. This is
@@ -10909,32 +11758,32 @@ var app = (function () {
                     // transform.
                     const o = [];
                     for (const t of e) {
-                        const e = nn(t, r.get(t.key));
+                        const e = un(t, r.get(t.key));
                         null != e && 
                         // NOTE: The base state should only be applied if there's some
                         // existing document to override, so use a Precondition of
                         // exists=true
-                        o.push(new cn(t.key, e, Wt(e.value.mapValue), Ye.exists(!0)));
+                        o.push(new fn(t.key, e, Ht(e.value.mapValue), nn.exists(!0)));
                     }
-                    return n.An.addMutationBatch(t, s, o, e);
+                    return n.gs.addMutationBatch(t, s, o, e);
                 })))).then((t => (t.applyToLocalDocumentSet(r), {
                     batchId: t.batchId,
                     changes: r
                 })));
             }(s.localStore, e);
             s.sharedClientState.addPendingMutation(t.batchId), function(t, e, n) {
-                let s = t.Ko[t.currentUser.toKey()];
-                s || (s = new yn(rt));
-                s = s.insert(e, n), t.Ko[t.currentUser.toKey()] = s;
+                let s = t.$c[t.currentUser.toKey()];
+                s || (s = new An(rt));
+                s = s.insert(e, n), t.$c[t.currentUser.toKey()] = s;
             }
             /**
      * Resolves or rejects the user callback for the given batch and then discards
      * it.
-     */ (s, t.batchId, n), await Ac(s, t.changes), await bo(s.remoteStore);
+     */ (s, t.batchId, n), await Xc(s, t.changes), await Zo(s.remoteStore);
         } catch (t) {
             // If we can't persist the mutation, we reject the user callback and
             // don't send the mutation. The user can then retry the write.
-            const e = Fo(t, "Failed to persist write");
+            const e = dc(t, "Failed to persist write");
             n.reject(e);
         }
     }
@@ -10943,29 +11792,29 @@ var app = (function () {
      * Applies one remote event to the sync engine, notifying any views of the
      * changes, and releasing any pending mutation batches that would become
      * visible because of the snapshot version the remote event contains.
-     */ async function hc(t, e) {
+     */ async function Bc(t, e) {
         const n = K(t);
         try {
-            const t = await gr(n.localStore, e);
+            const t = await Gr(n.localStore, e);
             // Update `receivedDocument` as appropriate for any limbo targets.
                     e.targetChanges.forEach(((t, e) => {
-                const s = n.Uo.get(e);
+                const s = n.Oc.get(e);
                 s && (
                 // Since this is a limbo resolution lookup, it's for a single document
                 // and it could be added, modified, or removed, but not a combination.
                 U(t.addedDocuments.size + t.modifiedDocuments.size + t.removedDocuments.size <= 1), 
-                t.addedDocuments.size > 0 ? s.$o = !0 : t.modifiedDocuments.size > 0 ? U(s.$o) : t.removedDocuments.size > 0 && (U(s.$o), 
-                s.$o = !1));
-            })), await Ac(n, t, e);
+                t.addedDocuments.size > 0 ? s.Sc = !0 : t.modifiedDocuments.size > 0 ? U(s.Sc) : t.removedDocuments.size > 0 && (U(s.Sc), 
+                s.Sc = !1));
+            })), await Xc(n, t, e);
         } catch (t) {
-            await Ui(t);
+            await _r(t);
         }
     }
 
     /**
      * Applies an OnlineState change to the sync engine and notifies any views of
      * the change.
-     */ function lc(t, e, n) {
+     */ function Lc(t, e, n) {
         const s = K(t);
         // If we are the secondary client, we explicitly ignore the remote store's
         // online state (the local client may go offline, even though the primary
@@ -10973,8 +11822,8 @@ var app = (function () {
         // SharedClientState.
             if (s.isPrimaryClient && 0 /* RemoteStore */ === n || !s.isPrimaryClient && 1 /* SharedClientState */ === n) {
             const t = [];
-            s.Mo.forEach(((n, s) => {
-                const i = s.view.ro(e);
+            s.Cc.forEach(((n, s) => {
+                const i = s.view.tc(e);
                 i.snapshot && t.push(i.snapshot);
             })), function(t, e) {
                 const n = K(t);
@@ -10983,9 +11832,9 @@ var app = (function () {
                 n.queries.forEach(((t, n) => {
                     for (const t of n.listeners) 
                     // Run global snapshot listeners if a consistent snapshot has been emitted.
-                    t.ro(e) && (s = !0);
-                })), s && zo(n);
-            }(s.eventManager, e), t.length && s.Oo.br(t), s.onlineState = e, s.isPrimaryClient && s.sharedClientState.setOnlineState(e);
+                    t.tc(e) && (s = !0);
+                })), s && Ac(n);
+            }(s.eventManager, e), t.length && s.Dc.To(t), s.onlineState = e, s.isPrimaryClient && s.sharedClientState.setOnlineState(e);
         }
     }
 
@@ -10999,11 +11848,11 @@ var app = (function () {
      * @param err - A description of the condition that has forced the rejection.
      * Nearly always this will be an indication that the user is no longer
      * authorized to see the data matching the target.
-     */ async function fc(t, e, n) {
+     */ async function Uc(t, e, n) {
         const s = K(t);
         // PORTING NOTE: Multi-tab only.
             s.sharedClientState.updateQueryState(e, "rejected", n);
-        const i = s.Uo.get(e), r = i && i.key;
+        const i = s.Oc.get(e), r = i && i.key;
         if (r) {
             // TODO(klimt): We really only should do the following on permission
             // denied errors, but we don't have the cause code here.
@@ -11011,45 +11860,48 @@ var app = (function () {
             // This is kind of a hack. Ideally, we would have a method in the local
             // store to purge a document. However, it would be tricky to keep all of
             // the local store's invariants with another method.
-            let t = new yn(Dt.comparator);
-            t = t.insert(r, Gt.newNoDocument(r, ut.min()));
-            const n = Dn().add(r), i = new kn(ut.min(), 
+            let t = new An(Nt.comparator);
+            // TODO(b/217189216): This limbo document should ideally have a read time,
+            // so that it is picked up by any read-time based scans. The backend,
+            // however, does not send a read time for target removals.
+                    t = t.insert(r, Jt.newNoDocument(r, at.min()));
+            const n = On().add(r), i = new Fn(at.min(), 
             /* targetChanges= */ new Map, 
-            /* targetMismatches= */ new En(rt), t, n);
-            await hc(s, i), 
+            /* targetMismatches= */ new bn(rt), t, n);
+            await Bc(s, i), 
             // Since this query failed, we won't want to manually unlisten to it.
             // We only remove it from bookkeeping after we successfully applied the
             // RemoteEvent. If `applyRemoteEvent()` throws, we want to re-listen to
             // this query when the RemoteStore restarts the Watch stream, which should
             // re-trigger the target failure.
-            s.Bo = s.Bo.remove(r), s.Uo.delete(e), Ic(s);
-        } else await Er(s.localStore, e, 
-        /* keepPersistedTargetData */ !1).then((() => yc(s, e, n))).catch(Ui);
+            s.kc = s.kc.remove(r), s.Oc.delete(e), Yc(s);
+        } else await zr(s.localStore, e, 
+        /* keepPersistedTargetData */ !1).then((() => Wc(s, e, n))).catch(_r);
     }
 
-    async function dc(t, e) {
+    async function qc(t, e) {
         const n = K(t), s = e.batch.batchId;
         try {
-            const t = await _r(n.localStore, e);
+            const t = await qr(n.localStore, e);
             // The local store may or may not be able to apply the write result and
             // raise events immediately (depending on whether the watcher is caught
             // up), so we raise user callbacks first so that they consistently happen
             // before listen events.
-                    gc(n, s, /*error=*/ null), mc(n, s), n.sharedClientState.updateMutationState(s, "acknowledged"), 
-            await Ac(n, t);
+                    Qc(n, s, /*error=*/ null), jc(n, s), n.sharedClientState.updateMutationState(s, "acknowledged"), 
+            await Xc(n, t);
         } catch (t) {
-            await Ui(t);
+            await _r(t);
         }
     }
 
-    async function wc(t, e, n) {
+    async function Kc(t, e, n) {
         const s = K(t);
         try {
             const t = await function(t, e) {
                 const n = K(t);
                 return n.persistence.runTransaction("Reject batch", "readwrite-primary", (t => {
                     let s;
-                    return n.An.lookupMutationBatch(t, e).next((e => (U(null !== e), s = e.keys(), n.An.removeMutationBatch(t, e)))).next((() => n.An.performConsistencyCheck(t))).next((() => n.Wn.vn(t, s)));
+                    return n.gs.lookupMutationBatch(t, e).next((e => (U(null !== e), s = e.keys(), n.gs.removeMutationBatch(t, e)))).next((() => n.gs.performConsistencyCheck(t))).next((() => n.Us.Es(t, s)));
                 }));
             }
             /**
@@ -11062,66 +11914,66 @@ var app = (function () {
             // raise events immediately (depending on whether the watcher is caught up),
             // so we raise user callbacks first so that they consistently happen before
             // listen events.
-                    gc(s, e, n), mc(s, e), s.sharedClientState.updateMutationState(e, "rejected", n), 
-            await Ac(s, t);
+                    Qc(s, e, n), jc(s, e), s.sharedClientState.updateMutationState(e, "rejected", n), 
+            await Xc(s, t);
         } catch (n) {
-            await Ui(n);
+            await _r(n);
         }
     }
 
     /**
      * Triggers the callbacks that are waiting for this batch id to get acknowledged by server,
      * if there are any.
-     */ function mc(t, e) {
-        (t.jo.get(e) || []).forEach((t => {
+     */ function jc(t, e) {
+        (t.Fc.get(e) || []).forEach((t => {
             t.resolve();
-        })), t.jo.delete(e);
+        })), t.Fc.delete(e);
     }
 
-    /** Reject all outstanding callbacks waiting for pending writes to complete. */ function gc(t, e, n) {
+    /** Reject all outstanding callbacks waiting for pending writes to complete. */ function Qc(t, e, n) {
         const s = K(t);
-        let i = s.Ko[s.currentUser.toKey()];
+        let i = s.$c[s.currentUser.toKey()];
         // NOTE: Mutations restored from persistence won't have callbacks, so it's
         // okay for there to be no callback for this ID.
             if (i) {
             const t = i.get(e);
-            t && (n ? t.reject(n) : t.resolve(), i = i.remove(e)), s.Ko[s.currentUser.toKey()] = i;
+            t && (n ? t.reject(n) : t.resolve(), i = i.remove(e)), s.$c[s.currentUser.toKey()] = i;
         }
     }
 
-    function yc(t, e, n = null) {
+    function Wc(t, e, n = null) {
         t.sharedClientState.removeLocalQueryTarget(e);
-        for (const s of t.Fo.get(e)) t.Mo.delete(s), n && t.Oo.zo(s, n);
-        if (t.Fo.delete(e), t.isPrimaryClient) {
-            t.qo.us(e).forEach((e => {
-                t.qo.containsKey(e) || 
+        for (const s of t.Nc.get(e)) t.Cc.delete(s), n && t.Dc.qc(s, n);
+        if (t.Nc.delete(e), t.isPrimaryClient) {
+            t.Mc.si(e).forEach((e => {
+                t.Mc.containsKey(e) || 
                 // We removed the last reference for this key
-                pc(t, e);
+                zc(t, e);
             }));
         }
     }
 
-    function pc(t, e) {
-        t.Lo.delete(e.path.canonicalString());
+    function zc(t, e) {
+        t.xc.delete(e.path.canonicalString());
         // It's possible that the target already got removed because the query failed. In that case,
         // the key won't exist in `limboTargetsByKey`. Only do the cleanup if we still have the target.
-        const n = t.Bo.get(e);
-        null !== n && (fo(t.remoteStore, n), t.Bo = t.Bo.remove(e), t.Uo.delete(n), Ic(t));
+        const n = t.kc.get(e);
+        null !== n && (Uo(t.remoteStore, n), t.kc = t.kc.remove(e), t.Oc.delete(n), Yc(t));
     }
 
-    function Tc(t, e, n) {
-        for (const s of n) if (s instanceof tc) t.qo.addReference(s.key, e), Ec(t, s); else if (s instanceof ec) {
-            O("SyncEngine", "Document no longer in limbo: " + s.key), t.qo.removeReference(s.key, e);
-            t.qo.containsKey(s.key) || 
+    function Hc(t, e, n) {
+        for (const s of n) if (s instanceof Sc) t.Mc.addReference(s.key, e), Jc(t, s); else if (s instanceof Dc) {
+            M("SyncEngine", "Document no longer in limbo: " + s.key), t.Mc.removeReference(s.key, e);
+            t.Mc.containsKey(s.key) || 
             // We removed the last reference for this key
-            pc(t, s.key);
-        } else B();
+            zc(t, s.key);
+        } else L();
     }
 
-    function Ec(t, e) {
+    function Jc(t, e) {
         const n = e.key, s = n.path.canonicalString();
-        t.Bo.get(n) || t.Lo.has(s) || (O("SyncEngine", "New document in limbo: " + n), t.Lo.add(s), 
-        Ic(t));
+        t.kc.get(n) || t.xc.has(s) || (M("SyncEngine", "New document in limbo: " + n), t.xc.add(s), 
+        Yc(t));
     }
 
     /**
@@ -11131,115 +11983,115 @@ var app = (function () {
      * Without bounding the number of concurrent resolutions, the server can fail
      * with "resource exhausted" errors which can lead to pathological client
      * behavior as seen in https://github.com/firebase/firebase-js-sdk/issues/2683.
-     */ function Ic(t) {
-        for (;t.Lo.size > 0 && t.Bo.size < t.maxConcurrentLimboResolutions; ) {
-            const e = t.Lo.values().next().value;
-            t.Lo.delete(e);
-            const n = new Dt(wt.fromString(e)), s = t.Qo.next();
-            t.Uo.set(s, new ic(n)), t.Bo = t.Bo.insert(n, s), lo(t.remoteStore, new ai(be(ye(n.path)), s, 2 /* LimboResolution */ , nt.I));
+     */ function Yc(t) {
+        for (;t.xc.size > 0 && t.kc.size < t.maxConcurrentLimboResolutions; ) {
+            const e = t.xc.values().next().value;
+            t.xc.delete(e);
+            const n = new Nt(_t.fromString(e)), s = t.Bc.next();
+            t.Oc.set(s, new xc(n)), t.kc = t.kc.insert(n, s), Lo(t.remoteStore, new yi(De(Ae(n.path)), s, 2 /* LimboResolution */ , nt.A));
         }
     }
 
-    async function Ac(t, e, n) {
+    async function Xc(t, e, n) {
         const s = K(t), i = [], r = [], o = [];
-        s.Mo.isEmpty() || (s.Mo.forEach(((t, c) => {
-            o.push(s.Go(c, e, n).then((t => {
+        s.Cc.isEmpty() || (s.Cc.forEach(((t, c) => {
+            o.push(s.Uc(c, e, n).then((t => {
                 if (t) {
                     s.isPrimaryClient && s.sharedClientState.updateQueryState(c.targetId, t.fromCache ? "not-current" : "current"), 
                     i.push(t);
-                    const e = hr.$n(c.targetId, t);
+                    const e = $r.Ss(c.targetId, t);
                     r.push(e);
                 }
             })));
-        })), await Promise.all(o), s.Oo.br(i), await async function(t, e) {
+        })), await Promise.all(o), s.Dc.To(i), await async function(t, e) {
             const n = K(t);
             try {
-                await n.persistence.runTransaction("notifyLocalViewChanges", "readwrite", (t => zs.forEach(e, (e => zs.forEach(e.kn, (s => n.persistence.referenceDelegate.addReference(t, e.targetId, s))).next((() => zs.forEach(e.xn, (s => n.persistence.referenceDelegate.removeReference(t, e.targetId, s)))))))));
+                await n.persistence.runTransaction("notifyLocalViewChanges", "readwrite", (t => si.forEach(e, (e => si.forEach(e.vs, (s => n.persistence.referenceDelegate.addReference(t, e.targetId, s))).next((() => si.forEach(e.Vs, (s => n.persistence.referenceDelegate.removeReference(t, e.targetId, s)))))))));
             } catch (t) {
-                if (!Zs(t)) throw t;
+                if (!ui(t)) throw t;
                 // If `notifyLocalViewChanges` fails, we did not advance the sequence
                 // number for the documents that were included in this transaction.
                 // This might trigger them to be deleted earlier than they otherwise
                 // would have, but it should not invalidate the integrity of the data.
-                O("LocalStore", "Failed to update sequence numbers: " + t);
+                M("LocalStore", "Failed to update sequence numbers: " + t);
             }
             for (const t of e) {
                 const e = t.targetId;
                 if (!t.fromCache) {
-                    const t = n.qn.get(e), s = t.snapshotVersion, i = t.withLastLimboFreeSnapshotVersion(s);
+                    const t = n.Ms.get(e), s = t.snapshotVersion, i = t.withLastLimboFreeSnapshotVersion(s);
                     // Advance the last limbo free snapshot version
-                                    n.qn = n.qn.insert(e, i);
+                                    n.Ms = n.Ms.insert(e, i);
                 }
             }
         }(s.localStore, r));
     }
 
-    async function Rc(t, e) {
+    async function Zc(t, e) {
         const n = K(t);
         if (!n.currentUser.isEqual(e)) {
-            O("SyncEngine", "User change. New user:", e.toKey());
-            const t = await wr(n.localStore, e);
+            M("SyncEngine", "User change. New user:", e.toKey());
+            const t = await Ur(n.localStore, e);
             n.currentUser = e, 
             // Fails tasks waiting for pending writes requested by previous user.
             function(t, e) {
-                t.jo.forEach((t => {
+                t.Fc.forEach((t => {
                     t.forEach((t => {
-                        t.reject(new Q(j.CANCELLED, e));
+                        t.reject(new j(G.CANCELLED, e));
                     }));
-                })), t.jo.clear();
+                })), t.Fc.clear();
             }(n, "'waitForPendingWrites' promise is rejected due to a user change."), 
             // TODO(b/114226417): Consider calling this only in the primary tab.
-            n.sharedClientState.handleUserChange(e, t.removedBatchIds, t.addedBatchIds), await Ac(n, t.Gn);
+            n.sharedClientState.handleUserChange(e, t.removedBatchIds, t.addedBatchIds), await Xc(n, t.qs);
         }
     }
 
-    function bc(t, e) {
-        const n = K(t), s = n.Uo.get(e);
-        if (s && s.$o) return Dn().add(s.key);
+    function tu(t, e) {
+        const n = K(t), s = n.Oc.get(e);
+        if (s && s.Sc) return On().add(s.key);
         {
-            let t = Dn();
-            const s = n.Fo.get(e);
+            let t = On();
+            const s = n.Nc.get(e);
             if (!s) return t;
             for (const e of s) {
-                const s = n.Mo.get(e);
-                t = t.unionWith(s.view.bo);
+                const s = n.Cc.get(e);
+                t = t.unionWith(s.view.yc);
             }
             return t;
         }
     }
 
-    function $c(t) {
+    function hu(t) {
         const e = K(t);
-        return e.remoteStore.remoteSyncer.applyRemoteEvent = hc.bind(null, e), e.remoteStore.remoteSyncer.getRemoteKeysForTarget = bc.bind(null, e), 
-        e.remoteStore.remoteSyncer.rejectListen = fc.bind(null, e), e.Oo.br = Wo.bind(null, e.eventManager), 
-        e.Oo.zo = Go.bind(null, e.eventManager), e;
+        return e.remoteStore.remoteSyncer.applyRemoteEvent = Bc.bind(null, e), e.remoteStore.remoteSyncer.getRemoteKeysForTarget = tu.bind(null, e), 
+        e.remoteStore.remoteSyncer.rejectListen = Uc.bind(null, e), e.Dc.To = Ec.bind(null, e.eventManager), 
+        e.Dc.qc = Tc.bind(null, e.eventManager), e;
     }
 
-    function Oc(t) {
+    function lu(t) {
         const e = K(t);
-        return e.remoteStore.remoteSyncer.applySuccessfulWrite = dc.bind(null, e), e.remoteStore.remoteSyncer.rejectFailedWrite = wc.bind(null, e), 
+        return e.remoteStore.remoteSyncer.applySuccessfulWrite = qc.bind(null, e), e.remoteStore.remoteSyncer.rejectFailedWrite = Kc.bind(null, e), 
         e;
     }
 
-    class Fc {
+    class du {
         constructor() {
             this.synchronizeTabs = !1;
         }
         async initialize(t) {
-            this.k = eo(t.databaseInfo.databaseId), this.sharedClientState = this.Jo(t), this.persistence = this.Yo(t), 
-            await this.persistence.start(), this.gcScheduler = this.Xo(t), this.localStore = this.Zo(t);
+            this.O = Do(t.databaseInfo.databaseId), this.sharedClientState = this.Gc(t), this.persistence = this.jc(t), 
+            await this.persistence.start(), this.gcScheduler = this.Qc(t), this.localStore = this.Wc(t);
         }
-        Xo(t) {
+        Qc(t) {
             return null;
         }
-        Zo(t) {
-            return dr(this.persistence, new lr, t.initialUser, this.k);
+        Wc(t) {
+            return Lr(this.persistence, new Fr, t.initialUser, this.O);
         }
-        Yo(t) {
-            return new $r(Mr.ks, this.k);
+        jc(t) {
+            return new ao(lo.bi, this.O);
         }
-        Jo(t) {
-            return new Gr;
+        Gc(t) {
+            return new To;
         }
         async terminate() {
             this.gcScheduler && this.gcScheduler.stop(), await this.sharedClientState.shutdown(), 
@@ -11250,46 +12102,46 @@ var app = (function () {
     /**
      * Initializes and wires the components that are needed to interface with the
      * network.
-     */ class Uc {
+     */ class mu {
         async initialize(t, e) {
             this.localStore || (this.localStore = t.localStore, this.sharedClientState = t.sharedClientState, 
             this.datastore = this.createDatastore(e), this.remoteStore = this.createRemoteStore(e), 
             this.eventManager = this.createEventManager(e), this.syncEngine = this.createSyncEngine(e, 
-            /* startAsPrimary=*/ !t.synchronizeTabs), this.sharedClientState.onlineStateHandler = t => lc(this.syncEngine, t, 1 /* SharedClientState */), 
-            this.remoteStore.remoteSyncer.handleCredentialChange = Rc.bind(null, this.syncEngine), 
-            await xo(this.remoteStore, this.syncEngine.isPrimaryClient));
+            /* startAsPrimary=*/ !t.synchronizeTabs), this.sharedClientState.onlineStateHandler = t => Lc(this.syncEngine, t, 1 /* SharedClientState */), 
+            this.remoteStore.remoteSyncer.handleCredentialChange = Zc.bind(null, this.syncEngine), 
+            await ac(this.remoteStore, this.syncEngine.isPrimaryClient));
         }
         createEventManager(t) {
-            return new Ko;
+            return new yc;
         }
         createDatastore(t) {
-            const e = eo(t.databaseInfo.databaseId), n = (s = t.databaseInfo, new Xr(s));
+            const e = Do(t.databaseInfo.databaseId), n = (s = t.databaseInfo, new vo(s));
             var s;
             /** Return the Platform-specific connectivity monitor. */        return function(t, e, n, s) {
-                return new oo(t, e, n, s);
+                return new Oo(t, e, n, s);
             }(t.authCredentials, t.appCheckCredentials, n, e);
         }
         createRemoteStore(t) {
-            return e = this.localStore, n = this.datastore, s = t.asyncQueue, i = t => lc(this.syncEngine, t, 0 /* RemoteStore */), 
-            r = Hr.Pt() ? new Hr : new zr, new ao(e, n, s, i, r);
+            return e = this.localStore, n = this.datastore, s = t.asyncQueue, i = t => Lc(this.syncEngine, t, 0 /* RemoteStore */), 
+            r = Ro.Vt() ? new Ro : new Ao, new $o(e, n, s, i, r);
             var e, n, s, i, r;
             /** Re-enables the network. Idempotent. */    }
         createSyncEngine(t, e) {
             return function(t, e, n, 
             // PORTING NOTE: Manages state synchronization in multi-tab environments.
             s, i, r, o) {
-                const c = new rc(t, e, n, s, i, r);
-                return o && (c.Wo = !0), c;
+                const c = new kc(t, e, n, s, i, r);
+                return o && (c.Lc = !0), c;
             }(this.localStore, this.remoteStore, this.eventManager, this.sharedClientState, t.initialUser, t.maxConcurrentLimboResolutions, e);
         }
         terminate() {
             return async function(t) {
                 const e = K(t);
-                O("RemoteStore", "RemoteStore shutting down."), e.Gr.add(5 /* Shutdown */), await ho(e), 
-                e.Hr.shutdown(), 
+                M("RemoteStore", "RemoteStore shutting down."), e.Ko.add(5 /* Shutdown */), await Bo(e), 
+                e.jo.shutdown(), 
                 // Set the OnlineState to Unknown (rather than Offline) to avoid potentially
                 // triggering spurious listener events with cached data, etc.
-                e.Jr.set("Unknown" /* Unknown */);
+                e.Qo.set("Unknown" /* Unknown */);
             }(this.remoteStore);
         }
     }
@@ -11334,7 +12186,7 @@ var app = (function () {
      * asynchronously. To allow immediate silencing, a mute call is added which
      * causes events scheduled to no longer be raised.
      */
-    class Kc {
+    class yu {
         constructor(t) {
             this.observer = t, 
             /**
@@ -11344,15 +12196,15 @@ var app = (function () {
             this.muted = !1;
         }
         next(t) {
-            this.observer.next && this.ec(this.observer.next, t);
+            this.observer.next && this.Hc(this.observer.next, t);
         }
         error(t) {
-            this.observer.error ? this.ec(this.observer.error, t) : console.error("Uncaught Error in snapshot listener:", t);
+            this.observer.error ? this.Hc(this.observer.error, t) : console.error("Uncaught Error in snapshot listener:", t);
         }
-        nc() {
+        Jc() {
             this.muted = !0;
         }
-        ec(t, e) {
+        Hc(t, e) {
             this.muted || setTimeout((() => {
                 this.muted || t(e);
             }), 0);
@@ -11380,7 +12232,7 @@ var app = (function () {
      * pieces of the client SDK architecture. It is responsible for creating the
      * async queue that is shared by all of the other components in the system.
      */
-    class Gc {
+    class Tu {
         constructor(t, e, 
         /**
          * Asynchronous queue responsible for all of our internal processing. When
@@ -11392,13 +12244,12 @@ var app = (function () {
          */
         n, s) {
             this.authCredentials = t, this.appCheckCredentials = e, this.asyncQueue = n, this.databaseInfo = s, 
-            this.user = C.UNAUTHENTICATED, this.clientId = it.A(), this.authCredentialListener = () => Promise.resolve(), 
-            this.authCredentials.start(n, (async t => {
-                O("FirestoreClient", "Received user=", t.uid), await this.authCredentialListener(t), 
+            this.user = C.UNAUTHENTICATED, this.clientId = it.R(), this.authCredentialListener = () => Promise.resolve(), 
+            this.appCheckCredentialListener = () => Promise.resolve(), this.authCredentials.start(n, (async t => {
+                M("FirestoreClient", "Received user=", t.uid), await this.authCredentialListener(t), 
                 this.user = t;
-            })), 
-            // Register an empty credentials change listener to activate token refresh.
-            this.appCheckCredentials.start(n, (() => Promise.resolve()));
+            })), this.appCheckCredentials.start(n, (t => (M("FirestoreClient", "Received new app check token=", t), 
+            this.appCheckCredentialListener(t, this.user))));
         }
         async getConfiguration() {
             return {
@@ -11414,15 +12265,18 @@ var app = (function () {
         setCredentialChangeListener(t) {
             this.authCredentialListener = t;
         }
+        setAppCheckTokenChangeListener(t) {
+            this.appCheckCredentialListener = t;
+        }
         /**
          * Checks that the client has not been terminated. Ensures that other methods on
          * this class cannot be called after the client is terminated.
          */    verifyNotTerminated() {
-            if (this.asyncQueue.isShuttingDown) throw new Q(j.FAILED_PRECONDITION, "The client has already been terminated.");
+            if (this.asyncQueue.isShuttingDown) throw new j(G.FAILED_PRECONDITION, "The client has already been terminated.");
         }
         terminate() {
             this.asyncQueue.enterRestrictedMode();
-            const t = new W;
+            const t = new Q;
             return this.asyncQueue.enqueueAndForgetEvenWhileRestricted((async () => {
                 try {
                     this.onlineComponents && await this.onlineComponents.terminate(), this.offlineComponents && await this.offlineComponents.terminate(), 
@@ -11431,143 +12285,77 @@ var app = (function () {
                     // tokens.
                     this.authCredentials.shutdown(), this.appCheckCredentials.shutdown(), t.resolve();
                 } catch (e) {
-                    const n = Fo(e, "Failed to shutdown persistence");
+                    const n = dc(e, "Failed to shutdown persistence");
                     t.reject(n);
                 }
             })), t.promise;
         }
     }
 
-    async function zc(t, e) {
-        t.asyncQueue.verifyOperationInProgress(), O("FirestoreClient", "Initializing OfflineComponentProvider");
+    async function Au(t, e) {
+        t.asyncQueue.verifyOperationInProgress(), M("FirestoreClient", "Initializing OfflineComponentProvider");
         const n = await t.getConfiguration();
         await e.initialize(n);
         let s = n.initialUser;
         t.setCredentialChangeListener((async t => {
-            s.isEqual(t) || (await wr(e.localStore, t), s = t);
+            s.isEqual(t) || (await Ur(e.localStore, t), s = t);
         })), 
         // When a user calls clearPersistence() in one client, all other clients
         // need to be terminated to allow the delete to succeed.
         e.persistence.setDatabaseDeletedListener((() => t.terminate())), t.offlineComponents = e;
     }
 
-    async function Hc(t, e) {
+    async function Ru(t, e) {
         t.asyncQueue.verifyOperationInProgress();
-        const n = await Jc(t);
-        O("FirestoreClient", "Initializing OnlineComponentProvider");
+        const n = await Pu(t);
+        M("FirestoreClient", "Initializing OnlineComponentProvider");
         const s = await t.getConfiguration();
         await e.initialize(n, s), 
         // The CredentialChangeListener of the online component provider takes
         // precedence over the offline component provider.
-        t.setCredentialChangeListener((t => async function(t, e) {
-            const n = K(t);
-            n.asyncQueue.verifyOperationInProgress(), O("RemoteStore", "RemoteStore received new credentials");
-            const s = yo(n);
-            // Tear down and re-create our network streams. This will ensure we get a
-            // fresh auth token for the new user and re-fill the write pipeline with
-            // new mutations from the LocalStore (since mutations are per-user).
-                    n.Gr.add(3 /* CredentialChange */), await ho(n), s && 
-            // Don't set the network status to Unknown if we are offline.
-            n.Jr.set("Unknown" /* Unknown */), await n.remoteSyncer.handleCredentialChange(e), 
-            n.Gr.delete(3 /* CredentialChange */), await uo(n);
-        }(e.remoteStore, t))), t.onlineComponents = e;
+        t.setCredentialChangeListener((t => uc(e.remoteStore, t))), t.setAppCheckTokenChangeListener(((t, n) => uc(e.remoteStore, n))), 
+        t.onlineComponents = e;
     }
 
-    async function Jc(t) {
-        return t.offlineComponents || (O("FirestoreClient", "Using default OfflineComponentProvider"), 
-        await zc(t, new Fc)), t.offlineComponents;
+    async function Pu(t) {
+        return t.offlineComponents || (M("FirestoreClient", "Using default OfflineComponentProvider"), 
+        await Au(t, new du)), t.offlineComponents;
     }
 
-    async function Yc(t) {
-        return t.onlineComponents || (O("FirestoreClient", "Using default OnlineComponentProvider"), 
-        await Hc(t, new Uc)), t.onlineComponents;
+    async function bu(t) {
+        return t.onlineComponents || (M("FirestoreClient", "Using default OnlineComponentProvider"), 
+        await Ru(t, new mu)), t.onlineComponents;
     }
 
-    function ea(t) {
-        return Yc(t).then((t => t.syncEngine));
+    function Du(t) {
+        return bu(t).then((t => t.syncEngine));
     }
 
-    async function na(t) {
-        const e = await Yc(t), n = e.eventManager;
-        return n.onListen = oc.bind(null, e.syncEngine), n.onUnlisten = ac.bind(null, e.syncEngine), 
+    async function Cu(t) {
+        const e = await bu(t), n = e.eventManager;
+        return n.onListen = Oc.bind(null, e.syncEngine), n.onUnlisten = $c.bind(null, e.syncEngine), 
         n;
     }
 
-    function aa(t, e, n = {}) {
-        const s = new W;
+    function $u(t, e, n = {}) {
+        const s = new Q;
         return t.asyncQueue.enqueueAndForget((async () => function(t, e, n, s, i) {
-            const r = new Kc({
+            const r = new yu({
                 next: n => {
                     // Remove query first before passing event to user to avoid
                     // user actions affecting the now stale query.
-                    e.enqueueAndForget((() => Qo(t, o))), n.fromCache && "server" === s.source ? i.reject(new Q(j.UNAVAILABLE, 'Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to "server" to retrieve the cached documents.)')) : i.resolve(n);
+                    e.enqueueAndForget((() => Ic(t, o))), n.fromCache && "server" === s.source ? i.reject(new j(G.UNAVAILABLE, 'Failed to get documents from server. (However, these documents may exist in the local cache. Run again without setting source to "server" to retrieve the cached documents.)')) : i.resolve(n);
                 },
                 error: t => i.reject(t)
-            }), o = new Ho(n, r, {
+            }), o = new Rc(n, r, {
                 includeMetadataChanges: !0,
-                wo: !0
+                uc: !0
             });
-            return jo(t, o);
-        }(await na(t), t.asyncQueue, e, n, s))), s.promise;
+            return pc(t, o);
+        }(await Cu(t), t.asyncQueue, e, n, s))), s.promise;
     }
 
-    class da {
-        /**
-         * Constructs a DatabaseInfo using the provided host, databaseId and
-         * persistenceKey.
-         *
-         * @param databaseId - The database to use.
-         * @param appId - The Firebase App Id.
-         * @param persistenceKey - A unique identifier for this Firestore's local
-         * storage (used in conjunction with the databaseId).
-         * @param host - The Firestore backend host to connect to.
-         * @param ssl - Whether to use SSL when connecting.
-         * @param forceLongPolling - Whether to use the forceLongPolling option
-         * when using WebChannel as the network transport.
-         * @param autoDetectLongPolling - Whether to use the detectBufferingProxy
-         * option when using WebChannel as the network transport.
-         * @param useFetchStreams Whether to use the Fetch API instead of
-         * XMLHTTPRequest
-         */
-        constructor(t, e, n, s, i, r, o, c) {
-            this.databaseId = t, this.appId = e, this.persistenceKey = n, this.host = s, this.ssl = i, 
-            this.forceLongPolling = r, this.autoDetectLongPolling = o, this.useFetchStreams = c;
-        }
-    }
-
-    /** The default database name for a project. */
-    /**
-     * Represents the database ID a Firestore client is associated with.
-     * @internal
-     */
-    class wa {
-        constructor(t, e) {
-            this.projectId = t, this.database = e || "(default)";
-        }
-        get isDefaultDatabase() {
-            return "(default)" === this.database;
-        }
-        isEqual(t) {
-            return t instanceof wa && t.projectId === this.projectId && t.database === this.database;
-        }
-    }
-
-    /**
-     * @license
-     * Copyright 2020 Google LLC
-     *
-     * Licensed under the Apache License, Version 2.0 (the "License");
-     * you may not use this file except in compliance with the License.
-     * You may obtain a copy of the License at
-     *
-     *   http://www.apache.org/licenses/LICENSE-2.0
-     *
-     * Unless required by applicable law or agreed to in writing, software
-     * distributed under the License is distributed on an "AS IS" BASIS,
-     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-     * See the License for the specific language governing permissions and
-     * limitations under the License.
-     */ const _a = new Map;
+    const qu = new Map;
 
     /**
      * An instance map that ensures only one Datastore exists per Firestore
@@ -11589,29 +12377,29 @@ var app = (function () {
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    function ma(t, e, n) {
-        if (!n) throw new Q(j.INVALID_ARGUMENT, `Function ${t}() cannot be called with an empty ${e}.`);
+    function Ku(t, e, n) {
+        if (!n) throw new j(G.INVALID_ARGUMENT, `Function ${t}() cannot be called with an empty ${e}.`);
     }
 
     /**
      * Validates that two boolean options are not set at the same time.
      * @internal
-     */ function ga(t, e, n, s) {
-        if (!0 === e && !0 === s) throw new Q(j.INVALID_ARGUMENT, `${t} and ${n} cannot be used together.`);
+     */ function Gu(t, e, n, s) {
+        if (!0 === e && !0 === s) throw new j(G.INVALID_ARGUMENT, `${t} and ${n} cannot be used together.`);
     }
 
     /**
      * Validates that `path` refers to a document (indicated by the fact it contains
      * an even numbers of segments).
-     */ function ya(t) {
-        if (!Dt.isDocumentKey(t)) throw new Q(j.INVALID_ARGUMENT, `Invalid document reference. Document references must have an even number of segments, but ${t} has ${t.length}.`);
+     */ function ju(t) {
+        if (!Nt.isDocumentKey(t)) throw new j(G.INVALID_ARGUMENT, `Invalid document reference. Document references must have an even number of segments, but ${t} has ${t.length}.`);
     }
 
     /**
      * Validates that `path` refers to a collection (indicated by the fact it
      * contains an odd numbers of segments).
-     */ function pa(t) {
-        if (Dt.isDocumentKey(t)) throw new Q(j.INVALID_ARGUMENT, `Invalid collection reference. Collection references must have an odd number of segments, but ${t} has ${t.length}.`);
+     */ function Qu(t) {
+        if (Nt.isDocumentKey(t)) throw new j(G.INVALID_ARGUMENT, `Invalid collection reference. Collection references must have an odd number of segments, but ${t} has ${t.length}.`);
     }
 
     /**
@@ -11619,7 +12407,7 @@ var app = (function () {
      * (i.e. excludes Array, Date, etc.).
      */
     /** Returns a string describing the type / value of the provided input. */
-    function Ta(t) {
+    function Wu(t) {
         if (void 0 === t) return "undefined";
         if (null === t) return "null";
         if ("string" == typeof t) return t.length > 20 && (t = `${t.substring(0, 20)}...`), 
@@ -11645,20 +12433,20 @@ var app = (function () {
                 return e ? `a custom ${e} object` : "an object";
             }
         }
-        return "function" == typeof t ? "a function" : B();
+        return "function" == typeof t ? "a function" : L();
     }
 
-    function Ea(t, 
+    function zu(t, 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     e) {
         if ("_delegate" in t && (
         // Unwrap Compat types
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         t = t._delegate), !(t instanceof e)) {
-            if (e.name === t.constructor.name) throw new Q(j.INVALID_ARGUMENT, "Type does not match the expected instance. Did you pass a reference from a different Firestore SDK?");
+            if (e.name === t.constructor.name) throw new j(G.INVALID_ARGUMENT, "Type does not match the expected instance. Did you pass a reference from a different Firestore SDK?");
             {
-                const n = Ta(t);
-                throw new Q(j.INVALID_ARGUMENT, `Expected type '${e.name}', but it was: ${n}`);
+                const n = Wu(t);
+                throw new j(G.INVALID_ARGUMENT, `Expected type '${e.name}', but it was: ${n}`);
             }
         }
         return t;
@@ -11686,20 +12474,20 @@ var app = (function () {
      * user-supplied `FirestoreSettings` object. This is a separate type so that
      * defaults can be supplied and the value can be checked for equality.
      */
-    class Aa {
+    class Ju {
         constructor(t) {
             var e;
             if (void 0 === t.host) {
-                if (void 0 !== t.ssl) throw new Q(j.INVALID_ARGUMENT, "Can't provide ssl option if host option is not set");
+                if (void 0 !== t.ssl) throw new j(G.INVALID_ARGUMENT, "Can't provide ssl option if host option is not set");
                 this.host = "firestore.googleapis.com", this.ssl = true;
             } else this.host = t.host, this.ssl = null === (e = t.ssl) || void 0 === e || e;
             if (this.credentials = t.credentials, this.ignoreUndefinedProperties = !!t.ignoreUndefinedProperties, 
             void 0 === t.cacheSizeBytes) this.cacheSizeBytes = 41943040; else {
-                if (-1 !== t.cacheSizeBytes && t.cacheSizeBytes < 1048576) throw new Q(j.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
+                if (-1 !== t.cacheSizeBytes && t.cacheSizeBytes < 1048576) throw new j(G.INVALID_ARGUMENT, "cacheSizeBytes must be at least 1048576");
                 this.cacheSizeBytes = t.cacheSizeBytes;
             }
             this.experimentalForceLongPolling = !!t.experimentalForceLongPolling, this.experimentalAutoDetectLongPolling = !!t.experimentalAutoDetectLongPolling, 
-            this.useFetchStreams = !!t.useFetchStreams, ga("experimentalForceLongPolling", t.experimentalForceLongPolling, "experimentalAutoDetectLongPolling", t.experimentalAutoDetectLongPolling);
+            this.useFetchStreams = !!t.useFetchStreams, Gu("experimentalForceLongPolling", t.experimentalForceLongPolling, "experimentalAutoDetectLongPolling", t.experimentalAutoDetectLongPolling);
         }
         isEqual(t) {
             return this.host === t.host && this.ssl === t.ssl && this.credentials === t.credentials && this.cacheSizeBytes === t.cacheSizeBytes && this.experimentalForceLongPolling === t.experimentalForceLongPolling && this.experimentalAutoDetectLongPolling === t.experimentalAutoDetectLongPolling && this.ignoreUndefinedProperties === t.ignoreUndefinedProperties && this.useFetchStreams === t.useFetchStreams;
@@ -11726,18 +12514,18 @@ var app = (function () {
      * The Cloud Firestore service interface.
      *
      * Do not call this constructor directly. Instead, use {@link getFirestore}.
-     */ class Ra {
+     */ class Yu {
         /** @hideconstructor */
         constructor(t, e, n) {
             this._authCredentials = e, this._appCheckCredentials = n, 
             /**
              * Whether it's a Firestore or Firestore Lite instance.
              */
-            this.type = "firestore-lite", this._persistenceKey = "(lite)", this._settings = new Aa({}), 
-            this._settingsFrozen = !1, t instanceof wa ? this._databaseId = t : (this._app = t, 
+            this.type = "firestore-lite", this._persistenceKey = "(lite)", this._settings = new Ju({}), 
+            this._settingsFrozen = !1, t instanceof Vt ? this._databaseId = t : (this._app = t, 
             this._databaseId = function(t) {
-                if (!Object.prototype.hasOwnProperty.apply(t.options, [ "projectId" ])) throw new Q(j.INVALID_ARGUMENT, '"projectId" not provided in firebase.initializeApp.');
-                return new wa(t.options.projectId);
+                if (!Object.prototype.hasOwnProperty.apply(t.options, [ "projectId" ])) throw new j(G.INVALID_ARGUMENT, '"projectId" not provided in firebase.initializeApp.');
+                return new Vt(t.options.projectId);
             }
             /**
      * Modify this instance to communicate with the Cloud Firestore emulator.
@@ -11757,7 +12545,7 @@ var app = (function () {
          * The {@link @firebase/app#FirebaseApp} associated with this `Firestore` service
          * instance.
          */    get app() {
-            if (!this._app) throw new Q(j.FAILED_PRECONDITION, "Firestore was not initialized using the Firebase SDK. 'app' is not available");
+            if (!this._app) throw new j(G.FAILED_PRECONDITION, "Firestore was not initialized using the Firebase SDK. 'app' is not available");
             return this._app;
         }
         get _initialized() {
@@ -11767,8 +12555,8 @@ var app = (function () {
             return void 0 !== this._terminateTask;
         }
         _setSettings(t) {
-            if (this._settingsFrozen) throw new Q(j.FAILED_PRECONDITION, "Firestore has already been started and its settings can no longer be changed. You can only modify settings before calling any other methods on a Firestore object.");
-            this._settings = new Aa(t), void 0 !== t.credentials && (this._authCredentials = function(t) {
+            if (this._settingsFrozen) throw new j(G.FAILED_PRECONDITION, "Firestore has already been started and its settings can no longer be changed. You can only modify settings before calling any other methods on a Firestore object.");
+            this._settings = new Ju(t), void 0 !== t.credentials && (this._authCredentials = function(t) {
                 if (!t) return new z;
                 switch (t.type) {
                   case "gapi":
@@ -11781,7 +12569,7 @@ var app = (function () {
                     return t.client;
 
                   default:
-                    throw new Q(j.INVALID_ARGUMENT, "makeAuthCredentialsProvider failed due to invalid credential type");
+                    throw new j(G.INVALID_ARGUMENT, "makeAuthCredentialsProvider failed due to invalid credential type");
                 }
             }(t.credentials));
         }
@@ -11813,8 +12601,8 @@ var app = (function () {
      * when the `Firestore` instance is terminated.
      */
             return function(t) {
-                const e = _a.get(t);
-                e && (O("ComponentProvider", "Removing Datastore"), _a.delete(t), e.terminate());
+                const e = qu.get(t);
+                e && (M("ComponentProvider", "Removing Datastore"), qu.delete(t), e.terminate());
             }(this), Promise.resolve();
         }
     }
@@ -11839,7 +12627,7 @@ var app = (function () {
      * A `DocumentReference` refers to a document location in a Firestore database
      * and can be used to write, read, or listen to the location. The document at
      * the referenced location may or may not exist.
-     */ class Pa {
+     */ class Zu {
         /** @hideconstructor */
         constructor(t, 
         /**
@@ -11867,17 +12655,17 @@ var app = (function () {
         /**
          * The collection this `DocumentReference` belongs to.
          */    get parent() {
-            return new Va(this.firestore, this.converter, this._key.path.popLast());
+            return new ea(this.firestore, this.converter, this._key.path.popLast());
         }
         withConverter(t) {
-            return new Pa(this.firestore, t, this._key);
+            return new Zu(this.firestore, t, this._key);
         }
     }
 
     /**
      * A `Query` refers to a query which you can read or listen to. You can also
      * construct refined `Query` objects by adding filters and ordering.
-     */ class va {
+     */ class ta {
         // This is the lite version of the Query class in the main SDK.
         /** @hideconstructor protected */
         constructor(t, 
@@ -11890,17 +12678,17 @@ var app = (function () {
             this.type = "query", this.firestore = t;
         }
         withConverter(t) {
-            return new va(this.firestore, t, this._query);
+            return new ta(this.firestore, t, this._query);
         }
     }
 
     /**
      * A `CollectionReference` object can be used for adding documents, getting
      * document references, and querying for documents (using {@link query}).
-     */ class Va extends va {
+     */ class ea extends ta {
         /** @hideconstructor */
         constructor(t, e, n) {
-            super(t, e, ye(n)), this._path = n, 
+            super(t, e, Ae(n)), this._path = n, 
             /** The type of this Firestore reference. */
             this.type = "collection";
         }
@@ -11918,40 +12706,40 @@ var app = (function () {
          * subcollection. If this isn't a subcollection, the reference is null.
          */    get parent() {
             const t = this._path.popLast();
-            return t.isEmpty() ? null : new Pa(this.firestore, 
-            /* converter= */ null, new Dt(t));
+            return t.isEmpty() ? null : new Zu(this.firestore, 
+            /* converter= */ null, new Nt(t));
         }
         withConverter(t) {
-            return new Va(this.firestore, t, this._path);
+            return new ea(this.firestore, t, this._path);
         }
     }
 
-    function Sa(t, e, ...n) {
-        if (t = getModularInstance(t), ma("collection", "path", e), t instanceof Ra) {
-            const s = wt.fromString(e, ...n);
-            return pa(s), new Va(t, /* converter= */ null, s);
+    function na(t, e, ...n) {
+        if (t = getModularInstance(t), Ku("collection", "path", e), t instanceof Yu) {
+            const s = _t.fromString(e, ...n);
+            return Qu(s), new ea(t, /* converter= */ null, s);
         }
         {
-            if (!(t instanceof Pa || t instanceof Va)) throw new Q(j.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
-            const s = t._path.child(wt.fromString(e, ...n));
-            return pa(s), new Va(t.firestore, 
+            if (!(t instanceof Zu || t instanceof ea)) throw new j(G.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
+            const s = t._path.child(_t.fromString(e, ...n));
+            return Qu(s), new ea(t.firestore, 
             /* converter= */ null, s);
         }
     }
 
-    function Ca(t, e, ...n) {
+    function ia(t, e, ...n) {
         if (t = getModularInstance(t), 
         // We allow omission of 'pathString' but explicitly prohibit passing in both
         // 'undefined' and 'null'.
-        1 === arguments.length && (e = it.A()), ma("doc", "path", e), t instanceof Ra) {
-            const s = wt.fromString(e, ...n);
-            return ya(s), new Pa(t, 
-            /* converter= */ null, new Dt(s));
+        1 === arguments.length && (e = it.R()), Ku("doc", "path", e), t instanceof Yu) {
+            const s = _t.fromString(e, ...n);
+            return ju(s), new Zu(t, 
+            /* converter= */ null, new Nt(s));
         }
         {
-            if (!(t instanceof Pa || t instanceof Va)) throw new Q(j.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
-            const s = t._path.child(wt.fromString(e, ...n));
-            return ya(s), new Pa(t.firestore, t instanceof Va ? t.converter : null, new Dt(s));
+            if (!(t instanceof Zu || t instanceof ea)) throw new j(G.INVALID_ARGUMENT, "Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore");
+            const s = t._path.child(_t.fromString(e, ...n));
+            return ju(s), new Zu(t.firestore, t instanceof ea ? t.converter : null, new Nt(s));
         }
     }
 
@@ -11970,42 +12758,42 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ class xa {
+     */ class ca {
         constructor() {
             // The last promise in the queue.
-            this.mc = Promise.resolve(), 
+            this.hu = Promise.resolve(), 
             // A list of retryable operations. Retryable operations are run in order and
             // retried with backoff.
-            this.gc = [], 
+            this.lu = [], 
             // Is this AsyncQueue being shut down? Once it is set to true, it will not
             // be changed again.
-            this.yc = !1, 
+            this.fu = !1, 
             // Operations scheduled to be queued in the future. Operations are
             // automatically removed after they are run or canceled.
-            this.Tc = [], 
+            this.du = [], 
             // visible for testing
-            this.Ec = null, 
+            this._u = null, 
             // Flag set while there's an outstanding AsyncQueue operation, used for
             // assertion sanity-checks.
-            this.Ic = !1, 
+            this.wu = !1, 
             // Enabled during shutdown on Safari to prevent future access to IndexedDB.
-            this.Ac = !1, 
+            this.mu = !1, 
             // List of TimerIds to fast-forward delays for.
-            this.Rc = [], 
+            this.gu = [], 
             // Backoff timer used to schedule retries for retryable operations
-            this.ur = new no(this, "async_queue_retry" /* AsyncQueueRetry */), 
+            this.ro = new Co(this, "async_queue_retry" /* AsyncQueueRetry */), 
             // Visibility handler that triggers an immediate retry of all retryable
             // operations. Meant to speed up recovery when we regain file system access
             // after page comes into foreground.
-            this.bc = () => {
-                const t = to();
-                t && O("AsyncQueue", "Visibility state changed to " + t.visibilityState), this.ur.er();
+            this.yu = () => {
+                const t = So();
+                t && M("AsyncQueue", "Visibility state changed to " + t.visibilityState), this.ro.Yr();
             };
-            const t = to();
-            t && "function" == typeof t.addEventListener && t.addEventListener("visibilitychange", this.bc);
+            const t = So();
+            t && "function" == typeof t.addEventListener && t.addEventListener("visibilitychange", this.yu);
         }
         get isShuttingDown() {
-            return this.yc;
+            return this.fu;
         }
         /**
          * Adds a new operation to the queue without waiting for it to complete (i.e.
@@ -12015,44 +12803,44 @@ var app = (function () {
             this.enqueue(t);
         }
         enqueueAndForgetEvenWhileRestricted(t) {
-            this.Pc(), 
+            this.pu(), 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            this.vc(t);
+            this.Iu(t);
         }
         enterRestrictedMode(t) {
-            if (!this.yc) {
-                this.yc = !0, this.Ac = t || !1;
-                const e = to();
-                e && "function" == typeof e.removeEventListener && e.removeEventListener("visibilitychange", this.bc);
+            if (!this.fu) {
+                this.fu = !0, this.mu = t || !1;
+                const e = So();
+                e && "function" == typeof e.removeEventListener && e.removeEventListener("visibilitychange", this.yu);
             }
         }
         enqueue(t) {
-            if (this.Pc(), this.yc) 
+            if (this.pu(), this.fu) 
             // Return a Promise which never resolves.
             return new Promise((() => {}));
             // Create a deferred Promise that we can return to the callee. This
             // allows us to return a "hanging Promise" only to the callee and still
             // advance the queue even when the operation is not run.
-                    const e = new W;
-            return this.vc((() => this.yc && this.Ac ? Promise.resolve() : (t().then(e.resolve, e.reject), 
+                    const e = new Q;
+            return this.Iu((() => this.fu && this.mu ? Promise.resolve() : (t().then(e.resolve, e.reject), 
             e.promise))).then((() => e.promise));
         }
         enqueueRetryable(t) {
-            this.enqueueAndForget((() => (this.gc.push(t), this.Vc())));
+            this.enqueueAndForget((() => (this.lu.push(t), this.Eu())));
         }
         /**
          * Runs the next operation from the retryable queue. If the operation fails,
          * reschedules with backoff.
-         */    async Vc() {
-            if (0 !== this.gc.length) {
+         */    async Eu() {
+            if (0 !== this.lu.length) {
                 try {
-                    await this.gc[0](), this.gc.shift(), this.ur.reset();
+                    await this.lu[0](), this.lu.shift(), this.ro.reset();
                 } catch (t) {
-                    if (!Zs(t)) throw t;
+                    if (!ui(t)) throw t;
      // Failure will be handled by AsyncQueue
-                                    O("AsyncQueue", "Operation failed with retryable error: " + t);
+                                    M("AsyncQueue", "Operation failed with retryable error: " + t);
                 }
-                this.gc.length > 0 && 
+                this.lu.length > 0 && 
                 // If there are additional operations, we re-schedule `retryNextOp()`.
                 // This is necessary to run retryable operations that failed during
                 // their initial attempt since we don't know whether they are already
@@ -12063,12 +12851,12 @@ var app = (function () {
                 // Since `backoffAndRun()` cancels an existing backoff and schedules a
                 // new backoff on every call, there is only ever a single additional
                 // operation in the queue.
-                this.ur.Zi((() => this.Vc()));
+                this.ro.Hr((() => this.Eu()));
             }
         }
-        vc(t) {
-            const e = this.mc.then((() => (this.Ic = !0, t().catch((t => {
-                this.Ec = t, this.Ic = !1;
+        Iu(t) {
+            const e = this.hu.then((() => (this.wu = !0, t().catch((t => {
+                this._u = t, this.wu = !1;
                 const e = 
                 /**
      * Chrome includes Error.message in Error.stack. Other browsers do not.
@@ -12099,39 +12887,39 @@ var app = (function () {
                 // Re-throw the error so that this.tail becomes a rejected Promise and
                 // all further attempts to chain (via .then) will just short-circuit
                 // and return the rejected Promise.
-                throw M("INTERNAL UNHANDLED ERROR: ", e), t;
-            })).then((t => (this.Ic = !1, t))))));
-            return this.mc = e, e;
+                throw $("INTERNAL UNHANDLED ERROR: ", e), t;
+            })).then((t => (this.wu = !1, t))))));
+            return this.hu = e, e;
         }
         enqueueAfterDelay(t, e, n) {
-            this.Pc(), 
+            this.pu(), 
             // Fast-forward delays for timerIds that have been overriden.
-            this.Rc.indexOf(t) > -1 && (e = 0);
-            const s = Mo.createAndSchedule(this, t, e, n, (t => this.Sc(t)));
-            return this.Tc.push(s), s;
+            this.gu.indexOf(t) > -1 && (e = 0);
+            const s = fc.createAndSchedule(this, t, e, n, (t => this.Tu(t)));
+            return this.du.push(s), s;
         }
-        Pc() {
-            this.Ec && B();
+        pu() {
+            this._u && L();
         }
         verifyOperationInProgress() {}
         /**
          * Waits until all currently queued tasks are finished executing. Delayed
          * operations are not run.
-         */    async Dc() {
+         */    async Au() {
             // Operations in the queue prior to draining may have enqueued additional
             // operations. Keep draining the queue until the tail is no longer advanced,
             // which indicates that no more new operations were enqueued and that all
             // operations were executed.
             let t;
             do {
-                t = this.mc, await t;
-            } while (t !== this.mc);
+                t = this.hu, await t;
+            } while (t !== this.hu);
         }
         /**
          * For Tests: Determine if a delayed operation with a particular TimerId
          * exists.
-         */    Cc(t) {
-            for (const e of this.Tc) if (e.timerId === t) return !0;
+         */    Ru(t) {
+            for (const e of this.du) if (e.timerId === t) return !0;
             return !1;
         }
         /**
@@ -12140,24 +12928,24 @@ var app = (function () {
          * @param lastTimerId - Delayed operations up to and including this TimerId
          * will be drained. Pass TimerId.All to run all delayed operations.
          * @returns a Promise that resolves once all operations have been run.
-         */    Nc(t) {
+         */    Pu(t) {
             // Note that draining may generate more delayed ops, so we do that first.
-            return this.Dc().then((() => {
+            return this.Au().then((() => {
                 // Run ops in the same order they'd run if they ran naturally.
-                this.Tc.sort(((t, e) => t.targetTimeMs - e.targetTimeMs));
-                for (const e of this.Tc) if (e.skipDelay(), "all" /* All */ !== t && e.timerId === t) break;
-                return this.Dc();
+                this.du.sort(((t, e) => t.targetTimeMs - e.targetTimeMs));
+                for (const e of this.du) if (e.skipDelay(), "all" /* All */ !== t && e.timerId === t) break;
+                return this.Au();
             }));
         }
         /**
          * For Tests: Skip all subsequent delays for a timer id.
-         */    kc(t) {
-            this.Rc.push(t);
+         */    bu(t) {
+            this.gu.push(t);
         }
-        /** Called once a DelayedOperation is run or canceled. */    Sc(t) {
+        /** Called once a DelayedOperation is run or canceled. */    Tu(t) {
             // NOTE: indexOf / slice are O(n), but delayedOperations is expected to be small.
-            const e = this.Tc.indexOf(t);
-            this.Tc.splice(e, 1);
+            const e = this.du.indexOf(t);
+            this.du.splice(e, 1);
         }
     }
 
@@ -12166,20 +12954,20 @@ var app = (function () {
      *
      * Do not call this constructor directly. Instead, use {@link getFirestore}.
      */
-    class Fa extends Ra {
+    class la extends Yu {
         /** @hideconstructor */
         constructor(t, e, n) {
             super(t, e, n), 
             /**
              * Whether it's a {@link Firestore} or Firestore Lite instance.
              */
-            this.type = "firestore", this._queue = new xa, this._persistenceKey = "name" in t ? t.name : "[DEFAULT]";
+            this.type = "firestore", this._queue = new ca, this._persistenceKey = "name" in t ? t.name : "[DEFAULT]";
         }
         _terminate() {
             return this._firestoreClient || 
             // The client must be initialized to ensure that all subsequent API
             // usage throws an exception.
-            qa(this), this._firestoreClient.terminate();
+            wa(this), this._firestoreClient.terminate();
         }
     }
 
@@ -12191,22 +12979,22 @@ var app = (function () {
      * @param app - The {@link @firebase/app#FirebaseApp} instance that the returned {@link Firestore}
      * instance is associated with.
      * @returns The {@link Firestore} instance of the provided app.
-     */ function Ba(e = getApp()) {
+     */ function da(e = getApp()) {
         return _getProvider(e, "firestore").getImmediate();
     }
 
     /**
      * @internal
-     */ function Ua(t) {
-        return t._firestoreClient || qa(t), t._firestoreClient.verifyNotTerminated(), t._firestoreClient;
+     */ function _a(t) {
+        return t._firestoreClient || wa(t), t._firestoreClient.verifyNotTerminated(), t._firestoreClient;
     }
 
-    function qa(t) {
+    function wa(t) {
         var e;
         const n = t._freezeSettings(), s = function(t, e, n, s) {
-            return new da(t, e, n, s.host, s.ssl, s.experimentalForceLongPolling, s.experimentalAutoDetectLongPolling, s.useFetchStreams);
+            return new vt(t, e, n, s.host, s.ssl, s.experimentalForceLongPolling, s.experimentalAutoDetectLongPolling, s.useFetchStreams);
         }(t._databaseId, (null === (e = t._app) || void 0 === e ? void 0 : e.options.appId) || "", t._persistenceKey, n);
-        t._firestoreClient = new Gc(t._authCredentials, t._appCheckCredentials, t._queue, s);
+        t._firestoreClient = new Tu(t._authCredentials, t._appCheckCredentials, t._queue, s);
     }
 
     /**
@@ -12249,7 +13037,7 @@ var app = (function () {
      * Create a `FieldPath` by providing field names. If more than one field
      * name is provided, the path will point to a nested field in a document.
      */
-    class tu {
+    class va {
         /**
          * Creates a `FieldPath` from the provided field names. If more than one field
          * name is provided, the path will point to a nested field in a document.
@@ -12257,7 +13045,7 @@ var app = (function () {
          * @param fieldNames - A list of field names.
          */
         constructor(...t) {
-            for (let e = 0; e < t.length; ++e) if (0 === t[e].length) throw new Q(j.INVALID_ARGUMENT, "Invalid field name at argument $(i + 1). Field names must not be empty.");
+            for (let e = 0; e < t.length; ++e) if (0 === t[e].length) throw new j(G.INVALID_ARGUMENT, "Invalid field name at argument $(i + 1). Field names must not be empty.");
             this._internalPath = new mt(t);
         }
         /**
@@ -12288,7 +13076,7 @@ var app = (function () {
      */
     /**
      * An immutable object representing an array of bytes.
-     */ class nu {
+     */ class Sa {
         /** @hideconstructor */
         constructor(t) {
             this._byteString = t;
@@ -12300,9 +13088,9 @@ var app = (function () {
          * @param base64 - The Base64 string used to create the `Bytes` object.
          */    static fromBase64String(t) {
             try {
-                return new nu(pt.fromBase64String(t));
+                return new Sa(pt.fromBase64String(t));
             } catch (t) {
-                throw new Q(j.INVALID_ARGUMENT, "Failed to construct data from Base64 string: " + t);
+                throw new j(G.INVALID_ARGUMENT, "Failed to construct data from Base64 string: " + t);
             }
         }
         /**
@@ -12310,7 +13098,7 @@ var app = (function () {
          *
          * @param array - The Uint8Array used to create the `Bytes` object.
          */    static fromUint8Array(t) {
-            return new nu(pt.fromUint8Array(t));
+            return new Sa(pt.fromUint8Array(t));
         }
         /**
          * Returns the underlying bytes as a Base64-encoded string.
@@ -12362,7 +13150,7 @@ var app = (function () {
     /**
      * Sentinel values that can be used when writing document fields with `set()`
      * or `update()`.
-     */ class su {
+     */ class Da {
         /**
          * @param _methodName - The public API endpoint that returns this class.
          * @hideconstructor
@@ -12394,7 +13182,7 @@ var app = (function () {
      *
      * Latitude values are in the range of [-90, 90].
      * Longitude values are in the range of [-180, 180].
-     */ class iu {
+     */ class Ca {
         /**
          * Creates a new immutable `GeoPoint` object with the provided latitude and
          * longitude values.
@@ -12402,8 +13190,8 @@ var app = (function () {
          * @param longitude - The longitude as number between -180 and 180.
          */
         constructor(t, e) {
-            if (!isFinite(t) || t < -90 || t > 90) throw new Q(j.INVALID_ARGUMENT, "Latitude must be a number between -90 and 90, but was: " + t);
-            if (!isFinite(e) || e < -180 || e > 180) throw new Q(j.INVALID_ARGUMENT, "Longitude must be a number between -180 and 180, but was: " + e);
+            if (!isFinite(t) || t < -90 || t > 90) throw new j(G.INVALID_ARGUMENT, "Latitude must be a number between -90 and 90, but was: " + t);
+            if (!isFinite(e) || e < -180 || e > 180) throw new j(G.INVALID_ARGUMENT, "Longitude must be a number between -180 and 180, but was: " + e);
             this._lat = t, this._long = e;
         }
         /**
@@ -12453,18 +13241,18 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ const ru = /^__.*__$/;
+     */ const Na = /^__.*__$/;
 
-    /** The result of parsing document data (e.g. for a setData call). */ class ou {
+    /** The result of parsing document data (e.g. for a setData call). */ class xa {
         constructor(t, e, n) {
             this.data = t, this.fieldMask = e, this.fieldTransforms = n;
         }
         toMutation(t, e) {
-            return null !== this.fieldMask ? new cn(t, this.data, this.fieldMask, e, this.fieldTransforms) : new on(t, this.data, e, this.fieldTransforms);
+            return null !== this.fieldMask ? new fn(t, this.data, this.fieldMask, e, this.fieldTransforms) : new ln(t, this.data, e, this.fieldTransforms);
         }
     }
 
-    function au(t) {
+    function Oa(t) {
         switch (t) {
           case 0 /* Set */ :
      // fall through
@@ -12478,11 +13266,11 @@ var app = (function () {
             return !1;
 
           default:
-            throw B();
+            throw L();
         }
     }
 
-    /** A "context" object passed around while parsing user data. */ class uu {
+    /** A "context" object passed around while parsing user data. */ class Ma {
         /**
          * Initializes a ParseContext with the given source and path.
          *
@@ -12502,100 +13290,100 @@ var app = (function () {
          * compromised).
          */
         constructor(t, e, n, s, i, r) {
-            this.settings = t, this.databaseId = e, this.k = n, this.ignoreUndefinedProperties = s, 
+            this.settings = t, this.databaseId = e, this.O = n, this.ignoreUndefinedProperties = s, 
             // Minor hack: If fieldTransforms is undefined, we assume this is an
             // external call and we need to validate the entire path.
-            void 0 === i && this.xc(), this.fieldTransforms = i || [], this.fieldMask = r || [];
+            void 0 === i && this.vu(), this.fieldTransforms = i || [], this.fieldMask = r || [];
         }
         get path() {
             return this.settings.path;
         }
-        get $c() {
-            return this.settings.$c;
+        get Vu() {
+            return this.settings.Vu;
         }
-        /** Returns a new context with the specified settings overwritten. */    Oc(t) {
-            return new uu(Object.assign(Object.assign({}, this.settings), t), this.databaseId, this.k, this.ignoreUndefinedProperties, this.fieldTransforms, this.fieldMask);
+        /** Returns a new context with the specified settings overwritten. */    Su(t) {
+            return new Ma(Object.assign(Object.assign({}, this.settings), t), this.databaseId, this.O, this.ignoreUndefinedProperties, this.fieldTransforms, this.fieldMask);
         }
-        Mc(t) {
+        Du(t) {
             var e;
-            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Oc({
+            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Su({
                 path: n,
-                Fc: !1
+                Cu: !1
             });
-            return s.Lc(t), s;
+            return s.Nu(t), s;
         }
-        Bc(t) {
+        xu(t) {
             var e;
-            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Oc({
+            const n = null === (e = this.path) || void 0 === e ? void 0 : e.child(t), s = this.Su({
                 path: n,
-                Fc: !1
+                Cu: !1
             });
-            return s.xc(), s;
+            return s.vu(), s;
         }
-        Uc(t) {
+        ku(t) {
             // TODO(b/34871131): We don't support array paths right now; so make path
             // undefined.
-            return this.Oc({
+            return this.Su({
                 path: void 0,
-                Fc: !0
+                Cu: !0
             });
         }
-        qc(t) {
-            return Su(t, this.settings.methodName, this.settings.Kc || !1, this.path, this.settings.jc);
+        Ou(t) {
+            return nh(t, this.settings.methodName, this.settings.Mu || !1, this.path, this.settings.$u);
         }
         /** Returns 'true' if 'fieldPath' was traversed when creating this context. */    contains(t) {
             return void 0 !== this.fieldMask.find((e => t.isPrefixOf(e))) || void 0 !== this.fieldTransforms.find((e => t.isPrefixOf(e.field)));
         }
-        xc() {
+        vu() {
             // TODO(b/34871131): Remove null check once we have proper paths for fields
             // within arrays.
-            if (this.path) for (let t = 0; t < this.path.length; t++) this.Lc(this.path.get(t));
+            if (this.path) for (let t = 0; t < this.path.length; t++) this.Nu(this.path.get(t));
         }
-        Lc(t) {
-            if (0 === t.length) throw this.qc("Document fields must not be empty");
-            if (au(this.$c) && ru.test(t)) throw this.qc('Document fields cannot begin and end with "__"');
+        Nu(t) {
+            if (0 === t.length) throw this.Ou("Document fields must not be empty");
+            if (Oa(this.Vu) && Na.test(t)) throw this.Ou('Document fields cannot begin and end with "__"');
         }
     }
 
     /**
      * Helper for parsing raw user input (provided via the API) into internal model
      * classes.
-     */ class hu {
+     */ class $a {
         constructor(t, e, n) {
-            this.databaseId = t, this.ignoreUndefinedProperties = e, this.k = n || eo(t);
+            this.databaseId = t, this.ignoreUndefinedProperties = e, this.O = n || Do(t);
         }
-        /** Creates a new top-level parse context. */    Qc(t, e, n, s = !1) {
-            return new uu({
-                $c: t,
+        /** Creates a new top-level parse context. */    Fu(t, e, n, s = !1) {
+            return new Ma({
+                Vu: t,
                 methodName: e,
-                jc: n,
+                $u: n,
                 path: mt.emptyPath(),
-                Fc: !1,
-                Kc: s
-            }, this.databaseId, this.k, this.ignoreUndefinedProperties);
+                Cu: !1,
+                Mu: s
+            }, this.databaseId, this.O, this.ignoreUndefinedProperties);
         }
     }
 
-    function lu(t) {
-        const e = t._freezeSettings(), n = eo(t._databaseId);
-        return new hu(t._databaseId, !!e.ignoreUndefinedProperties, n);
+    function Fa(t) {
+        const e = t._freezeSettings(), n = Do(t._databaseId);
+        return new $a(t._databaseId, !!e.ignoreUndefinedProperties, n);
     }
 
-    /** Parse document data from a set() call. */ function fu(t, e, n, s, i, r = {}) {
-        const o = t.Qc(r.merge || r.mergeFields ? 2 /* MergeSet */ : 0 /* Set */ , e, n, i);
-        bu("Data must be an object, but it was:", o, s);
-        const c = Au(s, o);
-        let a, u;
-        if (r.merge) a = new gt(o.fieldMask), u = o.fieldTransforms; else if (r.mergeFields) {
+    /** Parse document data from a set() call. */ function Ba(t, e, n, s, i, r = {}) {
+        const o = t.Fu(r.merge || r.mergeFields ? 2 /* MergeSet */ : 0 /* Set */ , e, n, i);
+        Xa("Data must be an object, but it was:", o, s);
+        const c = Ja(s, o);
+        let u, a;
+        if (r.merge) u = new gt(o.fieldMask), a = o.fieldTransforms; else if (r.mergeFields) {
             const t = [];
             for (const s of r.mergeFields) {
-                const i = Pu(e, s, n);
-                if (!o.contains(i)) throw new Q(j.INVALID_ARGUMENT, `Field '${i}' is specified in your field mask but missing from your input data.`);
-                Du(t, i) || t.push(i);
+                const i = Za(e, s, n);
+                if (!o.contains(i)) throw new j(G.INVALID_ARGUMENT, `Field '${i}' is specified in your field mask but missing from your input data.`);
+                sh(t, i) || t.push(i);
             }
-            a = new gt(t), u = o.fieldTransforms.filter((t => a.covers(t.field)));
-        } else a = null, u = o.fieldTransforms;
-        return new ou(new Qt(c), a, u);
+            u = new gt(t), a = o.fieldTransforms.filter((t => u.covers(t.field)));
+        } else u = null, a = o.fieldTransforms;
+        return new xa(new zt(c), u, a);
     }
 
     /**
@@ -12606,12 +13394,12 @@ var app = (function () {
      * the source of the data being parsed, etc.
      * @returns The parsed value, or null if the value was a FieldValue sentinel
      * that should not be included in the resulting parsed data.
-     */ function Iu(t, e) {
-        if (Ru(
+     */ function Ha(t, e) {
+        if (Ya(
         // Unwrap the API type from the Compat SDK. This will return the API type
         // from firestore-exp.
-        t = getModularInstance(t))) return bu("Unsupported field value:", e, t), Au(t, e);
-        if (t instanceof su) 
+        t = getModularInstance(t))) return Xa("Unsupported field value:", e, t), Ja(t, e);
+        if (t instanceof Da) 
         // FieldValues usually parse into transforms (except deleteField())
         // in which case we do not want to include this field in our parsed data
         // (as doing so will overwrite the field directly prior to the transform
@@ -12623,8 +13411,8 @@ var app = (function () {
      */
         return function(t, e) {
             // Sentinels are only supported with writes, and not within arrays.
-            if (!au(e.$c)) throw e.qc(`${t._methodName}() can only be used with update() and set()`);
-            if (!e.path) throw e.qc(`${t._methodName}() is not currently supported inside arrays`);
+            if (!Oa(e.Vu)) throw e.Ou(`${t._methodName}() can only be used with update() and set()`);
+            if (!e.path) throw e.Ou(`${t._methodName}() is not currently supported inside arrays`);
             const n = t._toFieldTransform(e);
             n && e.fieldTransforms.push(n);
         }
@@ -12648,12 +13436,12 @@ var app = (function () {
             // the set of values to be included for the IN query) that may directly
             // contain additional arrays (each representing an individual field
             // value), so we disable this validation.
-            if (e.settings.Fc && 4 /* ArrayArgument */ !== e.$c) throw e.qc("Nested arrays are not supported");
+            if (e.settings.Cu && 4 /* ArrayArgument */ !== e.Vu) throw e.Ou("Nested arrays are not supported");
             return function(t, e) {
                 const n = [];
                 let s = 0;
                 for (const i of t) {
-                    let t = Iu(i, e.Uc(s));
+                    let t = Ha(i, e.ku(s));
                     null == t && (
                     // Just include nulls in the array for fields being replaced with a
                     // sentinel.
@@ -12672,7 +13460,7 @@ var app = (function () {
             if (null === (t = getModularInstance(t))) return {
                 nullValue: "NULL_VALUE"
             };
-            if ("number" == typeof t) return $e(e.k, t);
+            if ("number" == typeof t) return Le(e.O, t);
             if ("boolean" == typeof t) return {
                 booleanValue: t
             };
@@ -12680,37 +13468,37 @@ var app = (function () {
                 stringValue: t
             };
             if (t instanceof Date) {
-                const n = at.fromDate(t);
+                const n = ut.fromDate(t);
                 return {
-                    timestampValue: Qn(e.k, n)
+                    timestampValue: Jn(e.O, n)
                 };
             }
-            if (t instanceof at) {
+            if (t instanceof ut) {
                 // Firestore backend truncates precision down to microseconds. To ensure
                 // offline mode works the same with regards to truncation, perform the
                 // truncation immediately without waiting for the backend to do that.
-                const n = new at(t.seconds, 1e3 * Math.floor(t.nanoseconds / 1e3));
+                const n = new ut(t.seconds, 1e3 * Math.floor(t.nanoseconds / 1e3));
                 return {
-                    timestampValue: Qn(e.k, n)
+                    timestampValue: Jn(e.O, n)
                 };
             }
-            if (t instanceof iu) return {
+            if (t instanceof Ca) return {
                 geoPointValue: {
                     latitude: t.latitude,
                     longitude: t.longitude
                 }
             };
-            if (t instanceof nu) return {
-                bytesValue: Wn(e.k, t._byteString)
+            if (t instanceof Sa) return {
+                bytesValue: Yn(e.O, t._byteString)
             };
-            if (t instanceof Pa) {
+            if (t instanceof Zu) {
                 const n = e.databaseId, s = t.firestore._databaseId;
-                if (!s.isEqual(n)) throw e.qc(`Document reference is for database ${s.projectId}/${s.database} but should be for database ${n.projectId}/${n.database}`);
+                if (!s.isEqual(n)) throw e.Ou(`Document reference is for database ${s.projectId}/${s.database} but should be for database ${n.projectId}/${n.database}`);
                 return {
-                    referenceValue: Hn(t.firestore._databaseId || e.databaseId, t._key.path)
+                    referenceValue: ts(t.firestore._databaseId || e.databaseId, t._key.path)
                 };
             }
-            throw e.qc(`Unsupported field value: ${Ta(t)}`);
+            throw e.Ou(`Unsupported field value: ${Wu(t)}`);
         }
         /**
      * Checks whether an object looks like a JSON object that should be converted
@@ -12721,13 +13509,13 @@ var app = (function () {
      */ (t, e);
     }
 
-    function Au(t, e) {
+    function Ja(t, e) {
         const n = {};
         return ft(t) ? 
         // If we encounter an empty object, we explicitly add it to the update
         // mask to ensure that the server creates a map entry.
         e.path && e.path.length > 0 && e.fieldMask.push(e.path) : lt(t, ((t, s) => {
-            const i = Iu(s, e.Mc(t));
+            const i = Ha(s, e.Du(t));
             null != i && (n[t] = i);
         })), {
             mapValue: {
@@ -12736,35 +13524,35 @@ var app = (function () {
         };
     }
 
-    function Ru(t) {
-        return !("object" != typeof t || null === t || t instanceof Array || t instanceof Date || t instanceof at || t instanceof iu || t instanceof nu || t instanceof Pa || t instanceof su);
+    function Ya(t) {
+        return !("object" != typeof t || null === t || t instanceof Array || t instanceof Date || t instanceof ut || t instanceof Ca || t instanceof Sa || t instanceof Zu || t instanceof Da);
     }
 
-    function bu(t, e, n) {
-        if (!Ru(n) || !function(t) {
+    function Xa(t, e, n) {
+        if (!Ya(n) || !function(t) {
             return "object" == typeof t && null !== t && (Object.getPrototypeOf(t) === Object.prototype || null === Object.getPrototypeOf(t));
         }(n)) {
-            const s = Ta(n);
-            throw "an object" === s ? e.qc(t + " a custom object") : e.qc(t + " " + s);
+            const s = Wu(n);
+            throw "an object" === s ? e.Ou(t + " a custom object") : e.Ou(t + " " + s);
         }
     }
 
     /**
      * Helper that calls fromDotSeparatedString() but wraps any error thrown.
-     */ function Pu(t, e, n) {
+     */ function Za(t, e, n) {
         if ((
         // If required, replace the FieldPath Compat class with with the firestore-exp
         // FieldPath.
-        e = getModularInstance(e)) instanceof tu) return e._internalPath;
-        if ("string" == typeof e) return Vu(t, e);
-        throw Su("Field path arguments must be of type string or ", t, 
+        e = getModularInstance(e)) instanceof va) return e._internalPath;
+        if ("string" == typeof e) return eh(t, e);
+        throw nh("Field path arguments must be of type string or ", t, 
         /* hasConverter= */ !1, 
         /* path= */ void 0, n);
     }
 
     /**
      * Matches any characters in a field path string that are reserved.
-     */ const vu = new RegExp("[~\\*/\\[\\]]");
+     */ const th = new RegExp("[~\\*/\\[\\]]");
 
     /**
      * Wraps fromDotSeparatedString with an error message about the method that
@@ -12774,29 +13562,29 @@ var app = (function () {
      * split on dots.
      * @param targetDoc - The document against which the field path will be
      * evaluated.
-     */ function Vu(t, e, n) {
-        if (e.search(vu) >= 0) throw Su(`Invalid field path (${e}). Paths must not contain '~', '*', '/', '[', or ']'`, t, 
+     */ function eh(t, e, n) {
+        if (e.search(th) >= 0) throw nh(`Invalid field path (${e}). Paths must not contain '~', '*', '/', '[', or ']'`, t, 
         /* hasConverter= */ !1, 
         /* path= */ void 0, n);
         try {
-            return new tu(...e.split("."))._internalPath;
+            return new va(...e.split("."))._internalPath;
         } catch (s) {
-            throw Su(`Invalid field path (${e}). Paths must not be empty, begin with '.', end with '.', or contain '..'`, t, 
+            throw nh(`Invalid field path (${e}). Paths must not be empty, begin with '.', end with '.', or contain '..'`, t, 
             /* hasConverter= */ !1, 
             /* path= */ void 0, n);
         }
     }
 
-    function Su(t, e, n, s, i) {
+    function nh(t, e, n, s, i) {
         const r = s && !s.isEmpty(), o = void 0 !== i;
         let c = `Function ${e}() called with invalid data`;
         n && (c += " (via `toFirestore()`)"), c += ". ";
-        let a = "";
-        return (r || o) && (a += " (found", r && (a += ` in field ${s}`), o && (a += ` in document ${i}`), 
-        a += ")"), new Q(j.INVALID_ARGUMENT, c + t + a);
+        let u = "";
+        return (r || o) && (u += " (found", r && (u += ` in field ${s}`), o && (u += ` in document ${i}`), 
+        u += ")"), new j(G.INVALID_ARGUMENT, c + t + u);
     }
 
-    /** Checks `haystack` if FieldPath `needle` is present. Runs in O(n). */ function Du(t, e) {
+    /** Checks `haystack` if FieldPath `needle` is present. Runs in O(n). */ function sh(t, e) {
         return t.some((t => t.isEqual(e)));
     }
 
@@ -12824,7 +13612,7 @@ var app = (function () {
      * For a `DocumentSnapshot` that points to a non-existing document, any data
      * access will return 'undefined'. You can use the `exists()` method to
      * explicitly verify a document's existence.
-     */ class Cu {
+     */ class ih {
         // Note: This class is stripped down version of the DocumentSnapshot in
         // the legacy SDK. The changes are:
         // - No support for SnapshotMetadata.
@@ -12840,7 +13628,7 @@ var app = (function () {
         /**
          * The `DocumentReference` for the document included in the `DocumentSnapshot`.
          */    get ref() {
-            return new Pa(this._firestore, this._converter, this._key);
+            return new Zu(this._firestore, this._converter, this._key);
         }
         /**
          * Signals whether or not the document at the snapshot's location exists.
@@ -12860,7 +13648,7 @@ var app = (function () {
                 if (this._converter) {
                     // We only want to use the converter and create a new DocumentSnapshot
                     // if a converter has been provided.
-                    const t = new Nu(this._firestore, this._userDataWriter, this._key, this._document, 
+                    const t = new rh(this._firestore, this._userDataWriter, this._key, this._document, 
                     /* converter= */ null);
                     return this._converter.fromFirestore(t);
                 }
@@ -12880,7 +13668,7 @@ var app = (function () {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         get(t) {
             if (this._document) {
-                const e = this._document.data.field(ku("DocumentSnapshot.get", t));
+                const e = this._document.data.field(oh("DocumentSnapshot.get", t));
                 if (null !== e) return this._userDataWriter.convertValue(e);
             }
         }
@@ -12896,7 +13684,7 @@ var app = (function () {
      * `DocumentSnapshot`. Since query results contain only existing documents, the
      * `exists` property will always be true and `data()` will never return
      * 'undefined'.
-     */ class Nu extends Cu {
+     */ class rh extends ih {
         /**
          * Retrieves all fields in the document as an `Object`.
          *
@@ -12910,8 +13698,8 @@ var app = (function () {
 
     /**
      * Helper that calls `fromDotSeparatedString()` but wraps any error thrown.
-     */ function ku(t, e) {
-        return "string" == typeof e ? Vu(t, e) : e instanceof tu ? e._internalPath : e._delegate._internalPath;
+     */ function oh(t, e) {
+        return "string" == typeof e ? eh(t, e) : e instanceof va ? e._internalPath : e._delegate._internalPath;
     }
 
     /**
@@ -12932,7 +13720,7 @@ var app = (function () {
      */
     /**
      * Metadata about a snapshot, describing the state of the snapshot.
-     */ class xu {
+     */ class ch {
         /** @hideconstructor */
         constructor(t, e) {
             this.hasPendingWrites = t, this.fromCache = e;
@@ -12955,14 +13743,13 @@ var app = (function () {
      * For a `DocumentSnapshot` that points to a non-existing document, any data
      * access will return 'undefined'. You can use the `exists()` method to
      * explicitly verify a document's existence.
-     */ class $u extends Cu {
+     */ class uh extends ih {
         /** @hideconstructor protected */
         constructor(t, e, n, s, i, r) {
             super(t, e, n, s, r), this._firestore = t, this._firestoreImpl = t, this.metadata = i;
         }
         /**
-         * Property of the `DocumentSnapshot` that signals whether or not the data
-         * exists. True if the document exists.
+         * Returns whether or not the data exists. True if the document exists.
          */    exists() {
             return super.exists();
         }
@@ -12984,7 +13771,7 @@ var app = (function () {
                 if (this._converter) {
                     // We only want to use the converter and create a new DocumentSnapshot
                     // if a converter has been provided.
-                    const e = new Ou(this._firestore, this._userDataWriter, this._key, this._document, this.metadata, 
+                    const e = new ah(this._firestore, this._userDataWriter, this._key, this._document, this.metadata, 
                     /* converter= */ null);
                     return this._converter.fromFirestore(e, t);
                 }
@@ -13011,7 +13798,7 @@ var app = (function () {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         get(t, e = {}) {
             if (this._document) {
-                const n = this._document.data.field(ku("DocumentSnapshot.get", t));
+                const n = this._document.data.field(oh("DocumentSnapshot.get", t));
                 if (null !== n) return this._userDataWriter.convertValue(n, e.serverTimestamps);
             }
         }
@@ -13027,7 +13814,7 @@ var app = (function () {
      * `DocumentSnapshot`. Since query results contain only existing documents, the
      * `exists` property will always be true and `data()` will never return
      * 'undefined'.
-     */ class Ou extends $u {
+     */ class ah extends uh {
         /**
          * Retrieves all fields in the document as an `Object`.
          *
@@ -13052,10 +13839,10 @@ var app = (function () {
      * array via the `docs` property or enumerated using the `forEach` method. The
      * number of documents can be determined via the `empty` and `size`
      * properties.
-     */ class Mu {
+     */ class hh {
         /** @hideconstructor */
         constructor(t, e, n, s) {
-            this._firestore = t, this._userDataWriter = e, this._snapshot = s, this.metadata = new xu(s.hasPendingWrites, s.fromCache), 
+            this._firestore = t, this._userDataWriter = e, this._snapshot = s, this.metadata = new ch(s.hasPendingWrites, s.fromCache), 
             this.query = n;
         }
         /** An array of all the documents in the `QuerySnapshot`. */    get docs() {
@@ -13076,7 +13863,7 @@ var app = (function () {
          * @param thisArg - The `this` binding for the callback.
          */    forEach(t, e) {
             this._snapshot.docs.forEach((n => {
-                t.call(e, new Ou(this._firestore, this._userDataWriter, n.key, n, new xu(this._snapshot.mutatedKeys.has(n.key), this._snapshot.fromCache), this.query.converter));
+                t.call(e, new ah(this._firestore, this._userDataWriter, n.key, n, new ch(this._snapshot.mutatedKeys.has(n.key), this._snapshot.fromCache), this.query.converter));
             }));
         }
         /**
@@ -13089,7 +13876,7 @@ var app = (function () {
          * snapshot events.
          */    docChanges(t = {}) {
             const e = !!t.includeMetadataChanges;
-            if (e && this._snapshot.excludesMetadataChanges) throw new Q(j.INVALID_ARGUMENT, "To include metadata changes with your document changes, you must also pass { includeMetadataChanges:true } to onSnapshot().");
+            if (e && this._snapshot.excludesMetadataChanges) throw new j(G.INVALID_ARGUMENT, "To include metadata changes with your document changes, you must also pass { includeMetadataChanges:true } to onSnapshot().");
             return this._cachedChanges && this._cachedChangesIncludeMetadataChanges === e || (this._cachedChanges = 
             /** Calculates the array of `DocumentChange`s for a given `ViewSnapshot`. */
             function(t, e) {
@@ -13097,7 +13884,7 @@ var app = (function () {
                     let e = 0;
                     return t._snapshot.docChanges.map((n => ({
                         type: "added",
-                        doc: new Ou(t._firestore, t._userDataWriter, n.doc.key, n.doc, new xu(t._snapshot.mutatedKeys.has(n.doc.key), t._snapshot.fromCache), t.query.converter),
+                        doc: new ah(t._firestore, t._userDataWriter, n.doc.key, n.doc, new ch(t._snapshot.mutatedKeys.has(n.doc.key), t._snapshot.fromCache), t.query.converter),
                         oldIndex: -1,
                         newIndex: e++
                     })));
@@ -13107,11 +13894,11 @@ var app = (function () {
                     // to lookup the index of a document.
                     let n = t._snapshot.oldDocs;
                     return t._snapshot.docChanges.filter((t => e || 3 /* Metadata */ !== t.type)).map((e => {
-                        const s = new Ou(t._firestore, t._userDataWriter, e.doc.key, e.doc, new xu(t._snapshot.mutatedKeys.has(e.doc.key), t._snapshot.fromCache), t.query.converter);
+                        const s = new ah(t._firestore, t._userDataWriter, e.doc.key, e.doc, new ch(t._snapshot.mutatedKeys.has(e.doc.key), t._snapshot.fromCache), t.query.converter);
                         let i = -1, r = -1;
                         return 0 /* Added */ !== e.type && (i = n.indexOf(e.doc.key), n = n.delete(e.doc.key)), 
                         1 /* Removed */ !== e.type && (n = n.add(e.doc), r = n.indexOf(e.doc.key)), {
-                            type: Fu(e.type),
+                            type: lh(e.type),
                             doc: s,
                             oldIndex: i,
                             newIndex: r
@@ -13122,7 +13909,7 @@ var app = (function () {
         }
     }
 
-    function Fu(t) {
+    function lh(t) {
         switch (t) {
           case 0 /* Added */ :
             return "added";
@@ -13135,7 +13922,7 @@ var app = (function () {
             return "removed";
 
           default:
-            return B();
+            return L();
         }
     }
 
@@ -13154,8 +13941,8 @@ var app = (function () {
      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
      * See the License for the specific language governing permissions and
      * limitations under the License.
-     */ function Bu(t) {
-        if (Te(t) && 0 === t.explicitOrderBy.length) throw new Q(j.UNIMPLEMENTED, "limitToLast() queries require specifying at least one orderBy() clause");
+     */ function dh(t) {
+        if (Pe(t) && 0 === t.explicitOrderBy.length) throw new j(G.UNIMPLEMENTED, "limitToLast() queries require specifying at least one orderBy() clause");
     }
 
     /**
@@ -13179,9 +13966,9 @@ var app = (function () {
      * to the user.
      *
      * @internal
-     */ class oh {
+     */ class xh {
         convertValue(t, e = "none") {
-            switch (Ct(t)) {
+            switch (kt(t)) {
               case 0 /* NullValue */ :
                 return null;
 
@@ -13189,7 +13976,7 @@ var app = (function () {
                 return t.booleanValue;
 
               case 2 /* NumberValue */ :
-                return It(t.integerValue || t.doubleValue);
+                return Tt(t.integerValue || t.doubleValue);
 
               case 3 /* TimestampValue */ :
                 return this.convertTimestamp(t.timestampValue);
@@ -13216,7 +14003,7 @@ var app = (function () {
                 return this.convertObject(t.mapValue, e);
 
               default:
-                throw B();
+                throw L();
             }
         }
         convertObject(t, e) {
@@ -13226,7 +14013,7 @@ var app = (function () {
             })), n;
         }
         convertGeoPoint(t) {
-            return new iu(It(t.latitude), It(t.longitude));
+            return new Ca(Tt(t.latitude), Tt(t.longitude));
         }
         convertArray(t, e) {
             return (t.values || []).map((t => this.convertValue(t, e)));
@@ -13234,11 +14021,11 @@ var app = (function () {
         convertServerTimestamp(t, e) {
             switch (e) {
               case "previous":
-                const n = bt(t);
+                const n = Pt(t);
                 return null == n ? null : this.convertValue(n, e);
 
               case "estimate":
-                return this.convertTimestamp(Pt(t));
+                return this.convertTimestamp(bt(t));
 
               default:
                 return null;
@@ -13246,15 +14033,15 @@ var app = (function () {
         }
         convertTimestamp(t) {
             const e = Et(t);
-            return new at(e.seconds, e.nanos);
+            return new ut(e.seconds, e.nanos);
         }
         convertDocumentKey(t, e) {
-            const n = wt.fromString(t);
-            U(Rs(n));
-            const s = new wa(n.get(1), n.get(3)), i = new Dt(n.popFirst(5));
+            const n = _t.fromString(t);
+            U(vs(n));
+            const s = new Vt(n.get(1), n.get(3)), i = new Nt(n.popFirst(5));
             return s.isEqual(e) || 
             // TODO(b/64130202): Somehow support foreign references.
-            M(`Document ${i} contains a document reference within a different database (${s.projectId}/${s.database}) which is not supported. It will be treated as a reference in the current database (${e.projectId}/${e.database}) instead.`), 
+            $(`Document ${i} contains a document reference within a different database (${s.projectId}/${s.database}) which is not supported. It will be treated as a reference in the current database (${e.projectId}/${e.database}) instead.`), 
             i;
         }
     }
@@ -13283,7 +14070,7 @@ var app = (function () {
      * because we want to provide the user with a more specific error message if
      * their `set()` or fails due to invalid data originating from a `toFirestore()`
      * call.
-     */ function ch(t, e, n) {
+     */ function kh(t, e, n) {
         let s;
         // Cast to `any` in order to satisfy the union type constraint on
         // toFirestore().
@@ -13292,16 +14079,16 @@ var app = (function () {
         s;
     }
 
-    class fh extends oh {
+    class Bh extends xh {
         constructor(t) {
             super(), this.firestore = t;
         }
         convertBytes(t) {
-            return new nu(t);
+            return new Sa(t);
         }
         convertReference(t) {
             const e = this.convertDocumentKey(t, this.firestore._databaseId);
-            return new Pa(this.firestore, /* converter= */ null, e);
+            return new Zu(this.firestore, /* converter= */ null, e);
         }
     }
 
@@ -13314,10 +14101,10 @@ var app = (function () {
      * invoke {@link getDocsFromCache} or {@link getDocsFromServer}.
      *
      * @returns A `Promise` that will be resolved with the results of the query.
-     */ function _h(t) {
-        t = Ea(t, va);
-        const e = Ea(t.firestore, Fa), n = Ua(e), s = new fh(e);
-        return Bu(t._query), aa(n, t._query).then((n => new Mu(e, s, t, n)));
+     */ function qh(t) {
+        t = zu(t, ta);
+        const e = zu(t.firestore, la), n = _a(e), s = new Bh(e);
+        return dh(t._query), $u(n, t._query).then((n => new hh(e, s, t, n)));
     }
 
     /**
@@ -13329,19 +14116,19 @@ var app = (function () {
      * @returns A `Promise` resolved with a `DocumentReference` pointing to the
      * newly created document after it has been written to the backend (Note that it
      * won't resolve while you're offline).
-     */ function Eh(t, e) {
-        const n = Ea(t.firestore, Fa), s = Ca(t), i = ch(t.converter, e);
-        return Rh(n, [ fu(lu(t.firestore), "addDoc", s._key, i, null !== t.converter, {}).toMutation(s._key, Ye.exists(!1)) ]).then((() => s));
+     */ function zh(t, e) {
+        const n = zu(t.firestore, la), s = ia(t), i = kh(t.converter, e);
+        return Yh(n, [ Ba(Fa(t.firestore), "addDoc", s._key, i, null !== t.converter, {}).toMutation(s._key, nn.exists(!1)) ]).then((() => s));
     }
 
     /**
      * Locally writes `mutations` on the async queue.
      * @internal
-     */ function Rh(t, e) {
+     */ function Yh(t, e) {
         return function(t, e) {
-            const n = new W;
-            return t.asyncQueue.enqueueAndForget((async () => uc(await ea(t), e, n))), n.promise;
-        }(Ua(t), e);
+            const n = new Q;
+            return t.asyncQueue.enqueueAndForget((async () => Fc(await Du(t), e, n))), n.promise;
+        }(_a(t), e);
     }
 
     /**
@@ -13352,19 +14139,19 @@ var app = (function () {
         !function(t) {
             N = t;
         }(SDK_VERSION), _registerComponent(new Component("firestore", ((t, {options: n}) => {
-            const s = t.getProvider("app").getImmediate(), i = new Fa(s, new J(t.getProvider("auth-internal")), new tt(t.getProvider("app-check-internal")));
+            const s = t.getProvider("app").getImmediate(), i = new la(s, new J(t.getProvider("auth-internal")), new tt(t.getProvider("app-check-internal")));
             return n = Object.assign({
                 useFetchStreams: e
             }, n), i._setSettings(n), i;
-        }), "PUBLIC")), registerVersion(D, "3.4.3", t), 
+        }), "PUBLIC")), registerVersion(D, "3.4.5", t), 
         // BUILD_TARGET will be replaced by values like esm5, esm2017, cjs5, etc during the compilation
-        registerVersion(D, "3.4.3", "esm2017");
+        registerVersion(D, "3.4.5", "esm2017");
     }();
 
     /* src\components\PubListings\PubListing.svelte generated by Svelte v3.46.2 */
 
     const { Object: Object_1$1 } = globals;
-    const file$3 = "src\\components\\PubListings\\PubListing.svelte";
+    const file$5 = "src\\components\\PubListings\\PubListing.svelte";
 
     function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -13398,7 +14185,7 @@ var app = (function () {
     			span = element("span");
     			t = text(t_value);
     			attr_dev(span, "class", "md:hidden");
-    			add_location(span, file$3, 21, 8, 590);
+    			add_location(span, file$5, 21, 8, 590);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
@@ -13423,8 +14210,8 @@ var app = (function () {
     	return block;
     }
 
-    // (38:4) {:else}
-    function create_else_block$2(ctx) {
+    // (40:8) {:else}
+    function create_else_block$3(ctx) {
     	let t_value = /*pubData*/ ctx[0][/*id*/ ctx[3]] + "";
     	let t;
 
@@ -13445,16 +14232,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$2.name,
+    		id: create_else_block$3.name,
     		type: "else",
-    		source: "(38:4) {:else}",
+    		source: "(40:8) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (36:36) 
+    // (38:40) 
     function create_if_block_3(ctx) {
     	let t;
 
@@ -13465,7 +14252,7 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			insert_dev(target, t, anchor);
     		},
-    		p: noop,
+    		p: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
     		}
@@ -13475,14 +14262,14 @@ var app = (function () {
     		block,
     		id: create_if_block_3.name,
     		type: "if",
-    		source: "(36:36) ",
+    		source: "(38:40) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (34:35) 
+    // (36:39) 
     function create_if_block_2(ctx) {
     	let t;
 
@@ -13493,7 +14280,7 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			insert_dev(target, t, anchor);
     		},
-    		p: noop,
+    		p: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t);
     		}
@@ -13503,15 +14290,15 @@ var app = (function () {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(34:35) ",
+    		source: "(36:39) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (30:36) 
-    function create_if_block_1$2(ctx) {
+    // (32:40) 
+    function create_if_block_1$3(ctx) {
     	let each_1_anchor;
 
     	let each_value_2 = {
@@ -13576,17 +14363,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$2.name,
+    		id: create_if_block_1$3.name,
     		type: "if",
-    		source: "(30:36) ",
+    		source: "(32:40) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (26:4) {#if id === 'drink_quality'}
-    function create_if_block$2(ctx) {
+    // (28:8) {#if id === 'drink_quality'}
+    function create_if_block$4(ctx) {
     	let each_1_anchor;
 
     	let each_value_1 = {
@@ -13651,16 +14438,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$4.name,
     		type: "if",
-    		source: "(26:4) {#if id === 'drink_quality'}",
+    		source: "(28:8) {#if id === 'drink_quality'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (31:8) {#each {length: pubData[id]} as _, i}
+    // (33:12) {#each {length: pubData[id]} as _, i}
     function create_each_block_2(ctx) {
     	let t;
 
@@ -13680,14 +14467,14 @@ var app = (function () {
     		block,
     		id: create_each_block_2.name,
     		type: "each",
-    		source: "(31:8) {#each {length: pubData[id]} as _, i}",
+    		source: "(33:12) {#each {length: pubData[id]} as _, i}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (27:8) {#each {length: pubData[id]} as _, i}
+    // (29:12) {#each {length: pubData[id]} as _, i}
     function create_each_block_1$1(ctx) {
     	let t;
 
@@ -13707,7 +14494,7 @@ var app = (function () {
     		block,
     		id: create_each_block_1$1.name,
     		type: "each",
-    		source: "(27:8) {#each {length: pubData[id]} as _, i}",
+    		source: "(29:12) {#each {length: pubData[id]} as _, i}",
     		ctx
     	});
 
@@ -13716,18 +14503,19 @@ var app = (function () {
 
     // (19:0) {#each Object.entries(headings) as [id, label]}
     function create_each_block$1(ctx) {
-    	let span;
+    	let span1;
     	let t0;
+    	let span0;
     	let t1;
-    	let span_class_value;
+    	let span1_class_value;
     	let if_block0 = /*id*/ ctx[3] !== 'name' && create_if_block_4(ctx);
 
     	function select_block_type(ctx, dirty) {
-    		if (/*id*/ ctx[3] === 'drink_quality') return create_if_block$2;
-    		if (/*id*/ ctx[3] === 'drink_choice') return create_if_block_1$2;
+    		if (/*id*/ ctx[3] === 'drink_quality') return create_if_block$4;
+    		if (/*id*/ ctx[3] === 'drink_choice') return create_if_block_1$3;
     		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === true) return create_if_block_2;
     		if (/*pubData*/ ctx[0][/*id*/ ctx[3]] === false) return create_if_block_3;
-    		return create_else_block$2;
+    		return create_else_block$3;
     	}
 
     	let current_block_type = select_block_type(ctx);
@@ -13735,20 +14523,24 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			span = element("span");
+    			span1 = element("span");
     			if (if_block0) if_block0.c();
     			t0 = space();
+    			span0 = element("span");
     			if_block1.c();
     			t1 = space();
-    			attr_dev(span, "class", span_class_value = /*labelClasses*/ ctx[2](/*id*/ ctx[3]));
-    			add_location(span, file$3, 19, 0, 522);
+    			attr_dev(span0, "class", "listing__value svelte-10ydbdy");
+    			add_location(span0, file$5, 26, 4, 675);
+    			attr_dev(span1, "class", span1_class_value = "" + (null_to_empty(/*labelClasses*/ ctx[2](/*id*/ ctx[3])) + " svelte-10ydbdy"));
+    			add_location(span1, file$5, 19, 0, 522);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, span, anchor);
-    			if (if_block0) if_block0.m(span, null);
-    			append_dev(span, t0);
-    			if_block1.m(span, null);
-    			append_dev(span, t1);
+    			insert_dev(target, span1, anchor);
+    			if (if_block0) if_block0.m(span1, null);
+    			append_dev(span1, t0);
+    			append_dev(span1, span0);
+    			if_block1.m(span0, null);
+    			append_dev(span1, t1);
     		},
     		p: function update(ctx, dirty) {
     			if (/*id*/ ctx[3] !== 'name') {
@@ -13757,7 +14549,7 @@ var app = (function () {
     				} else {
     					if_block0 = create_if_block_4(ctx);
     					if_block0.c();
-    					if_block0.m(span, t0);
+    					if_block0.m(span1, t0);
     				}
     			} else if (if_block0) {
     				if_block0.d(1);
@@ -13772,16 +14564,16 @@ var app = (function () {
 
     				if (if_block1) {
     					if_block1.c();
-    					if_block1.m(span, t1);
+    					if_block1.m(span0, null);
     				}
     			}
 
-    			if (dirty & /*labelClasses, headings*/ 6 && span_class_value !== (span_class_value = /*labelClasses*/ ctx[2](/*id*/ ctx[3]))) {
-    				attr_dev(span, "class", span_class_value);
+    			if (dirty & /*labelClasses, headings*/ 6 && span1_class_value !== (span1_class_value = "" + (null_to_empty(/*labelClasses*/ ctx[2](/*id*/ ctx[3])) + " svelte-10ydbdy"))) {
+    				attr_dev(span1, "class", span1_class_value);
     			}
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(span);
+    			if (detaching) detach_dev(span1);
     			if (if_block0) if_block0.d();
     			if_block1.d();
     		}
@@ -13798,7 +14590,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$3(ctx) {
+    function create_fragment$5(ctx) {
     	let each_1_anchor;
     	let each_value = Object.entries(/*headings*/ ctx[1]);
     	validate_each_argument(each_value);
@@ -13851,8 +14643,8 @@ var app = (function () {
     				each_blocks.length = each_value.length;
     			}
     		},
-    		i: noop,
-    		o: noop,
+    		i: noop$1,
+    		o: noop$1,
     		d: function destroy(detaching) {
     			destroy_each(each_blocks, detaching);
     			if (detaching) detach_dev(each_1_anchor);
@@ -13861,7 +14653,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
+    		id: create_fragment$5.name,
     		type: "component",
     		source: "",
     		ctx
@@ -13870,7 +14662,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$3($$self, $$props, $$invalidate) {
+    function instance$5($$self, $$props, $$invalidate) {
     	let labelClasses;
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('PubListing', slots, []);
@@ -13918,13 +14710,13 @@ var app = (function () {
     class PubListing extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { pubData: 0, headings: 1 });
+    		init(this, options, instance$5, create_fragment$5, safe_not_equal, { pubData: 0, headings: 1 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "PubListing",
     			options,
-    			id: create_fragment$3.name
+    			id: create_fragment$5.name
     		});
 
     		const { ctx } = this.$$;
@@ -13958,10 +14750,10 @@ var app = (function () {
 
     /* src\components\Filters\Filters.svelte generated by Svelte v3.46.2 */
 
-    const file$2 = "src\\components\\Filters\\Filters.svelte";
+    const file$4 = "src\\components\\Filters\\Filters.svelte";
 
-    // (31:8) {:else}
-    function create_else_block$1(ctx) {
+    // (23:8) {:else}
+    function create_else_block$2(ctx) {
     	let t;
 
     	const block = {
@@ -13978,17 +14770,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$1.name,
+    		id: create_else_block$2.name,
     		type: "else",
-    		source: "(31:8) {:else}",
+    		source: "(23:8) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (29:8) {#if showFilters}
-    function create_if_block_1$1(ctx) {
+    // (21:8) {#if showFilters}
+    function create_if_block_1$2(ctx) {
     	let t;
 
     	const block = {
@@ -14005,17 +14797,17 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$1.name,
+    		id: create_if_block_1$2.name,
     		type: "if",
-    		source: "(29:8) {#if showFilters}",
+    		source: "(21:8) {#if showFilters}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (40:4) {#if showFilters}
-    function create_if_block$1(ctx) {
+    // (32:4) {#if showFilters}
+    function create_if_block$3(ctx) {
     	let div0;
     	let label0;
     	let t1;
@@ -14071,47 +14863,47 @@ var app = (function () {
     			option5 = element("option");
     			option5.textContent = "No";
     			attr_dev(label0, "for", "max_group");
-    			add_location(label0, file$2, 41, 8, 1032);
+    			add_location(label0, file$4, 33, 8, 826);
     			attr_dev(input, "type", "number");
     			attr_dev(input, "id", "max_group");
-    			attr_dev(input, "class", "filters__input w-full md:w-auto");
-    			add_location(input, file$2, 42, 8, 1083);
-    			attr_dev(div0, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
-    			add_location(div0, file$2, 40, 4, 946);
+    			attr_dev(input, "class", "filters__input svelte-100ozfu");
+    			add_location(input, file$4, 34, 8, 877);
+    			attr_dev(div0, "class", "filters__section svelte-100ozfu");
+    			add_location(div0, file$4, 32, 4, 786);
     			attr_dev(label1, "for", "food");
-    			add_location(label1, file$2, 46, 8, 1291);
+    			add_location(label1, file$4, 38, 8, 1021);
     			option0.__value = 'both';
     			option0.value = option0.__value;
-    			add_location(option0, file$2, 49, 12, 1411);
+    			add_location(option0, file$4, 41, 12, 1139);
     			option1.__value = true;
     			option1.value = option1.__value;
-    			add_location(option1, file$2, 50, 12, 1469);
+    			add_location(option1, file$4, 42, 12, 1197);
     			option2.__value = false;
     			option2.value = option2.__value;
-    			add_location(option2, file$2, 51, 12, 1518);
+    			add_location(option2, file$4, 43, 12, 1246);
     			attr_dev(select0, "name", "food");
-    			attr_dev(select0, "class", "w-full md:w-auto");
+    			attr_dev(select0, "class", "filters__input svelte-100ozfu");
     			if (/*food*/ ctx[1] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[6].call(select0));
-    			add_location(select0, file$2, 48, 8, 1334);
-    			attr_dev(div1, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
-    			add_location(div1, file$2, 45, 4, 1204);
+    			add_location(select0, file$4, 40, 8, 1064);
+    			attr_dev(div1, "class", "filters__section svelte-100ozfu");
+    			add_location(div1, file$4, 37, 4, 981);
     			attr_dev(label2, "for", "sport");
-    			add_location(label2, file$2, 56, 8, 1679);
+    			add_location(label2, file$4, 48, 8, 1360);
     			option3.__value = 'both';
     			option3.value = option3.__value;
-    			add_location(option3, file$2, 59, 12, 1809);
+    			add_location(option3, file$4, 51, 12, 1487);
     			option4.__value = true;
     			option4.value = option4.__value;
-    			add_location(option4, file$2, 60, 12, 1867);
+    			add_location(option4, file$4, 52, 12, 1545);
     			option5.__value = false;
     			option5.value = option5.__value;
-    			add_location(option5, file$2, 61, 12, 1916);
+    			add_location(option5, file$4, 53, 12, 1594);
     			attr_dev(select1, "name", "food");
-    			attr_dev(select1, "class", "w-full md:w-auto");
+    			attr_dev(select1, "class", "filters__input svelte-100ozfu");
     			if (/*sport*/ ctx[2] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[7].call(select1));
-    			add_location(select1, file$2, 58, 8, 1730);
-    			attr_dev(div2, "class", "filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0");
-    			add_location(div2, file$2, 55, 4, 1592);
+    			add_location(select1, file$4, 50, 8, 1411);
+    			attr_dev(div2, "class", "filters__section svelte-100ozfu");
+    			add_location(div2, file$4, 47, 4, 1320);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -14174,16 +14966,16 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$3.name,
     		type: "if",
-    		source: "(40:4) {#if showFilters}",
+    		source: "(32:4) {#if showFilters}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$2(ctx) {
+    function create_fragment$4(ctx) {
     	let section;
     	let h2;
     	let t0;
@@ -14192,13 +14984,13 @@ var app = (function () {
     	let dispose;
 
     	function select_block_type(ctx, dirty) {
-    		if (/*showFilters*/ ctx[3]) return create_if_block_1$1;
-    		return create_else_block$1;
+    		if (/*showFilters*/ ctx[3]) return create_if_block_1$2;
+    		return create_else_block$2;
     	}
 
     	let current_block_type = select_block_type(ctx);
     	let if_block0 = current_block_type(ctx);
-    	let if_block1 = /*showFilters*/ ctx[3] && create_if_block$1(ctx);
+    	let if_block1 = /*showFilters*/ ctx[3] && create_if_block$3(ctx);
 
     	const block = {
     		c: function create() {
@@ -14209,9 +15001,9 @@ var app = (function () {
     			t1 = space();
     			if (if_block1) if_block1.c();
     			attr_dev(h2, "class", "text-2xl md:hidden text-center mb-4 border-y-2");
-    			add_location(h2, file$2, 22, 4, 499);
+    			add_location(h2, file$4, 14, 4, 339);
     			attr_dev(section, "class", "filters flex flex-col md:flex-row justify-center");
-    			add_location(section, file$2, 21, 0, 427);
+    			add_location(section, file$4, 13, 0, 267);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -14244,7 +15036,7 @@ var app = (function () {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
-    					if_block1 = create_if_block$1(ctx);
+    					if_block1 = create_if_block$3(ctx);
     					if_block1.c();
     					if_block1.m(section, null);
     				}
@@ -14253,8 +15045,8 @@ var app = (function () {
     				if_block1 = null;
     			}
     		},
-    		i: noop,
-    		o: noop,
+    		i: noop$1,
+    		o: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(section);
     			if_block0.d();
@@ -14266,7 +15058,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$2.name,
+    		id: create_fragment$4.name,
     		type: "component",
     		source: "",
     		ctx
@@ -14275,7 +15067,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$2($$self, $$props, $$invalidate) {
+    function instance$4($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Filters', slots, []);
     	let { groupSize = 5 } = $$props;
@@ -14285,14 +15077,6 @@ var app = (function () {
 
     	const toggleFilters = () => {
     		$$invalidate(3, showFilters = !showFilters);
-    	};
-
-    	const filterClasses = () => {
-    		if (!showFilters) {
-    			return 'hidden';
-    		} else {
-    			return 'block';
-    		}
     	};
 
     	const writable_props = ['groupSize', 'food', 'sport'];
@@ -14327,8 +15111,7 @@ var app = (function () {
     		food,
     		sport,
     		showFilters,
-    		toggleFilters,
-    		filterClasses
+    		toggleFilters
     	});
 
     	$$self.$inject_state = $$props => {
@@ -14357,13 +15140,13 @@ var app = (function () {
     class Filters extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { groupSize: 0, food: 1, sport: 2 });
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { groupSize: 0, food: 1, sport: 2 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Filters",
     			options,
-    			id: create_fragment$2.name
+    			id: create_fragment$4.name
     		});
     	}
 
@@ -14395,7 +15178,7 @@ var app = (function () {
     /* src\components\PubListings\PubListings.svelte generated by Svelte v3.46.2 */
 
     const { Object: Object_1 } = globals;
-    const file$1 = "src\\components\\PubListings\\PubListings.svelte";
+    const file$3 = "src\\components\\PubListings\\PubListings.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -14411,21 +15194,21 @@ var app = (function () {
     }
 
     // (64:4) {:else}
-    function create_else_block(ctx) {
+    function create_else_block$1(ctx) {
     	let p;
 
     	const block = {
     		c: function create() {
     			p = element("p");
     			p.textContent = "Sorry there are no pubs that match your criteria";
-    			add_location(p, file$1, 64, 8, 1834);
+    			add_location(p, file$3, 64, 8, 1817);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
     		},
-    		p: noop,
-    		i: noop,
-    		o: noop,
+    		p: noop$1,
+    		i: noop$1,
+    		o: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p);
     		}
@@ -14433,7 +15216,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block.name,
+    		id: create_else_block$1.name,
     		type: "else",
     		source: "(64:4) {:else}",
     		ctx
@@ -14443,21 +15226,21 @@ var app = (function () {
     }
 
     // (62:28) 
-    function create_if_block_1(ctx) {
+    function create_if_block_1$1(ctx) {
     	let p;
 
     	const block = {
     		c: function create() {
     			p = element("p");
     			p.textContent = "Loading";
-    			add_location(p, file$1, 62, 8, 1797);
+    			add_location(p, file$3, 62, 8, 1780);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
     		},
-    		p: noop,
-    		i: noop,
-    		o: noop,
+    		p: noop$1,
+    		i: noop$1,
+    		o: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p);
     		}
@@ -14465,7 +15248,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1.name,
+    		id: create_if_block_1$1.name,
     		type: "if",
     		source: "(62:28) ",
     		ctx
@@ -14475,7 +15258,7 @@ var app = (function () {
     }
 
     // (48:4) {#if filteredList.length > 0 && dataLoaded()}
-    function create_if_block(ctx) {
+    function create_if_block$2(ctx) {
     	let div;
     	let t;
     	let current;
@@ -14513,9 +15296,9 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			attr_dev(div, "class", "flex flex-wrap md:grid mt-6");
+    			attr_dev(div, "class", "pub-listings__container svelte-1lb3qvd");
     			attr_dev(div, "style", /*gridTemplate*/ ctx[4]);
-    			add_location(div, file$1, 48, 8, 1290);
+    			add_location(div, file$3, 48, 8, 1294);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -14616,7 +15399,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block.name,
+    		id: create_if_block$2.name,
     		type: "if",
     		source: "(48:4) {#if filteredList.length > 0 && dataLoaded()}",
     		ctx
@@ -14635,14 +15418,14 @@ var app = (function () {
     		c: function create() {
     			span = element("span");
     			t = text(t_value);
-    			attr_dev(span, "class", "table__header text-lg hidden md:block");
-    			add_location(span, file$1, 50, 16, 1435);
+    			attr_dev(span, "class", "pub-listings__header svelte-1lb3qvd");
+    			add_location(span, file$3, 50, 16, 1435);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, span, anchor);
     			append_dev(span, t);
     		},
-    		p: noop,
+    		p: noop$1,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(span);
     		}
@@ -14710,7 +15493,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$1(ctx) {
+    function create_fragment$3(ctx) {
     	let section;
     	let filters;
     	let updating_name;
@@ -14763,7 +15546,7 @@ var app = (function () {
     	binding_callbacks.push(() => bind(filters, 'groupSize', filters_groupSize_binding));
     	binding_callbacks.push(() => bind(filters, 'food', filters_food_binding));
     	binding_callbacks.push(() => bind(filters, 'sport', filters_sport_binding));
-    	const if_block_creators = [create_if_block, create_if_block_1, create_else_block];
+    	const if_block_creators = [create_if_block$2, create_if_block_1$1, create_else_block$1];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -14786,7 +15569,7 @@ var app = (function () {
     			t = space();
     			if_block.c();
     			attr_dev(section, "class", "pub-listings");
-    			add_location(section, file$1, 39, 0, 1059);
+    			add_location(section, file$3, 39, 0, 1063);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -14872,7 +15655,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$1.name,
+    		id: create_fragment$3.name,
     		type: "component",
     		source: "",
     		ctx
@@ -14881,7 +15664,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$1($$self, $$props, $$invalidate) {
+    function instance$3($$self, $$props, $$invalidate) {
     	let filteredList;
     	let dataLoaded;
     	let gridTemplate;
@@ -14900,7 +15683,7 @@ var app = (function () {
     		food: 'Food?',
     		sport: 'Sport?',
     		music: 'Music',
-    		non_beer: 'Non-beer choice',
+    		drink_quality: 'Drink quality',
     		drink_choice: 'Drink variety'
     	};
 
@@ -15005,13 +15788,13 @@ var app = (function () {
     class PubListings extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { data: 8 });
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { data: 8 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "PubListings",
     			options,
-    			id: create_fragment$1.name
+    			id: create_fragment$3.name
     		});
 
     		const { ctx } = this.$$;
@@ -15031,18 +15814,6528 @@ var app = (function () {
     	}
     }
 
+    /* src\components\AddPubs\AddPubs.svelte generated by Svelte v3.46.2 */
+    const file$2 = "src\\components\\AddPubs\\AddPubs.svelte";
+
+    function create_fragment$2(ctx) {
+    	let section;
+    	let p;
+    	let t1;
+    	let h1;
+    	let t3;
+    	let form;
+    	let div0;
+    	let label0;
+    	let t5;
+    	let input0;
+    	let t6;
+    	let div1;
+    	let label1;
+    	let t8;
+    	let input1;
+    	let t9;
+    	let div2;
+    	let label2;
+    	let t11;
+    	let select0;
+    	let option0;
+    	let option1;
+    	let t14;
+    	let div3;
+    	let label3;
+    	let t16;
+    	let select1;
+    	let option2;
+    	let option3;
+    	let t19;
+    	let div4;
+    	let label4;
+    	let t21;
+    	let select2;
+    	let option4;
+    	let option5;
+    	let t24;
+    	let div5;
+    	let label5;
+    	let t26;
+    	let select3;
+    	let option6;
+    	let option7;
+    	let option8;
+    	let option9;
+    	let option10;
+    	let t32;
+    	let div6;
+    	let label6;
+    	let t34;
+    	let select4;
+    	let option11;
+    	let option12;
+    	let option13;
+    	let option14;
+    	let option15;
+    	let t40;
+    	let input2;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			section = element("section");
+    			p = element("p");
+    			p.textContent = "Close x";
+    			t1 = space();
+    			h1 = element("h1");
+    			h1.textContent = "Add a pub";
+    			t3 = space();
+    			form = element("form");
+    			div0 = element("div");
+    			label0 = element("label");
+    			label0.textContent = "Name";
+    			t5 = space();
+    			input0 = element("input");
+    			t6 = space();
+    			div1 = element("div");
+    			label1 = element("label");
+    			label1.textContent = "Max group size";
+    			t8 = space();
+    			input1 = element("input");
+    			t9 = space();
+    			div2 = element("div");
+    			label2 = element("label");
+    			label2.textContent = "Food";
+    			t11 = space();
+    			select0 = element("select");
+    			option0 = element("option");
+    			option0.textContent = "Yes";
+    			option1 = element("option");
+    			option1.textContent = "No";
+    			t14 = space();
+    			div3 = element("div");
+    			label3 = element("label");
+    			label3.textContent = "Sport";
+    			t16 = space();
+    			select1 = element("select");
+    			option2 = element("option");
+    			option2.textContent = "Yes";
+    			option3 = element("option");
+    			option3.textContent = "No";
+    			t19 = space();
+    			div4 = element("div");
+    			label4 = element("label");
+    			label4.textContent = "Music";
+    			t21 = space();
+    			select2 = element("select");
+    			option4 = element("option");
+    			option4.textContent = "Yes";
+    			option5 = element("option");
+    			option5.textContent = "No";
+    			t24 = space();
+    			div5 = element("div");
+    			label5 = element("label");
+    			label5.textContent = "Drink quality";
+    			t26 = space();
+    			select3 = element("select");
+    			option6 = element("option");
+    			option6.textContent = "1";
+    			option7 = element("option");
+    			option7.textContent = "2";
+    			option8 = element("option");
+    			option8.textContent = "3";
+    			option9 = element("option");
+    			option9.textContent = "4";
+    			option10 = element("option");
+    			option10.textContent = "5";
+    			t32 = space();
+    			div6 = element("div");
+    			label6 = element("label");
+    			label6.textContent = "Drink variety";
+    			t34 = space();
+    			select4 = element("select");
+    			option11 = element("option");
+    			option11.textContent = "1";
+    			option12 = element("option");
+    			option12.textContent = "2";
+    			option13 = element("option");
+    			option13.textContent = "3";
+    			option14 = element("option");
+    			option14.textContent = "4";
+    			option15 = element("option");
+    			option15.textContent = "5";
+    			t40 = space();
+    			input2 = element("input");
+    			attr_dev(p, "class", "add-pub__close svelte-mksk70");
+    			add_location(p, file$2, 39, 4, 763);
+    			add_location(h1, file$2, 41, 4, 829);
+    			attr_dev(label0, "for", "name");
+    			add_location(label0, file$2, 45, 12, 965);
+    			attr_dev(input0, "type", "text");
+    			attr_dev(input0, "name", "name");
+    			attr_dev(input0, "id", "name");
+    			attr_dev(input0, "class", "svelte-mksk70");
+    			add_location(input0, file$2, 46, 12, 1009);
+    			attr_dev(div0, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div0, file$2, 44, 8, 917);
+    			attr_dev(label1, "for", "max_group");
+    			add_location(label1, file$2, 50, 12, 1146);
+    			attr_dev(input1, "type", "text");
+    			attr_dev(input1, "name", "max_group");
+    			attr_dev(input1, "id", "max_group");
+    			attr_dev(input1, "class", "svelte-mksk70");
+    			add_location(input1, file$2, 51, 12, 1205);
+    			attr_dev(div1, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div1, file$2, 49, 8, 1098);
+    			attr_dev(label2, "for", "food");
+    			add_location(label2, file$2, 55, 12, 1357);
+    			option0.__value = "true";
+    			option0.value = option0.__value;
+    			add_location(option0, file$2, 57, 16, 1467);
+    			option1.__value = "false";
+    			option1.value = option1.__value;
+    			add_location(option1, file$2, 58, 16, 1518);
+    			attr_dev(select0, "name", "food");
+    			attr_dev(select0, "id", "food");
+    			attr_dev(select0, "class", "svelte-mksk70");
+    			if (/*food*/ ctx[2] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[12].call(select0));
+    			add_location(select0, file$2, 56, 12, 1401);
+    			attr_dev(div2, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div2, file$2, 54, 8, 1309);
+    			attr_dev(label3, "for", "sport");
+    			add_location(label3, file$2, 63, 12, 1650);
+    			option2.__value = "true";
+    			option2.value = option2.__value;
+    			add_location(option2, file$2, 65, 16, 1765);
+    			option3.__value = "false";
+    			option3.value = option3.__value;
+    			add_location(option3, file$2, 66, 16, 1816);
+    			attr_dev(select1, "name", "sport");
+    			attr_dev(select1, "id", "sport");
+    			attr_dev(select1, "class", "svelte-mksk70");
+    			if (/*sport*/ ctx[3] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[13].call(select1));
+    			add_location(select1, file$2, 64, 12, 1696);
+    			attr_dev(div3, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div3, file$2, 62, 8, 1602);
+    			attr_dev(label4, "for", "music");
+    			add_location(label4, file$2, 71, 12, 1948);
+    			option4.__value = "true";
+    			option4.value = option4.__value;
+    			add_location(option4, file$2, 73, 16, 2063);
+    			option5.__value = "false";
+    			option5.value = option5.__value;
+    			add_location(option5, file$2, 74, 16, 2114);
+    			attr_dev(select2, "name", "music");
+    			attr_dev(select2, "id", "music");
+    			attr_dev(select2, "class", "svelte-mksk70");
+    			if (/*music*/ ctx[4] === void 0) add_render_callback(() => /*select2_change_handler*/ ctx[14].call(select2));
+    			add_location(select2, file$2, 72, 12, 1994);
+    			attr_dev(div4, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div4, file$2, 70, 8, 1900);
+    			attr_dev(label5, "for", "drink_quality");
+    			add_location(label5, file$2, 79, 12, 2246);
+    			option6.__value = "1";
+    			option6.value = option6.__value;
+    			add_location(option6, file$2, 81, 16, 2396);
+    			option7.__value = "2";
+    			option7.value = option7.__value;
+    			add_location(option7, file$2, 82, 16, 2442);
+    			option8.__value = "3";
+    			option8.value = option8.__value;
+    			add_location(option8, file$2, 83, 16, 2488);
+    			option9.__value = "4";
+    			option9.value = option9.__value;
+    			add_location(option9, file$2, 84, 16, 2534);
+    			option10.__value = "5";
+    			option10.value = option10.__value;
+    			add_location(option10, file$2, 85, 16, 2580);
+    			attr_dev(select3, "name", "drink_quality");
+    			attr_dev(select3, "id", "drink_quality");
+    			attr_dev(select3, "class", "svelte-mksk70");
+    			if (/*non_beer*/ ctx[5] === void 0) add_render_callback(() => /*select3_change_handler*/ ctx[15].call(select3));
+    			add_location(select3, file$2, 80, 12, 2308);
+    			attr_dev(div5, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div5, file$2, 78, 8, 2198);
+    			attr_dev(label6, "for", "drink_choice");
+    			add_location(label6, file$2, 90, 12, 2707);
+    			option11.__value = "1";
+    			option11.value = option11.__value;
+    			add_location(option11, file$2, 92, 16, 2858);
+    			option12.__value = "2";
+    			option12.value = option12.__value;
+    			add_location(option12, file$2, 93, 16, 2904);
+    			option13.__value = "3";
+    			option13.value = option13.__value;
+    			add_location(option13, file$2, 94, 16, 2950);
+    			option14.__value = "4";
+    			option14.value = option14.__value;
+    			add_location(option14, file$2, 95, 16, 2996);
+    			option15.__value = "5";
+    			option15.value = option15.__value;
+    			add_location(option15, file$2, 96, 16, 3042);
+    			attr_dev(select4, "name", "drink_choice");
+    			attr_dev(select4, "id", "drink_choice");
+    			attr_dev(select4, "class", "svelte-mksk70");
+    			if (/*drink_choice*/ ctx[6] === void 0) add_render_callback(() => /*select4_change_handler*/ ctx[16].call(select4));
+    			add_location(select4, file$2, 91, 12, 2768);
+    			attr_dev(div6, "class", "add-pub__input-group svelte-mksk70");
+    			add_location(div6, file$2, 89, 8, 2659);
+    			attr_dev(input2, "type", "submit");
+    			input2.value = "submit";
+    			add_location(input2, file$2, 100, 8, 3121);
+    			attr_dev(form, "class", "add-pub__form svelte-mksk70");
+    			add_location(form, file$2, 43, 4, 855);
+    			attr_dev(section, "class", "add-pub__container svelte-mksk70");
+    			add_location(section, file$2, 38, 0, 720);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, section, anchor);
+    			append_dev(section, p);
+    			append_dev(section, t1);
+    			append_dev(section, h1);
+    			append_dev(section, t3);
+    			append_dev(section, form);
+    			append_dev(form, div0);
+    			append_dev(div0, label0);
+    			append_dev(div0, t5);
+    			append_dev(div0, input0);
+    			set_input_value(input0, /*name*/ ctx[0]);
+    			append_dev(form, t6);
+    			append_dev(form, div1);
+    			append_dev(div1, label1);
+    			append_dev(div1, t8);
+    			append_dev(div1, input1);
+    			set_input_value(input1, /*max_group*/ ctx[1]);
+    			append_dev(form, t9);
+    			append_dev(form, div2);
+    			append_dev(div2, label2);
+    			append_dev(div2, t11);
+    			append_dev(div2, select0);
+    			append_dev(select0, option0);
+    			append_dev(select0, option1);
+    			select_option(select0, /*food*/ ctx[2]);
+    			append_dev(form, t14);
+    			append_dev(form, div3);
+    			append_dev(div3, label3);
+    			append_dev(div3, t16);
+    			append_dev(div3, select1);
+    			append_dev(select1, option2);
+    			append_dev(select1, option3);
+    			select_option(select1, /*sport*/ ctx[3]);
+    			append_dev(form, t19);
+    			append_dev(form, div4);
+    			append_dev(div4, label4);
+    			append_dev(div4, t21);
+    			append_dev(div4, select2);
+    			append_dev(select2, option4);
+    			append_dev(select2, option5);
+    			select_option(select2, /*music*/ ctx[4]);
+    			append_dev(form, t24);
+    			append_dev(form, div5);
+    			append_dev(div5, label5);
+    			append_dev(div5, t26);
+    			append_dev(div5, select3);
+    			append_dev(select3, option6);
+    			append_dev(select3, option7);
+    			append_dev(select3, option8);
+    			append_dev(select3, option9);
+    			append_dev(select3, option10);
+    			select_option(select3, /*non_beer*/ ctx[5]);
+    			append_dev(form, t32);
+    			append_dev(form, div6);
+    			append_dev(div6, label6);
+    			append_dev(div6, t34);
+    			append_dev(div6, select4);
+    			append_dev(select4, option11);
+    			append_dev(select4, option12);
+    			append_dev(select4, option13);
+    			append_dev(select4, option14);
+    			append_dev(select4, option15);
+    			select_option(select4, /*drink_choice*/ ctx[6]);
+    			append_dev(form, t40);
+    			append_dev(form, input2);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(p, "click", /*closeForm*/ ctx[8], false, false, false),
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[10]),
+    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[11]),
+    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[12]),
+    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[13]),
+    					listen_dev(select2, "change", /*select2_change_handler*/ ctx[14]),
+    					listen_dev(select3, "change", /*select3_change_handler*/ ctx[15]),
+    					listen_dev(select4, "change", /*select4_change_handler*/ ctx[16]),
+    					listen_dev(form, "submit", /*submitted*/ ctx[7], false, false, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*name*/ 1 && input0.value !== /*name*/ ctx[0]) {
+    				set_input_value(input0, /*name*/ ctx[0]);
+    			}
+
+    			if (dirty & /*max_group*/ 2 && input1.value !== /*max_group*/ ctx[1]) {
+    				set_input_value(input1, /*max_group*/ ctx[1]);
+    			}
+
+    			if (dirty & /*food*/ 4) {
+    				select_option(select0, /*food*/ ctx[2]);
+    			}
+
+    			if (dirty & /*sport*/ 8) {
+    				select_option(select1, /*sport*/ ctx[3]);
+    			}
+
+    			if (dirty & /*music*/ 16) {
+    				select_option(select2, /*music*/ ctx[4]);
+    			}
+
+    			if (dirty & /*non_beer*/ 32) {
+    				select_option(select3, /*non_beer*/ ctx[5]);
+    			}
+
+    			if (dirty & /*drink_choice*/ 64) {
+    				select_option(select4, /*drink_choice*/ ctx[6]);
+    			}
+    		},
+    		i: noop$1,
+    		o: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(section);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$2.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('AddPubs', slots, []);
+    	let { formOpen = false } = $$props;
+    	const dispatch = createEventDispatcher();
+    	let name;
+    	let max_group;
+    	let food;
+    	let sport;
+    	let music;
+    	let non_beer;
+    	let drink_choice;
+    	let payload = {};
+
+    	const submitted = e => {
+    		e.preventDefault();
+
+    		payload = {
+    			name,
+    			max_group,
+    			food,
+    			sport,
+    			music,
+    			non_beer,
+    			drink_choice
+    		};
+
+    		// console.log(payload);
+    		dispatch("form-submit", payload);
+    	};
+
+    	const closeForm = () => {
+    		$$invalidate(9, formOpen = false);
+    	};
+
+    	const writable_props = ['formOpen'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<AddPubs> was created with unknown prop '${key}'`);
+    	});
+
+    	function input0_input_handler() {
+    		name = this.value;
+    		$$invalidate(0, name);
+    	}
+
+    	function input1_input_handler() {
+    		max_group = this.value;
+    		$$invalidate(1, max_group);
+    	}
+
+    	function select0_change_handler() {
+    		food = select_value(this);
+    		$$invalidate(2, food);
+    	}
+
+    	function select1_change_handler() {
+    		sport = select_value(this);
+    		$$invalidate(3, sport);
+    	}
+
+    	function select2_change_handler() {
+    		music = select_value(this);
+    		$$invalidate(4, music);
+    	}
+
+    	function select3_change_handler() {
+    		non_beer = select_value(this);
+    		$$invalidate(5, non_beer);
+    	}
+
+    	function select4_change_handler() {
+    		drink_choice = select_value(this);
+    		$$invalidate(6, drink_choice);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('formOpen' in $$props) $$invalidate(9, formOpen = $$props.formOpen);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		createEventDispatcher,
+    		formOpen,
+    		dispatch,
+    		name,
+    		max_group,
+    		food,
+    		sport,
+    		music,
+    		non_beer,
+    		drink_choice,
+    		payload,
+    		submitted,
+    		closeForm
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('formOpen' in $$props) $$invalidate(9, formOpen = $$props.formOpen);
+    		if ('name' in $$props) $$invalidate(0, name = $$props.name);
+    		if ('max_group' in $$props) $$invalidate(1, max_group = $$props.max_group);
+    		if ('food' in $$props) $$invalidate(2, food = $$props.food);
+    		if ('sport' in $$props) $$invalidate(3, sport = $$props.sport);
+    		if ('music' in $$props) $$invalidate(4, music = $$props.music);
+    		if ('non_beer' in $$props) $$invalidate(5, non_beer = $$props.non_beer);
+    		if ('drink_choice' in $$props) $$invalidate(6, drink_choice = $$props.drink_choice);
+    		if ('payload' in $$props) payload = $$props.payload;
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		name,
+    		max_group,
+    		food,
+    		sport,
+    		music,
+    		non_beer,
+    		drink_choice,
+    		submitted,
+    		closeForm,
+    		formOpen,
+    		input0_input_handler,
+    		input1_input_handler,
+    		select0_change_handler,
+    		select1_change_handler,
+    		select2_change_handler,
+    		select3_change_handler,
+    		select4_change_handler
+    	];
+    }
+
+    class AddPubs extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { formOpen: 9 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "AddPubs",
+    			options,
+    			id: create_fragment$2.name
+    		});
+    	}
+
+    	get formOpen() {
+    		throw new Error("<AddPubs>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set formOpen(value) {
+    		throw new Error("<AddPubs>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+
+    function __rest(s, e) {
+        var t = {};
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+            t[p] = s[p];
+        if (s != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+                if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                    t[p[i]] = s[p[i]];
+            }
+        return t;
+    }
+
+    function _prodErrorMap() {
+        // We will include this one message in the prod error map since by the very
+        // nature of this error, developers will never be able to see the message
+        // using the debugErrorMap (which is installed during auth initialization).
+        return {
+            ["dependent-sdk-initialized-before-auth" /* DEPENDENT_SDK_INIT_BEFORE_AUTH */]: 'Another Firebase SDK was initialized and is trying to use Auth before Auth is ' +
+                'initialized. Please be sure to call `initializeAuth` or `getAuth` before ' +
+                'starting any other Firebase SDK.'
+        };
+    }
+    /**
+     * A minimal error map with all verbose error messages stripped.
+     *
+     * See discussion at {@link AuthErrorMap}
+     *
+     * @public
+     */
+    const prodErrorMap = _prodErrorMap;
+    const _DEFAULT_AUTH_ERROR_FACTORY = new ErrorFactory('auth', 'Firebase', _prodErrorMap());
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const logClient = new Logger('@firebase/auth');
+    function _logError(msg, ...args) {
+        if (logClient.logLevel <= LogLevel.ERROR) {
+            logClient.error(`Auth (${SDK_VERSION}): ${msg}`, ...args);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _fail(authOrCode, ...rest) {
+        throw createErrorInternal(authOrCode, ...rest);
+    }
+    function _createError(authOrCode, ...rest) {
+        return createErrorInternal(authOrCode, ...rest);
+    }
+    function _errorWithCustomMessage(auth, code, message) {
+        const errorMap = Object.assign(Object.assign({}, prodErrorMap()), { [code]: message });
+        const factory = new ErrorFactory('auth', 'Firebase', errorMap);
+        return factory.create(code, {
+            appName: auth.name,
+        });
+    }
+    function _assertInstanceOf(auth, object, instance) {
+        const constructorInstance = instance;
+        if (!(object instanceof constructorInstance)) {
+            if (constructorInstance.name !== object.constructor.name) {
+                _fail(auth, "argument-error" /* ARGUMENT_ERROR */);
+            }
+            throw _errorWithCustomMessage(auth, "argument-error" /* ARGUMENT_ERROR */, `Type of ${object.constructor.name} does not match expected instance.` +
+                `Did you pass a reference from a different Auth SDK?`);
+        }
+    }
+    function createErrorInternal(authOrCode, ...rest) {
+        if (typeof authOrCode !== 'string') {
+            const code = rest[0];
+            const fullParams = [...rest.slice(1)];
+            if (fullParams[0]) {
+                fullParams[0].appName = authOrCode.name;
+            }
+            return authOrCode._errorFactory.create(code, ...fullParams);
+        }
+        return _DEFAULT_AUTH_ERROR_FACTORY.create(authOrCode, ...rest);
+    }
+    function _assert(assertion, authOrCode, ...rest) {
+        if (!assertion) {
+            throw createErrorInternal(authOrCode, ...rest);
+        }
+    }
+    /**
+     * Unconditionally fails, throwing an internal error with the given message.
+     *
+     * @param failure type of failure encountered
+     * @throws Error
+     */
+    function debugFail(failure) {
+        // Log the failure in addition to throw an exception, just in case the
+        // exception is swallowed.
+        const message = `INTERNAL ASSERTION FAILED: ` + failure;
+        _logError(message);
+        // NOTE: We don't use FirebaseError here because these are internal failures
+        // that cannot be handled by the user. (Also it would create a circular
+        // dependency between the error and assert modules which doesn't work.)
+        throw new Error(message);
+    }
+    /**
+     * Fails if the given assertion condition is false, throwing an Error with the
+     * given message if it did.
+     *
+     * @param assertion
+     * @param message
+     */
+    function debugAssert(assertion, message) {
+        if (!assertion) {
+            debugFail(message);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const instanceCache = new Map();
+    function _getInstance(cls) {
+        debugAssert(cls instanceof Function, 'Expected a class definition');
+        let instance = instanceCache.get(cls);
+        if (instance) {
+            debugAssert(instance instanceof cls, 'Instance stored in cache mismatched with class');
+            return instance;
+        }
+        instance = new cls();
+        instanceCache.set(cls, instance);
+        return instance;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Initializes an {@link Auth} instance with fine-grained control over
+     * {@link Dependencies}.
+     *
+     * @remarks
+     *
+     * This function allows more control over the {@link Auth} instance than
+     * {@link getAuth}. `getAuth` uses platform-specific defaults to supply
+     * the {@link Dependencies}. In general, `getAuth` is the easiest way to
+     * initialize Auth and works for most use cases. Use `initializeAuth` if you
+     * need control over which persistence layer is used, or to minimize bundle
+     * size if you're not using either `signInWithPopup` or `signInWithRedirect`.
+     *
+     * For example, if your app only uses anonymous accounts and you only want
+     * accounts saved for the current session, initialize `Auth` with:
+     *
+     * ```js
+     * const auth = initializeAuth(app, {
+     *   persistence: browserSessionPersistence,
+     *   popupRedirectResolver: undefined,
+     * });
+     * ```
+     *
+     * @public
+     */
+    function initializeAuth(app, deps) {
+        const provider = _getProvider(app, 'auth');
+        if (provider.isInitialized()) {
+            const auth = provider.getImmediate();
+            const initialOptions = provider.getOptions();
+            if (deepEqual(initialOptions, deps !== null && deps !== void 0 ? deps : {})) {
+                return auth;
+            }
+            else {
+                _fail(auth, "already-initialized" /* ALREADY_INITIALIZED */);
+            }
+        }
+        const auth = provider.initialize({ options: deps });
+        return auth;
+    }
+    function _initializeAuthInstance(auth, deps) {
+        const persistence = (deps === null || deps === void 0 ? void 0 : deps.persistence) || [];
+        const hierarchy = (Array.isArray(persistence) ? persistence : [persistence]).map(_getInstance);
+        if (deps === null || deps === void 0 ? void 0 : deps.errorMap) {
+            auth._updateErrorMap(deps.errorMap);
+        }
+        // This promise is intended to float; auth initialization happens in the
+        // background, meanwhile the auth object may be used by the app.
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        auth._initializeWithPersistence(hierarchy, deps === null || deps === void 0 ? void 0 : deps.popupRedirectResolver);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _getCurrentUrl() {
+        var _a;
+        return (typeof self !== 'undefined' && ((_a = self.location) === null || _a === void 0 ? void 0 : _a.href)) || '';
+    }
+    function _isHttpOrHttps() {
+        return _getCurrentScheme() === 'http:' || _getCurrentScheme() === 'https:';
+    }
+    function _getCurrentScheme() {
+        var _a;
+        return (typeof self !== 'undefined' && ((_a = self.location) === null || _a === void 0 ? void 0 : _a.protocol)) || null;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Determine whether the browser is working online
+     */
+    function _isOnline() {
+        if (typeof navigator !== 'undefined' &&
+            navigator &&
+            'onLine' in navigator &&
+            typeof navigator.onLine === 'boolean' &&
+            // Apply only for traditional web apps and Chrome extensions.
+            // This is especially true for Cordova apps which have unreliable
+            // navigator.onLine behavior unless cordova-plugin-network-information is
+            // installed which overwrites the native navigator.onLine value and
+            // defines navigator.connection.
+            (_isHttpOrHttps() || isBrowserExtension() || 'connection' in navigator)) {
+            return navigator.onLine;
+        }
+        // If we can't determine the state, assume it is online.
+        return true;
+    }
+    function _getUserLanguage() {
+        if (typeof navigator === 'undefined') {
+            return null;
+        }
+        const navigatorLanguage = navigator;
+        return (
+        // Most reliable, but only supported in Chrome/Firefox.
+        (navigatorLanguage.languages && navigatorLanguage.languages[0]) ||
+            // Supported in most browsers, but returns the language of the browser
+            // UI, not the language set in browser settings.
+            navigatorLanguage.language ||
+            // Couldn't determine language.
+            null);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * A structure to help pick between a range of long and short delay durations
+     * depending on the current environment. In general, the long delay is used for
+     * mobile environments whereas short delays are used for desktop environments.
+     */
+    class Delay {
+        constructor(shortDelay, longDelay) {
+            this.shortDelay = shortDelay;
+            this.longDelay = longDelay;
+            // Internal error when improperly initialized.
+            debugAssert(longDelay > shortDelay, 'Short delay should be less than long delay!');
+            this.isMobile = isMobileCordova() || isReactNative();
+        }
+        get() {
+            if (!_isOnline()) {
+                // Pick the shorter timeout.
+                return Math.min(5000 /* OFFLINE */, this.shortDelay);
+            }
+            // If running in a mobile environment, return the long delay, otherwise
+            // return the short delay.
+            // This could be improved in the future to dynamically change based on other
+            // variables instead of just reading the current environment.
+            return this.isMobile ? this.longDelay : this.shortDelay;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _emulatorUrl(config, path) {
+        debugAssert(config.emulator, 'Emulator should always be set here');
+        const { url } = config.emulator;
+        if (!path) {
+            return url;
+        }
+        return `${url}${path.startsWith('/') ? path.slice(1) : path}`;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class FetchProvider {
+        static initialize(fetchImpl, headersImpl, responseImpl) {
+            this.fetchImpl = fetchImpl;
+            if (headersImpl) {
+                this.headersImpl = headersImpl;
+            }
+            if (responseImpl) {
+                this.responseImpl = responseImpl;
+            }
+        }
+        static fetch() {
+            if (this.fetchImpl) {
+                return this.fetchImpl;
+            }
+            if (typeof self !== 'undefined' && 'fetch' in self) {
+                return self.fetch;
+            }
+            debugFail('Could not find fetch implementation, make sure you call FetchProvider.initialize() with an appropriate polyfill');
+        }
+        static headers() {
+            if (this.headersImpl) {
+                return this.headersImpl;
+            }
+            if (typeof self !== 'undefined' && 'Headers' in self) {
+                return self.Headers;
+            }
+            debugFail('Could not find Headers implementation, make sure you call FetchProvider.initialize() with an appropriate polyfill');
+        }
+        static response() {
+            if (this.responseImpl) {
+                return this.responseImpl;
+            }
+            if (typeof self !== 'undefined' && 'Response' in self) {
+                return self.Response;
+            }
+            debugFail('Could not find Response implementation, make sure you call FetchProvider.initialize() with an appropriate polyfill');
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Map from errors returned by the server to errors to developer visible errors
+     */
+    const SERVER_ERROR_MAP = {
+        // Custom token errors.
+        ["CREDENTIAL_MISMATCH" /* CREDENTIAL_MISMATCH */]: "custom-token-mismatch" /* CREDENTIAL_MISMATCH */,
+        // This can only happen if the SDK sends a bad request.
+        ["MISSING_CUSTOM_TOKEN" /* MISSING_CUSTOM_TOKEN */]: "internal-error" /* INTERNAL_ERROR */,
+        // Create Auth URI errors.
+        ["INVALID_IDENTIFIER" /* INVALID_IDENTIFIER */]: "invalid-email" /* INVALID_EMAIL */,
+        // This can only happen if the SDK sends a bad request.
+        ["MISSING_CONTINUE_URI" /* MISSING_CONTINUE_URI */]: "internal-error" /* INTERNAL_ERROR */,
+        // Sign in with email and password errors (some apply to sign up too).
+        ["INVALID_PASSWORD" /* INVALID_PASSWORD */]: "wrong-password" /* INVALID_PASSWORD */,
+        // This can only happen if the SDK sends a bad request.
+        ["MISSING_PASSWORD" /* MISSING_PASSWORD */]: "internal-error" /* INTERNAL_ERROR */,
+        // Sign up with email and password errors.
+        ["EMAIL_EXISTS" /* EMAIL_EXISTS */]: "email-already-in-use" /* EMAIL_EXISTS */,
+        ["PASSWORD_LOGIN_DISABLED" /* PASSWORD_LOGIN_DISABLED */]: "operation-not-allowed" /* OPERATION_NOT_ALLOWED */,
+        // Verify assertion for sign in with credential errors:
+        ["INVALID_IDP_RESPONSE" /* INVALID_IDP_RESPONSE */]: "invalid-credential" /* INVALID_IDP_RESPONSE */,
+        ["INVALID_PENDING_TOKEN" /* INVALID_PENDING_TOKEN */]: "invalid-credential" /* INVALID_IDP_RESPONSE */,
+        ["FEDERATED_USER_ID_ALREADY_LINKED" /* FEDERATED_USER_ID_ALREADY_LINKED */]: "credential-already-in-use" /* CREDENTIAL_ALREADY_IN_USE */,
+        // This can only happen if the SDK sends a bad request.
+        ["MISSING_REQ_TYPE" /* MISSING_REQ_TYPE */]: "internal-error" /* INTERNAL_ERROR */,
+        // Send Password reset email errors:
+        ["EMAIL_NOT_FOUND" /* EMAIL_NOT_FOUND */]: "user-not-found" /* USER_DELETED */,
+        ["RESET_PASSWORD_EXCEED_LIMIT" /* RESET_PASSWORD_EXCEED_LIMIT */]: "too-many-requests" /* TOO_MANY_ATTEMPTS_TRY_LATER */,
+        ["EXPIRED_OOB_CODE" /* EXPIRED_OOB_CODE */]: "expired-action-code" /* EXPIRED_OOB_CODE */,
+        ["INVALID_OOB_CODE" /* INVALID_OOB_CODE */]: "invalid-action-code" /* INVALID_OOB_CODE */,
+        // This can only happen if the SDK sends a bad request.
+        ["MISSING_OOB_CODE" /* MISSING_OOB_CODE */]: "internal-error" /* INTERNAL_ERROR */,
+        // Operations that require ID token in request:
+        ["CREDENTIAL_TOO_OLD_LOGIN_AGAIN" /* CREDENTIAL_TOO_OLD_LOGIN_AGAIN */]: "requires-recent-login" /* CREDENTIAL_TOO_OLD_LOGIN_AGAIN */,
+        ["INVALID_ID_TOKEN" /* INVALID_ID_TOKEN */]: "invalid-user-token" /* INVALID_AUTH */,
+        ["TOKEN_EXPIRED" /* TOKEN_EXPIRED */]: "user-token-expired" /* TOKEN_EXPIRED */,
+        ["USER_NOT_FOUND" /* USER_NOT_FOUND */]: "user-token-expired" /* TOKEN_EXPIRED */,
+        // Other errors.
+        ["TOO_MANY_ATTEMPTS_TRY_LATER" /* TOO_MANY_ATTEMPTS_TRY_LATER */]: "too-many-requests" /* TOO_MANY_ATTEMPTS_TRY_LATER */,
+        // Phone Auth related errors.
+        ["INVALID_CODE" /* INVALID_CODE */]: "invalid-verification-code" /* INVALID_CODE */,
+        ["INVALID_SESSION_INFO" /* INVALID_SESSION_INFO */]: "invalid-verification-id" /* INVALID_SESSION_INFO */,
+        ["INVALID_TEMPORARY_PROOF" /* INVALID_TEMPORARY_PROOF */]: "invalid-credential" /* INVALID_IDP_RESPONSE */,
+        ["MISSING_SESSION_INFO" /* MISSING_SESSION_INFO */]: "missing-verification-id" /* MISSING_SESSION_INFO */,
+        ["SESSION_EXPIRED" /* SESSION_EXPIRED */]: "code-expired" /* CODE_EXPIRED */,
+        // Other action code errors when additional settings passed.
+        // MISSING_CONTINUE_URI is getting mapped to INTERNAL_ERROR above.
+        // This is OK as this error will be caught by client side validation.
+        ["MISSING_ANDROID_PACKAGE_NAME" /* MISSING_ANDROID_PACKAGE_NAME */]: "missing-android-pkg-name" /* MISSING_ANDROID_PACKAGE_NAME */,
+        ["UNAUTHORIZED_DOMAIN" /* UNAUTHORIZED_DOMAIN */]: "unauthorized-continue-uri" /* UNAUTHORIZED_DOMAIN */,
+        // getProjectConfig errors when clientId is passed.
+        ["INVALID_OAUTH_CLIENT_ID" /* INVALID_OAUTH_CLIENT_ID */]: "invalid-oauth-client-id" /* INVALID_OAUTH_CLIENT_ID */,
+        // User actions (sign-up or deletion) disabled errors.
+        ["ADMIN_ONLY_OPERATION" /* ADMIN_ONLY_OPERATION */]: "admin-restricted-operation" /* ADMIN_ONLY_OPERATION */,
+        // Multi factor related errors.
+        ["INVALID_MFA_PENDING_CREDENTIAL" /* INVALID_MFA_PENDING_CREDENTIAL */]: "invalid-multi-factor-session" /* INVALID_MFA_SESSION */,
+        ["MFA_ENROLLMENT_NOT_FOUND" /* MFA_ENROLLMENT_NOT_FOUND */]: "multi-factor-info-not-found" /* MFA_INFO_NOT_FOUND */,
+        ["MISSING_MFA_ENROLLMENT_ID" /* MISSING_MFA_ENROLLMENT_ID */]: "missing-multi-factor-info" /* MISSING_MFA_INFO */,
+        ["MISSING_MFA_PENDING_CREDENTIAL" /* MISSING_MFA_PENDING_CREDENTIAL */]: "missing-multi-factor-session" /* MISSING_MFA_SESSION */,
+        ["SECOND_FACTOR_EXISTS" /* SECOND_FACTOR_EXISTS */]: "second-factor-already-in-use" /* SECOND_FACTOR_ALREADY_ENROLLED */,
+        ["SECOND_FACTOR_LIMIT_EXCEEDED" /* SECOND_FACTOR_LIMIT_EXCEEDED */]: "maximum-second-factor-count-exceeded" /* SECOND_FACTOR_LIMIT_EXCEEDED */,
+        // Blocking functions related errors.
+        ["BLOCKING_FUNCTION_ERROR_RESPONSE" /* BLOCKING_FUNCTION_ERROR_RESPONSE */]: "internal-error" /* INTERNAL_ERROR */,
+    };
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const DEFAULT_API_TIMEOUT_MS = new Delay(30000, 60000);
+    function _addTidIfNecessary(auth, request) {
+        if (auth.tenantId && !request.tenantId) {
+            return Object.assign(Object.assign({}, request), { tenantId: auth.tenantId });
+        }
+        return request;
+    }
+    async function _performApiRequest(auth, method, path, request, customErrorMap = {}) {
+        return _performFetchWithErrorHandling(auth, customErrorMap, async () => {
+            let body = {};
+            let params = {};
+            if (request) {
+                if (method === "GET" /* GET */) {
+                    params = request;
+                }
+                else {
+                    body = {
+                        body: JSON.stringify(request)
+                    };
+                }
+            }
+            const query = querystring(Object.assign({ key: auth.config.apiKey }, params)).slice(1);
+            const headers = await auth._getAdditionalHeaders();
+            headers["Content-Type" /* CONTENT_TYPE */] = 'application/json';
+            if (auth.languageCode) {
+                headers["X-Firebase-Locale" /* X_FIREBASE_LOCALE */] = auth.languageCode;
+            }
+            return FetchProvider.fetch()(_getFinalTarget(auth, auth.config.apiHost, path, query), Object.assign({ method,
+                headers, referrerPolicy: 'no-referrer' }, body));
+        });
+    }
+    async function _performFetchWithErrorHandling(auth, customErrorMap, fetchFn) {
+        auth._canInitEmulator = false;
+        const errorMap = Object.assign(Object.assign({}, SERVER_ERROR_MAP), customErrorMap);
+        try {
+            const networkTimeout = new NetworkTimeout(auth);
+            const response = await Promise.race([
+                fetchFn(),
+                networkTimeout.promise
+            ]);
+            // If we've reached this point, the fetch succeeded and the networkTimeout
+            // didn't throw; clear the network timeout delay so that Node won't hang
+            networkTimeout.clearNetworkTimeout();
+            const json = await response.json();
+            if ('needConfirmation' in json) {
+                throw _makeTaggedError(auth, "account-exists-with-different-credential" /* NEED_CONFIRMATION */, json);
+            }
+            if (response.ok && !('errorMessage' in json)) {
+                return json;
+            }
+            else {
+                const errorMessage = response.ok ? json.errorMessage : json.error.message;
+                const [serverErrorCode, serverErrorMessage] = errorMessage.split(' : ');
+                if (serverErrorCode === "FEDERATED_USER_ID_ALREADY_LINKED" /* FEDERATED_USER_ID_ALREADY_LINKED */) {
+                    throw _makeTaggedError(auth, "credential-already-in-use" /* CREDENTIAL_ALREADY_IN_USE */, json);
+                }
+                else if (serverErrorCode === "EMAIL_EXISTS" /* EMAIL_EXISTS */) {
+                    throw _makeTaggedError(auth, "email-already-in-use" /* EMAIL_EXISTS */, json);
+                }
+                const authError = errorMap[serverErrorCode] ||
+                    serverErrorCode
+                        .toLowerCase()
+                        .replace(/[_\s]+/g, '-');
+                if (serverErrorMessage) {
+                    throw _errorWithCustomMessage(auth, authError, serverErrorMessage);
+                }
+                else {
+                    _fail(auth, authError);
+                }
+            }
+        }
+        catch (e) {
+            if (e instanceof FirebaseError) {
+                throw e;
+            }
+            _fail(auth, "network-request-failed" /* NETWORK_REQUEST_FAILED */);
+        }
+    }
+    async function _performSignInRequest(auth, method, path, request, customErrorMap = {}) {
+        const serverResponse = (await _performApiRequest(auth, method, path, request, customErrorMap));
+        if ('mfaPendingCredential' in serverResponse) {
+            _fail(auth, "multi-factor-auth-required" /* MFA_REQUIRED */, {
+                _serverResponse: serverResponse
+            });
+        }
+        return serverResponse;
+    }
+    function _getFinalTarget(auth, host, path, query) {
+        const base = `${host}${path}?${query}`;
+        if (!auth.config.emulator) {
+            return `${auth.config.apiScheme}://${base}`;
+        }
+        return _emulatorUrl(auth.config, base);
+    }
+    class NetworkTimeout {
+        constructor(auth) {
+            this.auth = auth;
+            // Node timers and browser timers are fundamentally incompatible, but we
+            // don't care about the value here
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            this.timer = null;
+            this.promise = new Promise((_, reject) => {
+                this.timer = setTimeout(() => {
+                    return reject(_createError(this.auth, "network-request-failed" /* NETWORK_REQUEST_FAILED */));
+                }, DEFAULT_API_TIMEOUT_MS.get());
+            });
+        }
+        clearNetworkTimeout() {
+            clearTimeout(this.timer);
+        }
+    }
+    function _makeTaggedError(auth, code, response) {
+        const errorParams = {
+            appName: auth.name
+        };
+        if (response.email) {
+            errorParams.email = response.email;
+        }
+        if (response.phoneNumber) {
+            errorParams.phoneNumber = response.phoneNumber;
+        }
+        const error = _createError(auth, code, errorParams);
+        // We know customData is defined on error because errorParams is defined
+        error.customData._tokenResponse = response;
+        return error;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function deleteAccount(auth, request) {
+        return _performApiRequest(auth, "POST" /* POST */, "/v1/accounts:delete" /* DELETE_ACCOUNT */, request);
+    }
+    async function getAccountInfo(auth, request) {
+        return _performApiRequest(auth, "POST" /* POST */, "/v1/accounts:lookup" /* GET_ACCOUNT_INFO */, request);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function utcTimestampToDateString(utcTimestamp) {
+        if (!utcTimestamp) {
+            return undefined;
+        }
+        try {
+            // Convert to date object.
+            const date = new Date(Number(utcTimestamp));
+            // Test date is valid.
+            if (!isNaN(date.getTime())) {
+                // Convert to UTC date string.
+                return date.toUTCString();
+            }
+        }
+        catch (e) {
+            // Do nothing. undefined will be returned.
+        }
+        return undefined;
+    }
+    /**
+     * Returns a deserialized JSON Web Token (JWT) used to identitfy the user to a Firebase service.
+     *
+     * @remarks
+     * Returns the current token if it has not expired or if it will not expire in the next five
+     * minutes. Otherwise, this will refresh the token and return a new one.
+     *
+     * @param user - The user.
+     * @param forceRefresh - Force refresh regardless of token expiration.
+     *
+     * @public
+     */
+    async function getIdTokenResult(user, forceRefresh = false) {
+        const userInternal = getModularInstance(user);
+        const token = await userInternal.getIdToken(forceRefresh);
+        const claims = _parseToken(token);
+        _assert(claims && claims.exp && claims.auth_time && claims.iat, userInternal.auth, "internal-error" /* INTERNAL_ERROR */);
+        const firebase = typeof claims.firebase === 'object' ? claims.firebase : undefined;
+        const signInProvider = firebase === null || firebase === void 0 ? void 0 : firebase['sign_in_provider'];
+        return {
+            claims,
+            token,
+            authTime: utcTimestampToDateString(secondsStringToMilliseconds(claims.auth_time)),
+            issuedAtTime: utcTimestampToDateString(secondsStringToMilliseconds(claims.iat)),
+            expirationTime: utcTimestampToDateString(secondsStringToMilliseconds(claims.exp)),
+            signInProvider: signInProvider || null,
+            signInSecondFactor: (firebase === null || firebase === void 0 ? void 0 : firebase['sign_in_second_factor']) || null
+        };
+    }
+    function secondsStringToMilliseconds(seconds) {
+        return Number(seconds) * 1000;
+    }
+    function _parseToken(token) {
+        const [algorithm, payload, signature] = token.split('.');
+        if (algorithm === undefined ||
+            payload === undefined ||
+            signature === undefined) {
+            _logError('JWT malformed, contained fewer than 3 sections');
+            return null;
+        }
+        try {
+            const decoded = base64Decode(payload);
+            if (!decoded) {
+                _logError('Failed to decode base64 JWT payload');
+                return null;
+            }
+            return JSON.parse(decoded);
+        }
+        catch (e) {
+            _logError('Caught error parsing JWT payload as JSON', e);
+            return null;
+        }
+    }
+    /**
+     * Extract expiresIn TTL from a token by subtracting the expiration from the issuance.
+     */
+    function _tokenExpiresIn(token) {
+        const parsedToken = _parseToken(token);
+        _assert(parsedToken, "internal-error" /* INTERNAL_ERROR */);
+        _assert(typeof parsedToken.exp !== 'undefined', "internal-error" /* INTERNAL_ERROR */);
+        _assert(typeof parsedToken.iat !== 'undefined', "internal-error" /* INTERNAL_ERROR */);
+        return Number(parsedToken.exp) - Number(parsedToken.iat);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function _logoutIfInvalidated(user, promise, bypassAuthState = false) {
+        if (bypassAuthState) {
+            return promise;
+        }
+        try {
+            return await promise;
+        }
+        catch (e) {
+            if (e instanceof FirebaseError && isUserInvalidated(e)) {
+                if (user.auth.currentUser === user) {
+                    await user.auth.signOut();
+                }
+            }
+            throw e;
+        }
+    }
+    function isUserInvalidated({ code }) {
+        return (code === `auth/${"user-disabled" /* USER_DISABLED */}` ||
+            code === `auth/${"user-token-expired" /* TOKEN_EXPIRED */}`);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class ProactiveRefresh {
+        constructor(user) {
+            this.user = user;
+            this.isRunning = false;
+            // Node timers and browser timers return fundamentally different types.
+            // We don't actually care what the value is but TS won't accept unknown and
+            // we can't cast properly in both environments.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            this.timerId = null;
+            this.errorBackoff = 30000 /* RETRY_BACKOFF_MIN */;
+        }
+        _start() {
+            if (this.isRunning) {
+                return;
+            }
+            this.isRunning = true;
+            this.schedule();
+        }
+        _stop() {
+            if (!this.isRunning) {
+                return;
+            }
+            this.isRunning = false;
+            if (this.timerId !== null) {
+                clearTimeout(this.timerId);
+            }
+        }
+        getInterval(wasError) {
+            var _a;
+            if (wasError) {
+                const interval = this.errorBackoff;
+                this.errorBackoff = Math.min(this.errorBackoff * 2, 960000 /* RETRY_BACKOFF_MAX */);
+                return interval;
+            }
+            else {
+                // Reset the error backoff
+                this.errorBackoff = 30000 /* RETRY_BACKOFF_MIN */;
+                const expTime = (_a = this.user.stsTokenManager.expirationTime) !== null && _a !== void 0 ? _a : 0;
+                const interval = expTime - Date.now() - 300000 /* OFFSET */;
+                return Math.max(0, interval);
+            }
+        }
+        schedule(wasError = false) {
+            if (!this.isRunning) {
+                // Just in case...
+                return;
+            }
+            const interval = this.getInterval(wasError);
+            this.timerId = setTimeout(async () => {
+                await this.iteration();
+            }, interval);
+        }
+        async iteration() {
+            try {
+                await this.user.getIdToken(true);
+            }
+            catch (e) {
+                // Only retry on network errors
+                if (e.code === `auth/${"network-request-failed" /* NETWORK_REQUEST_FAILED */}`) {
+                    this.schedule(/* wasError */ true);
+                }
+                return;
+            }
+            this.schedule();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class UserMetadata {
+        constructor(createdAt, lastLoginAt) {
+            this.createdAt = createdAt;
+            this.lastLoginAt = lastLoginAt;
+            this._initializeTime();
+        }
+        _initializeTime() {
+            this.lastSignInTime = utcTimestampToDateString(this.lastLoginAt);
+            this.creationTime = utcTimestampToDateString(this.createdAt);
+        }
+        _copy(metadata) {
+            this.createdAt = metadata.createdAt;
+            this.lastLoginAt = metadata.lastLoginAt;
+            this._initializeTime();
+        }
+        toJSON() {
+            return {
+                createdAt: this.createdAt,
+                lastLoginAt: this.lastLoginAt
+            };
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function _reloadWithoutSaving(user) {
+        var _a;
+        const auth = user.auth;
+        const idToken = await user.getIdToken();
+        const response = await _logoutIfInvalidated(user, getAccountInfo(auth, { idToken }));
+        _assert(response === null || response === void 0 ? void 0 : response.users.length, auth, "internal-error" /* INTERNAL_ERROR */);
+        const coreAccount = response.users[0];
+        user._notifyReloadListener(coreAccount);
+        const newProviderData = ((_a = coreAccount.providerUserInfo) === null || _a === void 0 ? void 0 : _a.length)
+            ? extractProviderData(coreAccount.providerUserInfo)
+            : [];
+        const providerData = mergeProviderData(user.providerData, newProviderData);
+        // Preserves the non-nonymous status of the stored user, even if no more
+        // credentials (federated or email/password) are linked to the user. If
+        // the user was previously anonymous, then use provider data to update.
+        // On the other hand, if it was not anonymous before, it should never be
+        // considered anonymous now.
+        const oldIsAnonymous = user.isAnonymous;
+        const newIsAnonymous = !(user.email && coreAccount.passwordHash) && !(providerData === null || providerData === void 0 ? void 0 : providerData.length);
+        const isAnonymous = !oldIsAnonymous ? false : newIsAnonymous;
+        const updates = {
+            uid: coreAccount.localId,
+            displayName: coreAccount.displayName || null,
+            photoURL: coreAccount.photoUrl || null,
+            email: coreAccount.email || null,
+            emailVerified: coreAccount.emailVerified || false,
+            phoneNumber: coreAccount.phoneNumber || null,
+            tenantId: coreAccount.tenantId || null,
+            providerData,
+            metadata: new UserMetadata(coreAccount.createdAt, coreAccount.lastLoginAt),
+            isAnonymous
+        };
+        Object.assign(user, updates);
+    }
+    /**
+     * Reloads user account data, if signed in.
+     *
+     * @param user - The user.
+     *
+     * @public
+     */
+    async function reload(user) {
+        const userInternal = getModularInstance(user);
+        await _reloadWithoutSaving(userInternal);
+        // Even though the current user hasn't changed, update
+        // current user will trigger a persistence update w/ the
+        // new info.
+        await userInternal.auth._persistUserIfCurrent(userInternal);
+        userInternal.auth._notifyListenersIfCurrent(userInternal);
+    }
+    function mergeProviderData(original, newData) {
+        const deduped = original.filter(o => !newData.some(n => n.providerId === o.providerId));
+        return [...deduped, ...newData];
+    }
+    function extractProviderData(providers) {
+        return providers.map((_a) => {
+            var { providerId } = _a, provider = __rest(_a, ["providerId"]);
+            return {
+                providerId,
+                uid: provider.rawId || '',
+                displayName: provider.displayName || null,
+                email: provider.email || null,
+                phoneNumber: provider.phoneNumber || null,
+                photoURL: provider.photoUrl || null
+            };
+        });
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function requestStsToken(auth, refreshToken) {
+        const response = await _performFetchWithErrorHandling(auth, {}, async () => {
+            const body = querystring({
+                'grant_type': 'refresh_token',
+                'refresh_token': refreshToken
+            }).slice(1);
+            const { tokenApiHost, apiKey } = auth.config;
+            const url = _getFinalTarget(auth, tokenApiHost, "/v1/token" /* TOKEN */, `key=${apiKey}`);
+            const headers = await auth._getAdditionalHeaders();
+            headers["Content-Type" /* CONTENT_TYPE */] = 'application/x-www-form-urlencoded';
+            return FetchProvider.fetch()(url, {
+                method: "POST" /* POST */,
+                headers,
+                body
+            });
+        });
+        // The response comes back in snake_case. Convert to camel:
+        return {
+            accessToken: response.access_token,
+            expiresIn: response.expires_in,
+            refreshToken: response.refresh_token
+        };
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * We need to mark this class as internal explicitly to exclude it in the public typings, because
+     * it references AuthInternal which has a circular dependency with UserInternal.
+     *
+     * @internal
+     */
+    class StsTokenManager {
+        constructor() {
+            this.refreshToken = null;
+            this.accessToken = null;
+            this.expirationTime = null;
+        }
+        get isExpired() {
+            return (!this.expirationTime ||
+                Date.now() > this.expirationTime - 30000 /* TOKEN_REFRESH */);
+        }
+        updateFromServerResponse(response) {
+            _assert(response.idToken, "internal-error" /* INTERNAL_ERROR */);
+            _assert(typeof response.idToken !== 'undefined', "internal-error" /* INTERNAL_ERROR */);
+            _assert(typeof response.refreshToken !== 'undefined', "internal-error" /* INTERNAL_ERROR */);
+            const expiresIn = 'expiresIn' in response && typeof response.expiresIn !== 'undefined'
+                ? Number(response.expiresIn)
+                : _tokenExpiresIn(response.idToken);
+            this.updateTokensAndExpiration(response.idToken, response.refreshToken, expiresIn);
+        }
+        async getToken(auth, forceRefresh = false) {
+            _assert(!this.accessToken || this.refreshToken, auth, "user-token-expired" /* TOKEN_EXPIRED */);
+            if (!forceRefresh && this.accessToken && !this.isExpired) {
+                return this.accessToken;
+            }
+            if (this.refreshToken) {
+                await this.refresh(auth, this.refreshToken);
+                return this.accessToken;
+            }
+            return null;
+        }
+        clearRefreshToken() {
+            this.refreshToken = null;
+        }
+        async refresh(auth, oldToken) {
+            const { accessToken, refreshToken, expiresIn } = await requestStsToken(auth, oldToken);
+            this.updateTokensAndExpiration(accessToken, refreshToken, Number(expiresIn));
+        }
+        updateTokensAndExpiration(accessToken, refreshToken, expiresInSec) {
+            this.refreshToken = refreshToken || null;
+            this.accessToken = accessToken || null;
+            this.expirationTime = Date.now() + expiresInSec * 1000;
+        }
+        static fromJSON(appName, object) {
+            const { refreshToken, accessToken, expirationTime } = object;
+            const manager = new StsTokenManager();
+            if (refreshToken) {
+                _assert(typeof refreshToken === 'string', "internal-error" /* INTERNAL_ERROR */, {
+                    appName
+                });
+                manager.refreshToken = refreshToken;
+            }
+            if (accessToken) {
+                _assert(typeof accessToken === 'string', "internal-error" /* INTERNAL_ERROR */, {
+                    appName
+                });
+                manager.accessToken = accessToken;
+            }
+            if (expirationTime) {
+                _assert(typeof expirationTime === 'number', "internal-error" /* INTERNAL_ERROR */, {
+                    appName
+                });
+                manager.expirationTime = expirationTime;
+            }
+            return manager;
+        }
+        toJSON() {
+            return {
+                refreshToken: this.refreshToken,
+                accessToken: this.accessToken,
+                expirationTime: this.expirationTime
+            };
+        }
+        _assign(stsTokenManager) {
+            this.accessToken = stsTokenManager.accessToken;
+            this.refreshToken = stsTokenManager.refreshToken;
+            this.expirationTime = stsTokenManager.expirationTime;
+        }
+        _clone() {
+            return Object.assign(new StsTokenManager(), this.toJSON());
+        }
+        _performRefresh() {
+            return debugFail('not implemented');
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function assertStringOrUndefined(assertion, appName) {
+        _assert(typeof assertion === 'string' || typeof assertion === 'undefined', "internal-error" /* INTERNAL_ERROR */, { appName });
+    }
+    class UserImpl {
+        constructor(_a) {
+            var { uid, auth, stsTokenManager } = _a, opt = __rest(_a, ["uid", "auth", "stsTokenManager"]);
+            // For the user object, provider is always Firebase.
+            this.providerId = "firebase" /* FIREBASE */;
+            this.proactiveRefresh = new ProactiveRefresh(this);
+            this.reloadUserInfo = null;
+            this.reloadListener = null;
+            this.uid = uid;
+            this.auth = auth;
+            this.stsTokenManager = stsTokenManager;
+            this.accessToken = stsTokenManager.accessToken;
+            this.displayName = opt.displayName || null;
+            this.email = opt.email || null;
+            this.emailVerified = opt.emailVerified || false;
+            this.phoneNumber = opt.phoneNumber || null;
+            this.photoURL = opt.photoURL || null;
+            this.isAnonymous = opt.isAnonymous || false;
+            this.tenantId = opt.tenantId || null;
+            this.providerData = opt.providerData ? [...opt.providerData] : [];
+            this.metadata = new UserMetadata(opt.createdAt || undefined, opt.lastLoginAt || undefined);
+        }
+        async getIdToken(forceRefresh) {
+            const accessToken = await _logoutIfInvalidated(this, this.stsTokenManager.getToken(this.auth, forceRefresh));
+            _assert(accessToken, this.auth, "internal-error" /* INTERNAL_ERROR */);
+            if (this.accessToken !== accessToken) {
+                this.accessToken = accessToken;
+                await this.auth._persistUserIfCurrent(this);
+                this.auth._notifyListenersIfCurrent(this);
+            }
+            return accessToken;
+        }
+        getIdTokenResult(forceRefresh) {
+            return getIdTokenResult(this, forceRefresh);
+        }
+        reload() {
+            return reload(this);
+        }
+        _assign(user) {
+            if (this === user) {
+                return;
+            }
+            _assert(this.uid === user.uid, this.auth, "internal-error" /* INTERNAL_ERROR */);
+            this.displayName = user.displayName;
+            this.photoURL = user.photoURL;
+            this.email = user.email;
+            this.emailVerified = user.emailVerified;
+            this.phoneNumber = user.phoneNumber;
+            this.isAnonymous = user.isAnonymous;
+            this.tenantId = user.tenantId;
+            this.providerData = user.providerData.map(userInfo => (Object.assign({}, userInfo)));
+            this.metadata._copy(user.metadata);
+            this.stsTokenManager._assign(user.stsTokenManager);
+        }
+        _clone(auth) {
+            return new UserImpl(Object.assign(Object.assign({}, this), { auth, stsTokenManager: this.stsTokenManager._clone() }));
+        }
+        _onReload(callback) {
+            // There should only ever be one listener, and that is a single instance of MultiFactorUser
+            _assert(!this.reloadListener, this.auth, "internal-error" /* INTERNAL_ERROR */);
+            this.reloadListener = callback;
+            if (this.reloadUserInfo) {
+                this._notifyReloadListener(this.reloadUserInfo);
+                this.reloadUserInfo = null;
+            }
+        }
+        _notifyReloadListener(userInfo) {
+            if (this.reloadListener) {
+                this.reloadListener(userInfo);
+            }
+            else {
+                // If no listener is subscribed yet, save the result so it's available when they do subscribe
+                this.reloadUserInfo = userInfo;
+            }
+        }
+        _startProactiveRefresh() {
+            this.proactiveRefresh._start();
+        }
+        _stopProactiveRefresh() {
+            this.proactiveRefresh._stop();
+        }
+        async _updateTokensIfNecessary(response, reload = false) {
+            let tokensRefreshed = false;
+            if (response.idToken &&
+                response.idToken !== this.stsTokenManager.accessToken) {
+                this.stsTokenManager.updateFromServerResponse(response);
+                tokensRefreshed = true;
+            }
+            if (reload) {
+                await _reloadWithoutSaving(this);
+            }
+            await this.auth._persistUserIfCurrent(this);
+            if (tokensRefreshed) {
+                this.auth._notifyListenersIfCurrent(this);
+            }
+        }
+        async delete() {
+            const idToken = await this.getIdToken();
+            await _logoutIfInvalidated(this, deleteAccount(this.auth, { idToken }));
+            this.stsTokenManager.clearRefreshToken();
+            // TODO: Determine if cancellable-promises are necessary to use in this class so that delete()
+            //       cancels pending actions...
+            return this.auth.signOut();
+        }
+        toJSON() {
+            return Object.assign(Object.assign({ uid: this.uid, email: this.email || undefined, emailVerified: this.emailVerified, displayName: this.displayName || undefined, isAnonymous: this.isAnonymous, photoURL: this.photoURL || undefined, phoneNumber: this.phoneNumber || undefined, tenantId: this.tenantId || undefined, providerData: this.providerData.map(userInfo => (Object.assign({}, userInfo))), stsTokenManager: this.stsTokenManager.toJSON(), 
+                // Redirect event ID must be maintained in case there is a pending
+                // redirect event.
+                _redirectEventId: this._redirectEventId }, this.metadata.toJSON()), { 
+                // Required for compatibility with the legacy SDK (go/firebase-auth-sdk-persistence-parsing):
+                apiKey: this.auth.config.apiKey, appName: this.auth.name });
+        }
+        get refreshToken() {
+            return this.stsTokenManager.refreshToken || '';
+        }
+        static _fromJSON(auth, object) {
+            var _a, _b, _c, _d, _e, _f, _g, _h;
+            const displayName = (_a = object.displayName) !== null && _a !== void 0 ? _a : undefined;
+            const email = (_b = object.email) !== null && _b !== void 0 ? _b : undefined;
+            const phoneNumber = (_c = object.phoneNumber) !== null && _c !== void 0 ? _c : undefined;
+            const photoURL = (_d = object.photoURL) !== null && _d !== void 0 ? _d : undefined;
+            const tenantId = (_e = object.tenantId) !== null && _e !== void 0 ? _e : undefined;
+            const _redirectEventId = (_f = object._redirectEventId) !== null && _f !== void 0 ? _f : undefined;
+            const createdAt = (_g = object.createdAt) !== null && _g !== void 0 ? _g : undefined;
+            const lastLoginAt = (_h = object.lastLoginAt) !== null && _h !== void 0 ? _h : undefined;
+            const { uid, emailVerified, isAnonymous, providerData, stsTokenManager: plainObjectTokenManager } = object;
+            _assert(uid && plainObjectTokenManager, auth, "internal-error" /* INTERNAL_ERROR */);
+            const stsTokenManager = StsTokenManager.fromJSON(this.name, plainObjectTokenManager);
+            _assert(typeof uid === 'string', auth, "internal-error" /* INTERNAL_ERROR */);
+            assertStringOrUndefined(displayName, auth.name);
+            assertStringOrUndefined(email, auth.name);
+            _assert(typeof emailVerified === 'boolean', auth, "internal-error" /* INTERNAL_ERROR */);
+            _assert(typeof isAnonymous === 'boolean', auth, "internal-error" /* INTERNAL_ERROR */);
+            assertStringOrUndefined(phoneNumber, auth.name);
+            assertStringOrUndefined(photoURL, auth.name);
+            assertStringOrUndefined(tenantId, auth.name);
+            assertStringOrUndefined(_redirectEventId, auth.name);
+            assertStringOrUndefined(createdAt, auth.name);
+            assertStringOrUndefined(lastLoginAt, auth.name);
+            const user = new UserImpl({
+                uid,
+                auth,
+                email,
+                emailVerified,
+                displayName,
+                isAnonymous,
+                photoURL,
+                phoneNumber,
+                tenantId,
+                stsTokenManager,
+                createdAt,
+                lastLoginAt
+            });
+            if (providerData && Array.isArray(providerData)) {
+                user.providerData = providerData.map(userInfo => (Object.assign({}, userInfo)));
+            }
+            if (_redirectEventId) {
+                user._redirectEventId = _redirectEventId;
+            }
+            return user;
+        }
+        /**
+         * Initialize a User from an idToken server response
+         * @param auth
+         * @param idTokenResponse
+         */
+        static async _fromIdTokenResponse(auth, idTokenResponse, isAnonymous = false) {
+            const stsTokenManager = new StsTokenManager();
+            stsTokenManager.updateFromServerResponse(idTokenResponse);
+            // Initialize the Firebase Auth user.
+            const user = new UserImpl({
+                uid: idTokenResponse.localId,
+                auth,
+                stsTokenManager,
+                isAnonymous
+            });
+            // Updates the user info and data and resolves with a user instance.
+            await _reloadWithoutSaving(user);
+            return user;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class InMemoryPersistence {
+        constructor() {
+            this.type = "NONE" /* NONE */;
+            this.storage = {};
+        }
+        async _isAvailable() {
+            return true;
+        }
+        async _set(key, value) {
+            this.storage[key] = value;
+        }
+        async _get(key) {
+            const value = this.storage[key];
+            return value === undefined ? null : value;
+        }
+        async _remove(key) {
+            delete this.storage[key];
+        }
+        _addListener(_key, _listener) {
+            // Listeners are not supported for in-memory storage since it cannot be shared across windows/workers
+            return;
+        }
+        _removeListener(_key, _listener) {
+            // Listeners are not supported for in-memory storage since it cannot be shared across windows/workers
+            return;
+        }
+    }
+    InMemoryPersistence.type = 'NONE';
+    /**
+     * An implementation of {@link Persistence} of type 'NONE'.
+     *
+     * @public
+     */
+    const inMemoryPersistence = InMemoryPersistence;
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _persistenceKeyName(key, apiKey, appName) {
+        return `${"firebase" /* PERSISTENCE */}:${key}:${apiKey}:${appName}`;
+    }
+    class PersistenceUserManager {
+        constructor(persistence, auth, userKey) {
+            this.persistence = persistence;
+            this.auth = auth;
+            this.userKey = userKey;
+            const { config, name } = this.auth;
+            this.fullUserKey = _persistenceKeyName(this.userKey, config.apiKey, name);
+            this.fullPersistenceKey = _persistenceKeyName("persistence" /* PERSISTENCE_USER */, config.apiKey, name);
+            this.boundEventHandler = auth._onStorageEvent.bind(auth);
+            this.persistence._addListener(this.fullUserKey, this.boundEventHandler);
+        }
+        setCurrentUser(user) {
+            return this.persistence._set(this.fullUserKey, user.toJSON());
+        }
+        async getCurrentUser() {
+            const blob = await this.persistence._get(this.fullUserKey);
+            return blob ? UserImpl._fromJSON(this.auth, blob) : null;
+        }
+        removeCurrentUser() {
+            return this.persistence._remove(this.fullUserKey);
+        }
+        savePersistenceForRedirect() {
+            return this.persistence._set(this.fullPersistenceKey, this.persistence.type);
+        }
+        async setPersistence(newPersistence) {
+            if (this.persistence === newPersistence) {
+                return;
+            }
+            const currentUser = await this.getCurrentUser();
+            await this.removeCurrentUser();
+            this.persistence = newPersistence;
+            if (currentUser) {
+                return this.setCurrentUser(currentUser);
+            }
+        }
+        delete() {
+            this.persistence._removeListener(this.fullUserKey, this.boundEventHandler);
+        }
+        static async create(auth, persistenceHierarchy, userKey = "authUser" /* AUTH_USER */) {
+            if (!persistenceHierarchy.length) {
+                return new PersistenceUserManager(_getInstance(inMemoryPersistence), auth, userKey);
+            }
+            // Eliminate any persistences that are not available
+            const availablePersistences = (await Promise.all(persistenceHierarchy.map(async (persistence) => {
+                if (await persistence._isAvailable()) {
+                    return persistence;
+                }
+                return undefined;
+            }))).filter(persistence => persistence);
+            // Fall back to the first persistence listed, or in memory if none available
+            let selectedPersistence = availablePersistences[0] ||
+                _getInstance(inMemoryPersistence);
+            const key = _persistenceKeyName(userKey, auth.config.apiKey, auth.name);
+            // Pull out the existing user, setting the chosen persistence to that
+            // persistence if the user exists.
+            let userToMigrate = null;
+            // Note, here we check for a user in _all_ persistences, not just the
+            // ones deemed available. If we can migrate a user out of a broken
+            // persistence, we will (but only if that persistence supports migration).
+            for (const persistence of persistenceHierarchy) {
+                try {
+                    const blob = await persistence._get(key);
+                    if (blob) {
+                        const user = UserImpl._fromJSON(auth, blob); // throws for unparsable blob (wrong format)
+                        if (persistence !== selectedPersistence) {
+                            userToMigrate = user;
+                        }
+                        selectedPersistence = persistence;
+                        break;
+                    }
+                }
+                catch (_a) { }
+            }
+            // If we find the user in a persistence that does support migration, use
+            // that migration path (of only persistences that support migration)
+            const migrationHierarchy = availablePersistences.filter(p => p._shouldAllowMigration);
+            // If the persistence does _not_ allow migration, just finish off here
+            if (!selectedPersistence._shouldAllowMigration ||
+                !migrationHierarchy.length) {
+                return new PersistenceUserManager(selectedPersistence, auth, userKey);
+            }
+            selectedPersistence = migrationHierarchy[0];
+            if (userToMigrate) {
+                // This normally shouldn't throw since chosenPersistence.isAvailable() is true, but if it does
+                // we'll just let it bubble to surface the error.
+                await selectedPersistence._set(key, userToMigrate.toJSON());
+            }
+            // Attempt to clear the key in other persistences but ignore errors. This helps prevent issues
+            // such as users getting stuck with a previous account after signing out and refreshing the tab.
+            await Promise.all(persistenceHierarchy.map(async (persistence) => {
+                if (persistence !== selectedPersistence) {
+                    try {
+                        await persistence._remove(key);
+                    }
+                    catch (_a) { }
+                }
+            }));
+            return new PersistenceUserManager(selectedPersistence, auth, userKey);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Determine the browser for the purposes of reporting usage to the API
+     */
+    function _getBrowserName(userAgent) {
+        const ua = userAgent.toLowerCase();
+        if (ua.includes('opera/') || ua.includes('opr/') || ua.includes('opios/')) {
+            return "Opera" /* OPERA */;
+        }
+        else if (_isIEMobile(ua)) {
+            // Windows phone IEMobile browser.
+            return "IEMobile" /* IEMOBILE */;
+        }
+        else if (ua.includes('msie') || ua.includes('trident/')) {
+            return "IE" /* IE */;
+        }
+        else if (ua.includes('edge/')) {
+            return "Edge" /* EDGE */;
+        }
+        else if (_isFirefox(ua)) {
+            return "Firefox" /* FIREFOX */;
+        }
+        else if (ua.includes('silk/')) {
+            return "Silk" /* SILK */;
+        }
+        else if (_isBlackBerry(ua)) {
+            // Blackberry browser.
+            return "Blackberry" /* BLACKBERRY */;
+        }
+        else if (_isWebOS(ua)) {
+            // WebOS default browser.
+            return "Webos" /* WEBOS */;
+        }
+        else if (_isSafari(ua)) {
+            return "Safari" /* SAFARI */;
+        }
+        else if ((ua.includes('chrome/') || _isChromeIOS(ua)) &&
+            !ua.includes('edge/')) {
+            return "Chrome" /* CHROME */;
+        }
+        else if (_isAndroid(ua)) {
+            // Android stock browser.
+            return "Android" /* ANDROID */;
+        }
+        else {
+            // Most modern browsers have name/version at end of user agent string.
+            const re = /([a-zA-Z\d\.]+)\/[a-zA-Z\d\.]*$/;
+            const matches = userAgent.match(re);
+            if ((matches === null || matches === void 0 ? void 0 : matches.length) === 2) {
+                return matches[1];
+            }
+        }
+        return "Other" /* OTHER */;
+    }
+    function _isFirefox(ua = getUA()) {
+        return /firefox\//i.test(ua);
+    }
+    function _isSafari(userAgent = getUA()) {
+        const ua = userAgent.toLowerCase();
+        return (ua.includes('safari/') &&
+            !ua.includes('chrome/') &&
+            !ua.includes('crios/') &&
+            !ua.includes('android'));
+    }
+    function _isChromeIOS(ua = getUA()) {
+        return /crios\//i.test(ua);
+    }
+    function _isIEMobile(ua = getUA()) {
+        return /iemobile/i.test(ua);
+    }
+    function _isAndroid(ua = getUA()) {
+        return /android/i.test(ua);
+    }
+    function _isBlackBerry(ua = getUA()) {
+        return /blackberry/i.test(ua);
+    }
+    function _isWebOS(ua = getUA()) {
+        return /webos/i.test(ua);
+    }
+    function _isIOS(ua = getUA()) {
+        return /iphone|ipad|ipod/i.test(ua);
+    }
+    function _isIOSStandalone(ua = getUA()) {
+        var _a;
+        return _isIOS(ua) && !!((_a = window.navigator) === null || _a === void 0 ? void 0 : _a.standalone);
+    }
+    function _isIE10() {
+        return isIE() && document.documentMode === 10;
+    }
+    function _isMobileBrowser(ua = getUA()) {
+        // TODO: implement getBrowserName equivalent for OS.
+        return (_isIOS(ua) ||
+            _isAndroid(ua) ||
+            _isWebOS(ua) ||
+            _isBlackBerry(ua) ||
+            /windows phone/i.test(ua) ||
+            _isIEMobile(ua));
+    }
+    function _isIframe() {
+        try {
+            // Check that the current window is not the top window.
+            // If so, return true.
+            return !!(window && window !== window.top);
+        }
+        catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /*
+     * Determine the SDK version string
+     */
+    function _getClientVersion(clientPlatform, frameworks = []) {
+        let reportedPlatform;
+        switch (clientPlatform) {
+            case "Browser" /* BROWSER */:
+                // In a browser environment, report the browser name.
+                reportedPlatform = _getBrowserName(getUA());
+                break;
+            case "Worker" /* WORKER */:
+                // Technically a worker runs from a browser but we need to differentiate a
+                // worker from a browser.
+                // For example: Chrome-Worker/JsCore/4.9.1/FirebaseCore-web.
+                reportedPlatform = `${_getBrowserName(getUA())}-${clientPlatform}`;
+                break;
+            default:
+                reportedPlatform = clientPlatform;
+        }
+        const reportedFrameworks = frameworks.length
+            ? frameworks.join(',')
+            : 'FirebaseCore-web'; /* default value if no other framework is used */
+        return `${reportedPlatform}/${"JsCore" /* CORE */}/${SDK_VERSION}/${reportedFrameworks}`;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class AuthImpl {
+        constructor(app, config) {
+            this.app = app;
+            this.config = config;
+            this.currentUser = null;
+            this.emulatorConfig = null;
+            this.operations = Promise.resolve();
+            this.authStateSubscription = new Subscription(this);
+            this.idTokenSubscription = new Subscription(this);
+            this.redirectUser = null;
+            this.isProactiveRefreshEnabled = false;
+            // Any network calls will set this to true and prevent subsequent emulator
+            // initialization
+            this._canInitEmulator = true;
+            this._isInitialized = false;
+            this._deleted = false;
+            this._initializationPromise = null;
+            this._popupRedirectResolver = null;
+            this._errorFactory = _DEFAULT_AUTH_ERROR_FACTORY;
+            // Tracks the last notified UID for state change listeners to prevent
+            // repeated calls to the callbacks. Undefined means it's never been
+            // called, whereas null means it's been called with a signed out user
+            this.lastNotifiedUid = undefined;
+            this.languageCode = null;
+            this.tenantId = null;
+            this.settings = { appVerificationDisabledForTesting: false };
+            this.frameworks = [];
+            this.name = app.name;
+            this.clientVersion = config.sdkClientVersion;
+        }
+        _initializeWithPersistence(persistenceHierarchy, popupRedirectResolver) {
+            if (popupRedirectResolver) {
+                this._popupRedirectResolver = _getInstance(popupRedirectResolver);
+            }
+            // Have to check for app deletion throughout initialization (after each
+            // promise resolution)
+            this._initializationPromise = this.queue(async () => {
+                var _a, _b;
+                if (this._deleted) {
+                    return;
+                }
+                this.persistenceManager = await PersistenceUserManager.create(this, persistenceHierarchy);
+                if (this._deleted) {
+                    return;
+                }
+                // Initialize the resolver early if necessary (only applicable to web:
+                // this will cause the iframe to load immediately in certain cases)
+                if ((_a = this._popupRedirectResolver) === null || _a === void 0 ? void 0 : _a._shouldInitProactively) {
+                    // If this fails, don't halt auth loading
+                    try {
+                        await this._popupRedirectResolver._initialize(this);
+                    }
+                    catch (e) { /* Ignore the error */ }
+                }
+                await this.initializeCurrentUser(popupRedirectResolver);
+                this.lastNotifiedUid = ((_b = this.currentUser) === null || _b === void 0 ? void 0 : _b.uid) || null;
+                if (this._deleted) {
+                    return;
+                }
+                this._isInitialized = true;
+            });
+            return this._initializationPromise;
+        }
+        /**
+         * If the persistence is changed in another window, the user manager will let us know
+         */
+        async _onStorageEvent() {
+            if (this._deleted) {
+                return;
+            }
+            const user = await this.assertedPersistence.getCurrentUser();
+            if (!this.currentUser && !user) {
+                // No change, do nothing (was signed out and remained signed out).
+                return;
+            }
+            // If the same user is to be synchronized.
+            if (this.currentUser && user && this.currentUser.uid === user.uid) {
+                // Data update, simply copy data changes.
+                this._currentUser._assign(user);
+                // If tokens changed from previous user tokens, this will trigger
+                // notifyAuthListeners_.
+                await this.currentUser.getIdToken();
+                return;
+            }
+            // Update current Auth state. Either a new login or logout.
+            await this._updateCurrentUser(user);
+        }
+        async initializeCurrentUser(popupRedirectResolver) {
+            var _a;
+            // First check to see if we have a pending redirect event.
+            let storedUser = (await this.assertedPersistence.getCurrentUser());
+            if (popupRedirectResolver && this.config.authDomain) {
+                await this.getOrInitRedirectPersistenceManager();
+                const redirectUserEventId = (_a = this.redirectUser) === null || _a === void 0 ? void 0 : _a._redirectEventId;
+                const storedUserEventId = storedUser === null || storedUser === void 0 ? void 0 : storedUser._redirectEventId;
+                const result = await this.tryRedirectSignIn(popupRedirectResolver);
+                // If the stored user (i.e. the old "currentUser") has a redirectId that
+                // matches the redirect user, then we want to initially sign in with the
+                // new user object from result.
+                // TODO(samgho): More thoroughly test all of this
+                if ((!redirectUserEventId || redirectUserEventId === storedUserEventId) &&
+                    (result === null || result === void 0 ? void 0 : result.user)) {
+                    storedUser = result.user;
+                }
+            }
+            // If no user in persistence, there is no current user. Set to null.
+            if (!storedUser) {
+                return this.directlySetCurrentUser(null);
+            }
+            if (!storedUser._redirectEventId) {
+                // This isn't a redirect user, we can reload and bail
+                // This will also catch the redirected user, if available, as that method
+                // strips the _redirectEventId
+                return this.reloadAndSetCurrentUserOrClear(storedUser);
+            }
+            _assert(this._popupRedirectResolver, this, "argument-error" /* ARGUMENT_ERROR */);
+            await this.getOrInitRedirectPersistenceManager();
+            // If the redirect user's event ID matches the current user's event ID,
+            // DO NOT reload the current user, otherwise they'll be cleared from storage.
+            // This is important for the reauthenticateWithRedirect() flow.
+            if (this.redirectUser &&
+                this.redirectUser._redirectEventId === storedUser._redirectEventId) {
+                return this.directlySetCurrentUser(storedUser);
+            }
+            return this.reloadAndSetCurrentUserOrClear(storedUser);
+        }
+        async tryRedirectSignIn(redirectResolver) {
+            // The redirect user needs to be checked (and signed in if available)
+            // during auth initialization. All of the normal sign in and link/reauth
+            // flows call back into auth and push things onto the promise queue. We
+            // need to await the result of the redirect sign in *inside the promise
+            // queue*. This presents a problem: we run into deadlock. See:
+            //    ┌> [Initialization] ─────┐
+            //    ┌> [<other queue tasks>] │
+            //    └─ [getRedirectResult] <─┘
+            //    where [] are tasks on the queue and arrows denote awaits
+            // Initialization will never complete because it's waiting on something
+            // that's waiting for initialization to complete!
+            //
+            // Instead, this method calls getRedirectResult() (stored in
+            // _completeRedirectFn) with an optional parameter that instructs all of
+            // the underlying auth operations to skip anything that mutates auth state.
+            let result = null;
+            try {
+                // We know this._popupRedirectResolver is set since redirectResolver
+                // is passed in. The _completeRedirectFn expects the unwrapped extern.
+                result = await this._popupRedirectResolver._completeRedirectFn(this, redirectResolver, true);
+            }
+            catch (e) {
+                // Swallow any errors here; the code can retrieve them in
+                // getRedirectResult().
+                await this._setRedirectUser(null);
+            }
+            return result;
+        }
+        async reloadAndSetCurrentUserOrClear(user) {
+            try {
+                await _reloadWithoutSaving(user);
+            }
+            catch (e) {
+                if (e.code !== `auth/${"network-request-failed" /* NETWORK_REQUEST_FAILED */}`) {
+                    // Something's wrong with the user's token. Log them out and remove
+                    // them from storage
+                    return this.directlySetCurrentUser(null);
+                }
+            }
+            return this.directlySetCurrentUser(user);
+        }
+        useDeviceLanguage() {
+            this.languageCode = _getUserLanguage();
+        }
+        async _delete() {
+            this._deleted = true;
+        }
+        async updateCurrentUser(userExtern) {
+            // The public updateCurrentUser method needs to make a copy of the user,
+            // and also check that the project matches
+            const user = userExtern
+                ? getModularInstance(userExtern)
+                : null;
+            if (user) {
+                _assert(user.auth.config.apiKey === this.config.apiKey, this, "invalid-user-token" /* INVALID_AUTH */);
+            }
+            return this._updateCurrentUser(user && user._clone(this));
+        }
+        async _updateCurrentUser(user) {
+            if (this._deleted) {
+                return;
+            }
+            if (user) {
+                _assert(this.tenantId === user.tenantId, this, "tenant-id-mismatch" /* TENANT_ID_MISMATCH */);
+            }
+            return this.queue(async () => {
+                await this.directlySetCurrentUser(user);
+                this.notifyAuthListeners();
+            });
+        }
+        async signOut() {
+            // Clear the redirect user when signOut is called
+            if (this.redirectPersistenceManager || this._popupRedirectResolver) {
+                await this._setRedirectUser(null);
+            }
+            return this._updateCurrentUser(null);
+        }
+        setPersistence(persistence) {
+            return this.queue(async () => {
+                await this.assertedPersistence.setPersistence(_getInstance(persistence));
+            });
+        }
+        _getPersistence() {
+            return this.assertedPersistence.persistence.type;
+        }
+        _updateErrorMap(errorMap) {
+            this._errorFactory = new ErrorFactory('auth', 'Firebase', errorMap());
+        }
+        onAuthStateChanged(nextOrObserver, error, completed) {
+            return this.registerStateListener(this.authStateSubscription, nextOrObserver, error, completed);
+        }
+        onIdTokenChanged(nextOrObserver, error, completed) {
+            return this.registerStateListener(this.idTokenSubscription, nextOrObserver, error, completed);
+        }
+        toJSON() {
+            var _a;
+            return {
+                apiKey: this.config.apiKey,
+                authDomain: this.config.authDomain,
+                appName: this.name,
+                currentUser: (_a = this._currentUser) === null || _a === void 0 ? void 0 : _a.toJSON()
+            };
+        }
+        async _setRedirectUser(user, popupRedirectResolver) {
+            const redirectManager = await this.getOrInitRedirectPersistenceManager(popupRedirectResolver);
+            return user === null
+                ? redirectManager.removeCurrentUser()
+                : redirectManager.setCurrentUser(user);
+        }
+        async getOrInitRedirectPersistenceManager(popupRedirectResolver) {
+            if (!this.redirectPersistenceManager) {
+                const resolver = (popupRedirectResolver && _getInstance(popupRedirectResolver)) ||
+                    this._popupRedirectResolver;
+                _assert(resolver, this, "argument-error" /* ARGUMENT_ERROR */);
+                this.redirectPersistenceManager = await PersistenceUserManager.create(this, [_getInstance(resolver._redirectPersistence)], "redirectUser" /* REDIRECT_USER */);
+                this.redirectUser =
+                    await this.redirectPersistenceManager.getCurrentUser();
+            }
+            return this.redirectPersistenceManager;
+        }
+        async _redirectUserForId(id) {
+            var _a, _b;
+            // Make sure we've cleared any pending persistence actions if we're not in
+            // the initializer
+            if (this._isInitialized) {
+                await this.queue(async () => { });
+            }
+            if (((_a = this._currentUser) === null || _a === void 0 ? void 0 : _a._redirectEventId) === id) {
+                return this._currentUser;
+            }
+            if (((_b = this.redirectUser) === null || _b === void 0 ? void 0 : _b._redirectEventId) === id) {
+                return this.redirectUser;
+            }
+            return null;
+        }
+        async _persistUserIfCurrent(user) {
+            if (user === this.currentUser) {
+                return this.queue(async () => this.directlySetCurrentUser(user));
+            }
+        }
+        /** Notifies listeners only if the user is current */
+        _notifyListenersIfCurrent(user) {
+            if (user === this.currentUser) {
+                this.notifyAuthListeners();
+            }
+        }
+        _key() {
+            return `${this.config.authDomain}:${this.config.apiKey}:${this.name}`;
+        }
+        _startProactiveRefresh() {
+            this.isProactiveRefreshEnabled = true;
+            if (this.currentUser) {
+                this._currentUser._startProactiveRefresh();
+            }
+        }
+        _stopProactiveRefresh() {
+            this.isProactiveRefreshEnabled = false;
+            if (this.currentUser) {
+                this._currentUser._stopProactiveRefresh();
+            }
+        }
+        /** Returns the current user cast as the internal type */
+        get _currentUser() {
+            return this.currentUser;
+        }
+        notifyAuthListeners() {
+            var _a, _b;
+            if (!this._isInitialized) {
+                return;
+            }
+            this.idTokenSubscription.next(this.currentUser);
+            const currentUid = (_b = (_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.uid) !== null && _b !== void 0 ? _b : null;
+            if (this.lastNotifiedUid !== currentUid) {
+                this.lastNotifiedUid = currentUid;
+                this.authStateSubscription.next(this.currentUser);
+            }
+        }
+        registerStateListener(subscription, nextOrObserver, error, completed) {
+            if (this._deleted) {
+                return () => { };
+            }
+            const cb = typeof nextOrObserver === 'function'
+                ? nextOrObserver
+                : nextOrObserver.next.bind(nextOrObserver);
+            const promise = this._isInitialized
+                ? Promise.resolve()
+                : this._initializationPromise;
+            _assert(promise, this, "internal-error" /* INTERNAL_ERROR */);
+            // The callback needs to be called asynchronously per the spec.
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            promise.then(() => cb(this.currentUser));
+            if (typeof nextOrObserver === 'function') {
+                return subscription.addObserver(nextOrObserver, error, completed);
+            }
+            else {
+                return subscription.addObserver(nextOrObserver);
+            }
+        }
+        /**
+         * Unprotected (from race conditions) method to set the current user. This
+         * should only be called from within a queued callback. This is necessary
+         * because the queue shouldn't rely on another queued callback.
+         */
+        async directlySetCurrentUser(user) {
+            if (this.currentUser && this.currentUser !== user) {
+                this._currentUser._stopProactiveRefresh();
+                if (user && this.isProactiveRefreshEnabled) {
+                    user._startProactiveRefresh();
+                }
+            }
+            this.currentUser = user;
+            if (user) {
+                await this.assertedPersistence.setCurrentUser(user);
+            }
+            else {
+                await this.assertedPersistence.removeCurrentUser();
+            }
+        }
+        queue(action) {
+            // In case something errors, the callback still should be called in order
+            // to keep the promise chain alive
+            this.operations = this.operations.then(action, action);
+            return this.operations;
+        }
+        get assertedPersistence() {
+            _assert(this.persistenceManager, this, "internal-error" /* INTERNAL_ERROR */);
+            return this.persistenceManager;
+        }
+        _logFramework(framework) {
+            if (!framework || this.frameworks.includes(framework)) {
+                return;
+            }
+            this.frameworks.push(framework);
+            // Sort alphabetically so that "FirebaseCore-web,FirebaseUI-web" and
+            // "FirebaseUI-web,FirebaseCore-web" aren't viewed as different.
+            this.frameworks.sort();
+            this.clientVersion = _getClientVersion(this.config.clientPlatform, this._getFrameworks());
+        }
+        _getFrameworks() {
+            return this.frameworks;
+        }
+        async _getAdditionalHeaders() {
+            // Additional headers on every request
+            const headers = {
+                ["X-Client-Version" /* X_CLIENT_VERSION */]: this.clientVersion,
+            };
+            if (this.app.options.appId) {
+                headers["X-Firebase-gmpid" /* X_FIREBASE_GMPID */] = this.app.options.appId;
+            }
+            return headers;
+        }
+    }
+    /**
+     * Method to be used to cast down to our private implmentation of Auth.
+     * It will also handle unwrapping from the compat type if necessary
+     *
+     * @param auth Auth object passed in from developer
+     */
+    function _castAuth(auth) {
+        return getModularInstance(auth);
+    }
+    /** Helper class to wrap subscriber logic */
+    class Subscription {
+        constructor(auth) {
+            this.auth = auth;
+            this.observer = null;
+            this.addObserver = createSubscribe(observer => (this.observer = observer));
+        }
+        get next() {
+            _assert(this.observer, this.auth, "internal-error" /* INTERNAL_ERROR */);
+            return this.observer.next.bind(this.observer);
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Interface that represents the credentials returned by an {@link AuthProvider}.
+     *
+     * @remarks
+     * Implementations specify the details about each auth provider's credential requirements.
+     *
+     * @public
+     */
+    class AuthCredential {
+        /** @internal */
+        constructor(
+        /**
+         * The authentication provider ID for the credential.
+         *
+         * @remarks
+         * For example, 'facebook.com', or 'google.com'.
+         */
+        providerId, 
+        /**
+         * The authentication sign in method for the credential.
+         *
+         * @remarks
+         * For example, {@link SignInMethod}.EMAIL_PASSWORD, or
+         * {@link SignInMethod}.EMAIL_LINK. This corresponds to the sign-in method
+         * identifier as returned in {@link fetchSignInMethodsForEmail}.
+         */
+        signInMethod) {
+            this.providerId = providerId;
+            this.signInMethod = signInMethod;
+        }
+        /**
+         * Returns a JSON-serializable representation of this object.
+         *
+         * @returns a JSON-serializable representation of this object.
+         */
+        toJSON() {
+            return debugFail('not implemented');
+        }
+        /** @internal */
+        _getIdTokenResponse(_auth) {
+            return debugFail('not implemented');
+        }
+        /** @internal */
+        _linkToIdToken(_auth, _idToken) {
+            return debugFail('not implemented');
+        }
+        /** @internal */
+        _getReauthenticationResolver(_auth) {
+            return debugFail('not implemented');
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function signInWithIdp(auth, request) {
+        return _performSignInRequest(auth, "POST" /* POST */, "/v1/accounts:signInWithIdp" /* SIGN_IN_WITH_IDP */, _addTidIfNecessary(auth, request));
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const IDP_REQUEST_URI$1 = 'http://localhost';
+    /**
+     * Represents the OAuth credentials returned by an {@link OAuthProvider}.
+     *
+     * @remarks
+     * Implementations specify the details about each auth provider's credential requirements.
+     *
+     * @public
+     */
+    class OAuthCredential extends AuthCredential {
+        constructor() {
+            super(...arguments);
+            this.pendingToken = null;
+        }
+        /** @internal */
+        static _fromParams(params) {
+            const cred = new OAuthCredential(params.providerId, params.signInMethod);
+            if (params.idToken || params.accessToken) {
+                // OAuth 2 and either ID token or access token.
+                if (params.idToken) {
+                    cred.idToken = params.idToken;
+                }
+                if (params.accessToken) {
+                    cred.accessToken = params.accessToken;
+                }
+                // Add nonce if available and no pendingToken is present.
+                if (params.nonce && !params.pendingToken) {
+                    cred.nonce = params.nonce;
+                }
+                if (params.pendingToken) {
+                    cred.pendingToken = params.pendingToken;
+                }
+            }
+            else if (params.oauthToken && params.oauthTokenSecret) {
+                // OAuth 1 and OAuth token with token secret
+                cred.accessToken = params.oauthToken;
+                cred.secret = params.oauthTokenSecret;
+            }
+            else {
+                _fail("argument-error" /* ARGUMENT_ERROR */);
+            }
+            return cred;
+        }
+        /** {@inheritdoc AuthCredential.toJSON}  */
+        toJSON() {
+            return {
+                idToken: this.idToken,
+                accessToken: this.accessToken,
+                secret: this.secret,
+                nonce: this.nonce,
+                pendingToken: this.pendingToken,
+                providerId: this.providerId,
+                signInMethod: this.signInMethod
+            };
+        }
+        /**
+         * Static method to deserialize a JSON representation of an object into an
+         * {@link  AuthCredential}.
+         *
+         * @param json - Input can be either Object or the stringified representation of the object.
+         * When string is provided, JSON.parse would be called first.
+         *
+         * @returns If the JSON input does not represent an {@link  AuthCredential}, null is returned.
+         */
+        static fromJSON(json) {
+            const obj = typeof json === 'string' ? JSON.parse(json) : json;
+            const { providerId, signInMethod } = obj, rest = __rest(obj, ["providerId", "signInMethod"]);
+            if (!providerId || !signInMethod) {
+                return null;
+            }
+            const cred = new OAuthCredential(providerId, signInMethod);
+            cred.idToken = rest.idToken || undefined;
+            cred.accessToken = rest.accessToken || undefined;
+            cred.secret = rest.secret;
+            cred.nonce = rest.nonce;
+            cred.pendingToken = rest.pendingToken || null;
+            return cred;
+        }
+        /** @internal */
+        _getIdTokenResponse(auth) {
+            const request = this.buildRequest();
+            return signInWithIdp(auth, request);
+        }
+        /** @internal */
+        _linkToIdToken(auth, idToken) {
+            const request = this.buildRequest();
+            request.idToken = idToken;
+            return signInWithIdp(auth, request);
+        }
+        /** @internal */
+        _getReauthenticationResolver(auth) {
+            const request = this.buildRequest();
+            request.autoCreate = false;
+            return signInWithIdp(auth, request);
+        }
+        buildRequest() {
+            const request = {
+                requestUri: IDP_REQUEST_URI$1,
+                returnSecureToken: true
+            };
+            if (this.pendingToken) {
+                request.pendingToken = this.pendingToken;
+            }
+            else {
+                const postBody = {};
+                if (this.idToken) {
+                    postBody['id_token'] = this.idToken;
+                }
+                if (this.accessToken) {
+                    postBody['access_token'] = this.accessToken;
+                }
+                if (this.secret) {
+                    postBody['oauth_token_secret'] = this.secret;
+                }
+                postBody['providerId'] = this.providerId;
+                if (this.nonce && !this.pendingToken) {
+                    postBody['nonce'] = this.nonce;
+                }
+                request.postBody = querystring(postBody);
+            }
+            return request;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * The base class for all Federated providers (OAuth (including OIDC), SAML).
+     *
+     * This class is not meant to be instantiated directly.
+     *
+     * @public
+     */
+    class FederatedAuthProvider {
+        /**
+         * Constructor for generic OAuth providers.
+         *
+         * @param providerId - Provider for which credentials should be generated.
+         */
+        constructor(providerId) {
+            this.providerId = providerId;
+            /** @internal */
+            this.defaultLanguageCode = null;
+            /** @internal */
+            this.customParameters = {};
+        }
+        /**
+         * Set the language gode.
+         *
+         * @param languageCode - language code
+         */
+        setDefaultLanguage(languageCode) {
+            this.defaultLanguageCode = languageCode;
+        }
+        /**
+         * Sets the OAuth custom parameters to pass in an OAuth request for popup and redirect sign-in
+         * operations.
+         *
+         * @remarks
+         * For a detailed list, check the reserved required OAuth 2.0 parameters such as `client_id`,
+         * `redirect_uri`, `scope`, `response_type`, and `state` are not allowed and will be ignored.
+         *
+         * @param customOAuthParameters - The custom OAuth parameters to pass in the OAuth request.
+         */
+        setCustomParameters(customOAuthParameters) {
+            this.customParameters = customOAuthParameters;
+            return this;
+        }
+        /**
+         * Retrieve the current list of {@link CustomParameters}.
+         */
+        getCustomParameters() {
+            return this.customParameters;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Common code to all OAuth providers. This is separate from the
+     * {@link OAuthProvider} so that child providers (like
+     * {@link GoogleAuthProvider}) don't inherit the `credential` instance method.
+     * Instead, they rely on a static `credential` method.
+     */
+    class BaseOAuthProvider extends FederatedAuthProvider {
+        constructor() {
+            super(...arguments);
+            /** @internal */
+            this.scopes = [];
+        }
+        /**
+         * Add an OAuth scope to the credential.
+         *
+         * @param scope - Provider OAuth scope to add.
+         */
+        addScope(scope) {
+            // If not already added, add scope to list.
+            if (!this.scopes.includes(scope)) {
+                this.scopes.push(scope);
+            }
+            return this;
+        }
+        /**
+         * Retrieve the current list of OAuth scopes.
+         */
+        getScopes() {
+            return [...this.scopes];
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Provider for generating an {@link OAuthCredential} for {@link ProviderId}.FACEBOOK.
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a redirect.
+     * const provider = new FacebookAuthProvider();
+     * // Start a sign in process for an unauthenticated user.
+     * provider.addScope('user_birthday');
+     * await signInWithRedirect(auth, provider);
+     * // This will trigger a full page redirect away from your app
+     *
+     * // After returning from the redirect when your app initializes you can obtain the result
+     * const result = await getRedirectResult(auth);
+     * if (result) {
+     *   // This is the signed-in user
+     *   const user = result.user;
+     *   // This gives you a Facebook Access Token.
+     *   const credential = FacebookAuthProvider.credentialFromResult(result);
+     *   const token = credential.accessToken;
+     * }
+     * ```
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a popup.
+     * const provider = new FacebookAuthProvider();
+     * provider.addScope('user_birthday');
+     * const result = await signInWithPopup(auth, provider);
+     *
+     * // The signed-in user info.
+     * const user = result.user;
+     * // This gives you a Facebook Access Token.
+     * const credential = FacebookAuthProvider.credentialFromResult(result);
+     * const token = credential.accessToken;
+     * ```
+     *
+     * @public
+     */
+    class FacebookAuthProvider extends BaseOAuthProvider {
+        constructor() {
+            super("facebook.com" /* FACEBOOK */);
+        }
+        /**
+         * Creates a credential for Facebook.
+         *
+         * @example
+         * ```javascript
+         * // `event` from the Facebook auth.authResponseChange callback.
+         * const credential = FacebookAuthProvider.credential(event.authResponse.accessToken);
+         * const result = await signInWithCredential(credential);
+         * ```
+         *
+         * @param accessToken - Facebook access token.
+         */
+        static credential(accessToken) {
+            return OAuthCredential._fromParams({
+                providerId: FacebookAuthProvider.PROVIDER_ID,
+                signInMethod: FacebookAuthProvider.FACEBOOK_SIGN_IN_METHOD,
+                accessToken
+            });
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link UserCredential}.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromResult(userCredential) {
+            return FacebookAuthProvider.credentialFromTaggedObject(userCredential);
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link AuthError} which was
+         * thrown during a sign-in, link, or reauthenticate operation.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromError(error) {
+            return FacebookAuthProvider.credentialFromTaggedObject((error.customData || {}));
+        }
+        static credentialFromTaggedObject({ _tokenResponse: tokenResponse }) {
+            if (!tokenResponse || !('oauthAccessToken' in tokenResponse)) {
+                return null;
+            }
+            if (!tokenResponse.oauthAccessToken) {
+                return null;
+            }
+            try {
+                return FacebookAuthProvider.credential(tokenResponse.oauthAccessToken);
+            }
+            catch (_a) {
+                return null;
+            }
+        }
+    }
+    /** Always set to {@link SignInMethod}.FACEBOOK. */
+    FacebookAuthProvider.FACEBOOK_SIGN_IN_METHOD = "facebook.com" /* FACEBOOK */;
+    /** Always set to {@link ProviderId}.FACEBOOK. */
+    FacebookAuthProvider.PROVIDER_ID = "facebook.com" /* FACEBOOK */;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Provider for generating an an {@link OAuthCredential} for {@link ProviderId}.GOOGLE.
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a redirect.
+     * const provider = new GoogleAuthProvider();
+     * // Start a sign in process for an unauthenticated user.
+     * provider.addScope('profile');
+     * provider.addScope('email');
+     * await signInWithRedirect(auth, provider);
+     * // This will trigger a full page redirect away from your app
+     *
+     * // After returning from the redirect when your app initializes you can obtain the result
+     * const result = await getRedirectResult(auth);
+     * if (result) {
+     *   // This is the signed-in user
+     *   const user = result.user;
+     *   // This gives you a Google Access Token.
+     *   const credential = GoogleAuthProvider.credentialFromResult(result);
+     *   const token = credential.accessToken;
+     * }
+     * ```
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a popup.
+     * const provider = new GoogleAuthProvider();
+     * provider.addScope('profile');
+     * provider.addScope('email');
+     * const result = await signInWithPopup(auth, provider);
+     *
+     * // The signed-in user info.
+     * const user = result.user;
+     * // This gives you a Google Access Token.
+     * const credential = GoogleAuthProvider.credentialFromResult(result);
+     * const token = credential.accessToken;
+     * ```
+     *
+     * @public
+     */
+    class GoogleAuthProvider extends BaseOAuthProvider {
+        constructor() {
+            super("google.com" /* GOOGLE */);
+            this.addScope('profile');
+        }
+        /**
+         * Creates a credential for Google. At least one of ID token and access token is required.
+         *
+         * @example
+         * ```javascript
+         * // \`googleUser\` from the onsuccess Google Sign In callback.
+         * const credential = GoogleAuthProvider.credential(googleUser.getAuthResponse().id_token);
+         * const result = await signInWithCredential(credential);
+         * ```
+         *
+         * @param idToken - Google ID token.
+         * @param accessToken - Google access token.
+         */
+        static credential(idToken, accessToken) {
+            return OAuthCredential._fromParams({
+                providerId: GoogleAuthProvider.PROVIDER_ID,
+                signInMethod: GoogleAuthProvider.GOOGLE_SIGN_IN_METHOD,
+                idToken,
+                accessToken
+            });
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link UserCredential}.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromResult(userCredential) {
+            return GoogleAuthProvider.credentialFromTaggedObject(userCredential);
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link AuthError} which was
+         * thrown during a sign-in, link, or reauthenticate operation.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromError(error) {
+            return GoogleAuthProvider.credentialFromTaggedObject((error.customData || {}));
+        }
+        static credentialFromTaggedObject({ _tokenResponse: tokenResponse }) {
+            if (!tokenResponse) {
+                return null;
+            }
+            const { oauthIdToken, oauthAccessToken } = tokenResponse;
+            if (!oauthIdToken && !oauthAccessToken) {
+                // This could be an oauth 1 credential or a phone credential
+                return null;
+            }
+            try {
+                return GoogleAuthProvider.credential(oauthIdToken, oauthAccessToken);
+            }
+            catch (_a) {
+                return null;
+            }
+        }
+    }
+    /** Always set to {@link SignInMethod}.GOOGLE. */
+    GoogleAuthProvider.GOOGLE_SIGN_IN_METHOD = "google.com" /* GOOGLE */;
+    /** Always set to {@link ProviderId}.GOOGLE. */
+    GoogleAuthProvider.PROVIDER_ID = "google.com" /* GOOGLE */;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Provider for generating an {@link OAuthCredential} for {@link ProviderId}.GITHUB.
+     *
+     * @remarks
+     * GitHub requires an OAuth 2.0 redirect, so you can either handle the redirect directly, or use
+     * the {@link signInWithPopup} handler:
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a redirect.
+     * const provider = new GithubAuthProvider();
+     * // Start a sign in process for an unauthenticated user.
+     * provider.addScope('repo');
+     * await signInWithRedirect(auth, provider);
+     * // This will trigger a full page redirect away from your app
+     *
+     * // After returning from the redirect when your app initializes you can obtain the result
+     * const result = await getRedirectResult(auth);
+     * if (result) {
+     *   // This is the signed-in user
+     *   const user = result.user;
+     *   // This gives you a Github Access Token.
+     *   const credential = GithubAuthProvider.credentialFromResult(result);
+     *   const token = credential.accessToken;
+     * }
+     * ```
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a popup.
+     * const provider = new GithubAuthProvider();
+     * provider.addScope('repo');
+     * const result = await signInWithPopup(auth, provider);
+     *
+     * // The signed-in user info.
+     * const user = result.user;
+     * // This gives you a Github Access Token.
+     * const credential = GithubAuthProvider.credentialFromResult(result);
+     * const token = credential.accessToken;
+     * ```
+     * @public
+     */
+    class GithubAuthProvider extends BaseOAuthProvider {
+        constructor() {
+            super("github.com" /* GITHUB */);
+        }
+        /**
+         * Creates a credential for Github.
+         *
+         * @param accessToken - Github access token.
+         */
+        static credential(accessToken) {
+            return OAuthCredential._fromParams({
+                providerId: GithubAuthProvider.PROVIDER_ID,
+                signInMethod: GithubAuthProvider.GITHUB_SIGN_IN_METHOD,
+                accessToken
+            });
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link UserCredential}.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromResult(userCredential) {
+            return GithubAuthProvider.credentialFromTaggedObject(userCredential);
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link AuthError} which was
+         * thrown during a sign-in, link, or reauthenticate operation.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromError(error) {
+            return GithubAuthProvider.credentialFromTaggedObject((error.customData || {}));
+        }
+        static credentialFromTaggedObject({ _tokenResponse: tokenResponse }) {
+            if (!tokenResponse || !('oauthAccessToken' in tokenResponse)) {
+                return null;
+            }
+            if (!tokenResponse.oauthAccessToken) {
+                return null;
+            }
+            try {
+                return GithubAuthProvider.credential(tokenResponse.oauthAccessToken);
+            }
+            catch (_a) {
+                return null;
+            }
+        }
+    }
+    /** Always set to {@link SignInMethod}.GITHUB. */
+    GithubAuthProvider.GITHUB_SIGN_IN_METHOD = "github.com" /* GITHUB */;
+    /** Always set to {@link ProviderId}.GITHUB. */
+    GithubAuthProvider.PROVIDER_ID = "github.com" /* GITHUB */;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Provider for generating an {@link OAuthCredential} for {@link ProviderId}.TWITTER.
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a redirect.
+     * const provider = new TwitterAuthProvider();
+     * // Start a sign in process for an unauthenticated user.
+     * await signInWithRedirect(auth, provider);
+     * // This will trigger a full page redirect away from your app
+     *
+     * // After returning from the redirect when your app initializes you can obtain the result
+     * const result = await getRedirectResult(auth);
+     * if (result) {
+     *   // This is the signed-in user
+     *   const user = result.user;
+     *   // This gives you a Twitter Access Token and Secret.
+     *   const credential = TwitterAuthProvider.credentialFromResult(result);
+     *   const token = credential.accessToken;
+     *   const secret = credential.secret;
+     * }
+     * ```
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a popup.
+     * const provider = new TwitterAuthProvider();
+     * const result = await signInWithPopup(auth, provider);
+     *
+     * // The signed-in user info.
+     * const user = result.user;
+     * // This gives you a Twitter Access Token and Secret.
+     * const credential = TwitterAuthProvider.credentialFromResult(result);
+     * const token = credential.accessToken;
+     * const secret = credential.secret;
+     * ```
+     *
+     * @public
+     */
+    class TwitterAuthProvider extends BaseOAuthProvider {
+        constructor() {
+            super("twitter.com" /* TWITTER */);
+        }
+        /**
+         * Creates a credential for Twitter.
+         *
+         * @param token - Twitter access token.
+         * @param secret - Twitter secret.
+         */
+        static credential(token, secret) {
+            return OAuthCredential._fromParams({
+                providerId: TwitterAuthProvider.PROVIDER_ID,
+                signInMethod: TwitterAuthProvider.TWITTER_SIGN_IN_METHOD,
+                oauthToken: token,
+                oauthTokenSecret: secret
+            });
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link UserCredential}.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromResult(userCredential) {
+            return TwitterAuthProvider.credentialFromTaggedObject(userCredential);
+        }
+        /**
+         * Used to extract the underlying {@link OAuthCredential} from a {@link AuthError} which was
+         * thrown during a sign-in, link, or reauthenticate operation.
+         *
+         * @param userCredential - The user credential.
+         */
+        static credentialFromError(error) {
+            return TwitterAuthProvider.credentialFromTaggedObject((error.customData || {}));
+        }
+        static credentialFromTaggedObject({ _tokenResponse: tokenResponse }) {
+            if (!tokenResponse) {
+                return null;
+            }
+            const { oauthAccessToken, oauthTokenSecret } = tokenResponse;
+            if (!oauthAccessToken || !oauthTokenSecret) {
+                return null;
+            }
+            try {
+                return TwitterAuthProvider.credential(oauthAccessToken, oauthTokenSecret);
+            }
+            catch (_a) {
+                return null;
+            }
+        }
+    }
+    /** Always set to {@link SignInMethod}.TWITTER. */
+    TwitterAuthProvider.TWITTER_SIGN_IN_METHOD = "twitter.com" /* TWITTER */;
+    /** Always set to {@link ProviderId}.TWITTER. */
+    TwitterAuthProvider.PROVIDER_ID = "twitter.com" /* TWITTER */;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class UserCredentialImpl {
+        constructor(params) {
+            this.user = params.user;
+            this.providerId = params.providerId;
+            this._tokenResponse = params._tokenResponse;
+            this.operationType = params.operationType;
+        }
+        static async _fromIdTokenResponse(auth, operationType, idTokenResponse, isAnonymous = false) {
+            const user = await UserImpl._fromIdTokenResponse(auth, idTokenResponse, isAnonymous);
+            const providerId = providerIdForResponse(idTokenResponse);
+            const userCred = new UserCredentialImpl({
+                user,
+                providerId,
+                _tokenResponse: idTokenResponse,
+                operationType
+            });
+            return userCred;
+        }
+        static async _forOperation(user, operationType, response) {
+            await user._updateTokensIfNecessary(response, /* reload */ true);
+            const providerId = providerIdForResponse(response);
+            return new UserCredentialImpl({
+                user,
+                providerId,
+                _tokenResponse: response,
+                operationType
+            });
+        }
+    }
+    function providerIdForResponse(response) {
+        if (response.providerId) {
+            return response.providerId;
+        }
+        if ('phoneNumber' in response) {
+            return "phone" /* PHONE */;
+        }
+        return null;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class MultiFactorError extends FirebaseError {
+        constructor(auth, error, operationType, user) {
+            var _a;
+            super(error.code, error.message);
+            this.operationType = operationType;
+            this.user = user;
+            // https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+            Object.setPrototypeOf(this, MultiFactorError.prototype);
+            this.customData = {
+                appName: auth.name,
+                tenantId: (_a = auth.tenantId) !== null && _a !== void 0 ? _a : undefined,
+                _serverResponse: error.customData._serverResponse,
+                operationType,
+            };
+        }
+        static _fromErrorAndOperation(auth, error, operationType, user) {
+            return new MultiFactorError(auth, error, operationType, user);
+        }
+    }
+    function _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential, user) {
+        const idTokenProvider = operationType === "reauthenticate" /* REAUTHENTICATE */
+            ? credential._getReauthenticationResolver(auth)
+            : credential._getIdTokenResponse(auth);
+        return idTokenProvider.catch(error => {
+            if (error.code === `auth/${"multi-factor-auth-required" /* MFA_REQUIRED */}`) {
+                throw MultiFactorError._fromErrorAndOperation(auth, error, operationType, user);
+            }
+            throw error;
+        });
+    }
+    async function _link$1(user, credential, bypassAuthState = false) {
+        const response = await _logoutIfInvalidated(user, credential._linkToIdToken(user.auth, await user.getIdToken()), bypassAuthState);
+        return UserCredentialImpl._forOperation(user, "link" /* LINK */, response);
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function _reauthenticate(user, credential, bypassAuthState = false) {
+        const { auth } = user;
+        const operationType = "reauthenticate" /* REAUTHENTICATE */;
+        try {
+            const response = await _logoutIfInvalidated(user, _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential, user), bypassAuthState);
+            _assert(response.idToken, auth, "internal-error" /* INTERNAL_ERROR */);
+            const parsed = _parseToken(response.idToken);
+            _assert(parsed, auth, "internal-error" /* INTERNAL_ERROR */);
+            const { sub: localId } = parsed;
+            _assert(user.uid === localId, auth, "user-mismatch" /* USER_MISMATCH */);
+            return UserCredentialImpl._forOperation(user, operationType, response);
+        }
+        catch (e) {
+            // Convert user deleted error into user mismatch
+            if ((e === null || e === void 0 ? void 0 : e.code) === `auth/${"user-not-found" /* USER_DELETED */}`) {
+                _fail(auth, "user-mismatch" /* USER_MISMATCH */);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function _signInWithCredential(auth, credential, bypassAuthState = false) {
+        const operationType = "signIn" /* SIGN_IN */;
+        const response = await _processCredentialSavingMfaContextIfNecessary(auth, operationType, credential);
+        const userCredential = await UserCredentialImpl._fromIdTokenResponse(auth, operationType, response);
+        if (!bypassAuthState) {
+            await auth._updateCurrentUser(userCredential.user);
+        }
+        return userCredential;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    // Non-optional auth methods.
+    /**
+     * Changes the type of persistence on the {@link Auth} instance for the currently saved
+     * `Auth` session and applies this type of persistence for future sign-in requests, including
+     * sign-in with redirect requests.
+     *
+     * @remarks
+     * This makes it easy for a user signing in to specify whether their session should be
+     * remembered or not. It also makes it easier to never persist the `Auth` state for applications
+     * that are shared by other users or have sensitive data.
+     *
+     * @example
+     * ```javascript
+     * setPersistence(auth, browserSessionPersistence);
+     * ```
+     *
+     * @param auth - The {@link Auth} instance.
+     * @param persistence - The {@link Persistence} to use.
+     * @returns A `Promise` that resolves once the persistence change has completed
+     *
+     * @public
+     */
+    function setPersistence(auth, persistence) {
+        return getModularInstance(auth).setPersistence(persistence);
+    }
+    /**
+     * Signs out the current user.
+     *
+     * @param auth - The {@link Auth} instance.
+     *
+     * @public
+     */
+    function signOut(auth) {
+        return getModularInstance(auth).signOut();
+    }
+
+    const STORAGE_AVAILABLE_KEY = '__sak';
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    // There are two different browser persistence types: local and session.
+    // Both have the same implementation but use a different underlying storage
+    // object.
+    class BrowserPersistenceClass {
+        constructor(storageRetriever, type) {
+            this.storageRetriever = storageRetriever;
+            this.type = type;
+        }
+        _isAvailable() {
+            try {
+                if (!this.storage) {
+                    return Promise.resolve(false);
+                }
+                this.storage.setItem(STORAGE_AVAILABLE_KEY, '1');
+                this.storage.removeItem(STORAGE_AVAILABLE_KEY);
+                return Promise.resolve(true);
+            }
+            catch (_a) {
+                return Promise.resolve(false);
+            }
+        }
+        _set(key, value) {
+            this.storage.setItem(key, JSON.stringify(value));
+            return Promise.resolve();
+        }
+        _get(key) {
+            const json = this.storage.getItem(key);
+            return Promise.resolve(json ? JSON.parse(json) : null);
+        }
+        _remove(key) {
+            this.storage.removeItem(key);
+            return Promise.resolve();
+        }
+        get storage() {
+            return this.storageRetriever();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _iframeCannotSyncWebStorage() {
+        const ua = getUA();
+        return _isSafari(ua) || _isIOS(ua);
+    }
+    // The polling period in case events are not supported
+    const _POLLING_INTERVAL_MS$1 = 1000;
+    // The IE 10 localStorage cross tab synchronization delay in milliseconds
+    const IE10_LOCAL_STORAGE_SYNC_DELAY = 10;
+    class BrowserLocalPersistence extends BrowserPersistenceClass {
+        constructor() {
+            super(() => window.localStorage, "LOCAL" /* LOCAL */);
+            this.boundEventHandler = (event, poll) => this.onStorageEvent(event, poll);
+            this.listeners = {};
+            this.localCache = {};
+            // setTimeout return value is platform specific
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            this.pollTimer = null;
+            // Safari or iOS browser and embedded in an iframe.
+            this.safariLocalStorageNotSynced = _iframeCannotSyncWebStorage() && _isIframe();
+            // Whether to use polling instead of depending on window events
+            this.fallbackToPolling = _isMobileBrowser();
+            this._shouldAllowMigration = true;
+        }
+        forAllChangedKeys(cb) {
+            // Check all keys with listeners on them.
+            for (const key of Object.keys(this.listeners)) {
+                // Get value from localStorage.
+                const newValue = this.storage.getItem(key);
+                const oldValue = this.localCache[key];
+                // If local map value does not match, trigger listener with storage event.
+                // Differentiate this simulated event from the real storage event.
+                if (newValue !== oldValue) {
+                    cb(key, oldValue, newValue);
+                }
+            }
+        }
+        onStorageEvent(event, poll = false) {
+            // Key would be null in some situations, like when localStorage is cleared
+            if (!event.key) {
+                this.forAllChangedKeys((key, _oldValue, newValue) => {
+                    this.notifyListeners(key, newValue);
+                });
+                return;
+            }
+            const key = event.key;
+            // Check the mechanism how this event was detected.
+            // The first event will dictate the mechanism to be used.
+            if (poll) {
+                // Environment detects storage changes via polling.
+                // Remove storage event listener to prevent possible event duplication.
+                this.detachListener();
+            }
+            else {
+                // Environment detects storage changes via storage event listener.
+                // Remove polling listener to prevent possible event duplication.
+                this.stopPolling();
+            }
+            // Safari embedded iframe. Storage event will trigger with the delta
+            // changes but no changes will be applied to the iframe localStorage.
+            if (this.safariLocalStorageNotSynced) {
+                // Get current iframe page value.
+                const storedValue = this.storage.getItem(key);
+                // Value not synchronized, synchronize manually.
+                if (event.newValue !== storedValue) {
+                    if (event.newValue !== null) {
+                        // Value changed from current value.
+                        this.storage.setItem(key, event.newValue);
+                    }
+                    else {
+                        // Current value deleted.
+                        this.storage.removeItem(key);
+                    }
+                }
+                else if (this.localCache[key] === event.newValue && !poll) {
+                    // Already detected and processed, do not trigger listeners again.
+                    return;
+                }
+            }
+            const triggerListeners = () => {
+                // Keep local map up to date in case storage event is triggered before
+                // poll.
+                const storedValue = this.storage.getItem(key);
+                if (!poll && this.localCache[key] === storedValue) {
+                    // Real storage event which has already been detected, do nothing.
+                    // This seems to trigger in some IE browsers for some reason.
+                    return;
+                }
+                this.notifyListeners(key, storedValue);
+            };
+            const storedValue = this.storage.getItem(key);
+            if (_isIE10() &&
+                storedValue !== event.newValue &&
+                event.newValue !== event.oldValue) {
+                // IE 10 has this weird bug where a storage event would trigger with the
+                // correct key, oldValue and newValue but localStorage.getItem(key) does
+                // not yield the updated value until a few milliseconds. This ensures
+                // this recovers from that situation.
+                setTimeout(triggerListeners, IE10_LOCAL_STORAGE_SYNC_DELAY);
+            }
+            else {
+                triggerListeners();
+            }
+        }
+        notifyListeners(key, value) {
+            this.localCache[key] = value;
+            const listeners = this.listeners[key];
+            if (listeners) {
+                for (const listener of Array.from(listeners)) {
+                    listener(value ? JSON.parse(value) : value);
+                }
+            }
+        }
+        startPolling() {
+            this.stopPolling();
+            this.pollTimer = setInterval(() => {
+                this.forAllChangedKeys((key, oldValue, newValue) => {
+                    this.onStorageEvent(new StorageEvent('storage', {
+                        key,
+                        oldValue,
+                        newValue
+                    }), 
+                    /* poll */ true);
+                });
+            }, _POLLING_INTERVAL_MS$1);
+        }
+        stopPolling() {
+            if (this.pollTimer) {
+                clearInterval(this.pollTimer);
+                this.pollTimer = null;
+            }
+        }
+        attachListener() {
+            window.addEventListener('storage', this.boundEventHandler);
+        }
+        detachListener() {
+            window.removeEventListener('storage', this.boundEventHandler);
+        }
+        _addListener(key, listener) {
+            if (Object.keys(this.listeners).length === 0) {
+                // Whether browser can detect storage event when it had already been pushed to the background.
+                // This may happen in some mobile browsers. A localStorage change in the foreground window
+                // will not be detected in the background window via the storage event.
+                // This was detected in iOS 7.x mobile browsers
+                if (this.fallbackToPolling) {
+                    this.startPolling();
+                }
+                else {
+                    this.attachListener();
+                }
+            }
+            if (!this.listeners[key]) {
+                this.listeners[key] = new Set();
+                // Populate the cache to avoid spuriously triggering on first poll.
+                this.localCache[key] = this.storage.getItem(key);
+            }
+            this.listeners[key].add(listener);
+        }
+        _removeListener(key, listener) {
+            if (this.listeners[key]) {
+                this.listeners[key].delete(listener);
+                if (this.listeners[key].size === 0) {
+                    delete this.listeners[key];
+                }
+            }
+            if (Object.keys(this.listeners).length === 0) {
+                this.detachListener();
+                this.stopPolling();
+            }
+        }
+        // Update local cache on base operations:
+        async _set(key, value) {
+            await super._set(key, value);
+            this.localCache[key] = JSON.stringify(value);
+        }
+        async _get(key) {
+            const value = await super._get(key);
+            this.localCache[key] = JSON.stringify(value);
+            return value;
+        }
+        async _remove(key) {
+            await super._remove(key);
+            delete this.localCache[key];
+        }
+    }
+    BrowserLocalPersistence.type = 'LOCAL';
+    /**
+     * An implementation of {@link Persistence} of type `LOCAL` using `localStorage`
+     * for the underlying storage.
+     *
+     * @public
+     */
+    const browserLocalPersistence = BrowserLocalPersistence;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class BrowserSessionPersistence extends BrowserPersistenceClass {
+        constructor() {
+            super(() => window.sessionStorage, "SESSION" /* SESSION */);
+        }
+        _addListener(_key, _listener) {
+            // Listeners are not supported for session storage since it cannot be shared across windows
+            return;
+        }
+        _removeListener(_key, _listener) {
+            // Listeners are not supported for session storage since it cannot be shared across windows
+            return;
+        }
+    }
+    BrowserSessionPersistence.type = 'SESSION';
+    /**
+     * An implementation of {@link Persistence} of `SESSION` using `sessionStorage`
+     * for the underlying storage.
+     *
+     * @public
+     */
+    const browserSessionPersistence = BrowserSessionPersistence;
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Shim for Promise.allSettled, note the slightly different format of `fulfilled` vs `status`.
+     *
+     * @param promises - Array of promises to wait on.
+     */
+    function _allSettled(promises) {
+        return Promise.all(promises.map(async (promise) => {
+            try {
+                const value = await promise;
+                return {
+                    fulfilled: true,
+                    value
+                };
+            }
+            catch (reason) {
+                return {
+                    fulfilled: false,
+                    reason
+                };
+            }
+        }));
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Interface class for receiving messages.
+     *
+     */
+    class Receiver {
+        constructor(eventTarget) {
+            this.eventTarget = eventTarget;
+            this.handlersMap = {};
+            this.boundEventHandler = this.handleEvent.bind(this);
+        }
+        /**
+         * Obtain an instance of a Receiver for a given event target, if none exists it will be created.
+         *
+         * @param eventTarget - An event target (such as window or self) through which the underlying
+         * messages will be received.
+         */
+        static _getInstance(eventTarget) {
+            // The results are stored in an array since objects can't be keys for other
+            // objects. In addition, setting a unique property on an event target as a
+            // hash map key may not be allowed due to CORS restrictions.
+            const existingInstance = this.receivers.find(receiver => receiver.isListeningto(eventTarget));
+            if (existingInstance) {
+                return existingInstance;
+            }
+            const newInstance = new Receiver(eventTarget);
+            this.receivers.push(newInstance);
+            return newInstance;
+        }
+        isListeningto(eventTarget) {
+            return this.eventTarget === eventTarget;
+        }
+        /**
+         * Fans out a MessageEvent to the appropriate listeners.
+         *
+         * @remarks
+         * Sends an {@link Status.ACK} upon receipt and a {@link Status.DONE} once all handlers have
+         * finished processing.
+         *
+         * @param event - The MessageEvent.
+         *
+         */
+        async handleEvent(event) {
+            const messageEvent = event;
+            const { eventId, eventType, data } = messageEvent.data;
+            const handlers = this.handlersMap[eventType];
+            if (!(handlers === null || handlers === void 0 ? void 0 : handlers.size)) {
+                return;
+            }
+            messageEvent.ports[0].postMessage({
+                status: "ack" /* ACK */,
+                eventId,
+                eventType
+            });
+            const promises = Array.from(handlers).map(async (handler) => handler(messageEvent.origin, data));
+            const response = await _allSettled(promises);
+            messageEvent.ports[0].postMessage({
+                status: "done" /* DONE */,
+                eventId,
+                eventType,
+                response
+            });
+        }
+        /**
+         * Subscribe an event handler for a particular event.
+         *
+         * @param eventType - Event name to subscribe to.
+         * @param eventHandler - The event handler which should receive the events.
+         *
+         */
+        _subscribe(eventType, eventHandler) {
+            if (Object.keys(this.handlersMap).length === 0) {
+                this.eventTarget.addEventListener('message', this.boundEventHandler);
+            }
+            if (!this.handlersMap[eventType]) {
+                this.handlersMap[eventType] = new Set();
+            }
+            this.handlersMap[eventType].add(eventHandler);
+        }
+        /**
+         * Unsubscribe an event handler from a particular event.
+         *
+         * @param eventType - Event name to unsubscribe from.
+         * @param eventHandler - Optinoal event handler, if none provided, unsubscribe all handlers on this event.
+         *
+         */
+        _unsubscribe(eventType, eventHandler) {
+            if (this.handlersMap[eventType] && eventHandler) {
+                this.handlersMap[eventType].delete(eventHandler);
+            }
+            if (!eventHandler || this.handlersMap[eventType].size === 0) {
+                delete this.handlersMap[eventType];
+            }
+            if (Object.keys(this.handlersMap).length === 0) {
+                this.eventTarget.removeEventListener('message', this.boundEventHandler);
+            }
+        }
+    }
+    Receiver.receivers = [];
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _generateEventId(prefix = '', digits = 10) {
+        let random = '';
+        for (let i = 0; i < digits; i++) {
+            random += Math.floor(Math.random() * 10);
+        }
+        return prefix + random;
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Interface for sending messages and waiting for a completion response.
+     *
+     */
+    class Sender {
+        constructor(target) {
+            this.target = target;
+            this.handlers = new Set();
+        }
+        /**
+         * Unsubscribe the handler and remove it from our tracking Set.
+         *
+         * @param handler - The handler to unsubscribe.
+         */
+        removeMessageHandler(handler) {
+            if (handler.messageChannel) {
+                handler.messageChannel.port1.removeEventListener('message', handler.onMessage);
+                handler.messageChannel.port1.close();
+            }
+            this.handlers.delete(handler);
+        }
+        /**
+         * Send a message to the Receiver located at {@link target}.
+         *
+         * @remarks
+         * We'll first wait a bit for an ACK , if we get one we will wait significantly longer until the
+         * receiver has had a chance to fully process the event.
+         *
+         * @param eventType - Type of event to send.
+         * @param data - The payload of the event.
+         * @param timeout - Timeout for waiting on an ACK from the receiver.
+         *
+         * @returns An array of settled promises from all the handlers that were listening on the receiver.
+         */
+        async _send(eventType, data, timeout = 50 /* ACK */) {
+            const messageChannel = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
+            if (!messageChannel) {
+                throw new Error("connection_unavailable" /* CONNECTION_UNAVAILABLE */);
+            }
+            // Node timers and browser timers return fundamentally different types.
+            // We don't actually care what the value is but TS won't accept unknown and
+            // we can't cast properly in both environments.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let completionTimer;
+            let handler;
+            return new Promise((resolve, reject) => {
+                const eventId = _generateEventId('', 20);
+                messageChannel.port1.start();
+                const ackTimer = setTimeout(() => {
+                    reject(new Error("unsupported_event" /* UNSUPPORTED_EVENT */));
+                }, timeout);
+                handler = {
+                    messageChannel,
+                    onMessage(event) {
+                        const messageEvent = event;
+                        if (messageEvent.data.eventId !== eventId) {
+                            return;
+                        }
+                        switch (messageEvent.data.status) {
+                            case "ack" /* ACK */:
+                                // The receiver should ACK first.
+                                clearTimeout(ackTimer);
+                                completionTimer = setTimeout(() => {
+                                    reject(new Error("timeout" /* TIMEOUT */));
+                                }, 3000 /* COMPLETION */);
+                                break;
+                            case "done" /* DONE */:
+                                // Once the receiver's handlers are finished we will get the results.
+                                clearTimeout(completionTimer);
+                                resolve(messageEvent.data.response);
+                                break;
+                            default:
+                                clearTimeout(ackTimer);
+                                clearTimeout(completionTimer);
+                                reject(new Error("invalid_response" /* INVALID_RESPONSE */));
+                                break;
+                        }
+                    }
+                };
+                this.handlers.add(handler);
+                messageChannel.port1.addEventListener('message', handler.onMessage);
+                this.target.postMessage({
+                    eventType,
+                    eventId,
+                    data
+                }, [messageChannel.port2]);
+            }).finally(() => {
+                if (handler) {
+                    this.removeMessageHandler(handler);
+                }
+            });
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Lazy accessor for window, since the compat layer won't tree shake this out,
+     * we need to make sure not to mess with window unless we have to
+     */
+    function _window() {
+        return window;
+    }
+    function _setWindowLocation(url) {
+        _window().location.href = url;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function _isWorker() {
+        return (typeof _window()['WorkerGlobalScope'] !== 'undefined' &&
+            typeof _window()['importScripts'] === 'function');
+    }
+    async function _getActiveServiceWorker() {
+        if (!(navigator === null || navigator === void 0 ? void 0 : navigator.serviceWorker)) {
+            return null;
+        }
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            return registration.active;
+        }
+        catch (_a) {
+            return null;
+        }
+    }
+    function _getServiceWorkerController() {
+        var _a;
+        return ((_a = navigator === null || navigator === void 0 ? void 0 : navigator.serviceWorker) === null || _a === void 0 ? void 0 : _a.controller) || null;
+    }
+    function _getWorkerGlobalScope() {
+        return _isWorker() ? self : null;
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const DB_NAME = 'firebaseLocalStorageDb';
+    const DB_VERSION = 1;
+    const DB_OBJECTSTORE_NAME = 'firebaseLocalStorage';
+    const DB_DATA_KEYPATH = 'fbase_key';
+    /**
+     * Promise wrapper for IDBRequest
+     *
+     * Unfortunately we can't cleanly extend Promise<T> since promises are not callable in ES6
+     *
+     */
+    class DBPromise {
+        constructor(request) {
+            this.request = request;
+        }
+        toPromise() {
+            return new Promise((resolve, reject) => {
+                this.request.addEventListener('success', () => {
+                    resolve(this.request.result);
+                });
+                this.request.addEventListener('error', () => {
+                    reject(this.request.error);
+                });
+            });
+        }
+    }
+    function getObjectStore(db, isReadWrite) {
+        return db
+            .transaction([DB_OBJECTSTORE_NAME], isReadWrite ? 'readwrite' : 'readonly')
+            .objectStore(DB_OBJECTSTORE_NAME);
+    }
+    function _deleteDatabase() {
+        const request = indexedDB.deleteDatabase(DB_NAME);
+        return new DBPromise(request).toPromise();
+    }
+    function _openDatabase() {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        return new Promise((resolve, reject) => {
+            request.addEventListener('error', () => {
+                reject(request.error);
+            });
+            request.addEventListener('upgradeneeded', () => {
+                const db = request.result;
+                try {
+                    db.createObjectStore(DB_OBJECTSTORE_NAME, { keyPath: DB_DATA_KEYPATH });
+                }
+                catch (e) {
+                    reject(e);
+                }
+            });
+            request.addEventListener('success', async () => {
+                const db = request.result;
+                // Strange bug that occurs in Firefox when multiple tabs are opened at the
+                // same time. The only way to recover seems to be deleting the database
+                // and re-initializing it.
+                // https://github.com/firebase/firebase-js-sdk/issues/634
+                if (!db.objectStoreNames.contains(DB_OBJECTSTORE_NAME)) {
+                    // Need to close the database or else you get a `blocked` event
+                    db.close();
+                    await _deleteDatabase();
+                    resolve(await _openDatabase());
+                }
+                else {
+                    resolve(db);
+                }
+            });
+        });
+    }
+    async function _putObject(db, key, value) {
+        const request = getObjectStore(db, true).put({
+            [DB_DATA_KEYPATH]: key,
+            value
+        });
+        return new DBPromise(request).toPromise();
+    }
+    async function getObject(db, key) {
+        const request = getObjectStore(db, false).get(key);
+        const data = await new DBPromise(request).toPromise();
+        return data === undefined ? null : data.value;
+    }
+    function _deleteObject(db, key) {
+        const request = getObjectStore(db, true).delete(key);
+        return new DBPromise(request).toPromise();
+    }
+    const _POLLING_INTERVAL_MS = 800;
+    const _TRANSACTION_RETRY_COUNT = 3;
+    class IndexedDBLocalPersistence {
+        constructor() {
+            this.type = "LOCAL" /* LOCAL */;
+            this._shouldAllowMigration = true;
+            this.listeners = {};
+            this.localCache = {};
+            // setTimeout return value is platform specific
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            this.pollTimer = null;
+            this.pendingWrites = 0;
+            this.receiver = null;
+            this.sender = null;
+            this.serviceWorkerReceiverAvailable = false;
+            this.activeServiceWorker = null;
+            // Fire & forget the service worker registration as it may never resolve
+            this._workerInitializationPromise =
+                this.initializeServiceWorkerMessaging().then(() => { }, () => { });
+        }
+        async _openDb() {
+            if (this.db) {
+                return this.db;
+            }
+            this.db = await _openDatabase();
+            return this.db;
+        }
+        async _withRetries(op) {
+            let numAttempts = 0;
+            while (true) {
+                try {
+                    const db = await this._openDb();
+                    return await op(db);
+                }
+                catch (e) {
+                    if (numAttempts++ > _TRANSACTION_RETRY_COUNT) {
+                        throw e;
+                    }
+                    if (this.db) {
+                        this.db.close();
+                        this.db = undefined;
+                    }
+                    // TODO: consider adding exponential backoff
+                }
+            }
+        }
+        /**
+         * IndexedDB events do not propagate from the main window to the worker context.  We rely on a
+         * postMessage interface to send these events to the worker ourselves.
+         */
+        async initializeServiceWorkerMessaging() {
+            return _isWorker() ? this.initializeReceiver() : this.initializeSender();
+        }
+        /**
+         * As the worker we should listen to events from the main window.
+         */
+        async initializeReceiver() {
+            this.receiver = Receiver._getInstance(_getWorkerGlobalScope());
+            // Refresh from persistence if we receive a KeyChanged message.
+            this.receiver._subscribe("keyChanged" /* KEY_CHANGED */, async (_origin, data) => {
+                const keys = await this._poll();
+                return {
+                    keyProcessed: keys.includes(data.key)
+                };
+            });
+            // Let the sender know that we are listening so they give us more timeout.
+            this.receiver._subscribe("ping" /* PING */, async (_origin, _data) => {
+                return ["keyChanged" /* KEY_CHANGED */];
+            });
+        }
+        /**
+         * As the main window, we should let the worker know when keys change (set and remove).
+         *
+         * @remarks
+         * {@link https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/ready | ServiceWorkerContainer.ready}
+         * may not resolve.
+         */
+        async initializeSender() {
+            var _a, _b;
+            // Check to see if there's an active service worker.
+            this.activeServiceWorker = await _getActiveServiceWorker();
+            if (!this.activeServiceWorker) {
+                return;
+            }
+            this.sender = new Sender(this.activeServiceWorker);
+            // Ping the service worker to check what events they can handle.
+            const results = await this.sender._send("ping" /* PING */, {}, 800 /* LONG_ACK */);
+            if (!results) {
+                return;
+            }
+            if (((_a = results[0]) === null || _a === void 0 ? void 0 : _a.fulfilled) &&
+                ((_b = results[0]) === null || _b === void 0 ? void 0 : _b.value.includes("keyChanged" /* KEY_CHANGED */))) {
+                this.serviceWorkerReceiverAvailable = true;
+            }
+        }
+        /**
+         * Let the worker know about a changed key, the exact key doesn't technically matter since the
+         * worker will just trigger a full sync anyway.
+         *
+         * @remarks
+         * For now, we only support one service worker per page.
+         *
+         * @param key - Storage key which changed.
+         */
+        async notifyServiceWorker(key) {
+            if (!this.sender ||
+                !this.activeServiceWorker ||
+                _getServiceWorkerController() !== this.activeServiceWorker) {
+                return;
+            }
+            try {
+                await this.sender._send("keyChanged" /* KEY_CHANGED */, { key }, 
+                // Use long timeout if receiver has previously responded to a ping from us.
+                this.serviceWorkerReceiverAvailable
+                    ? 800 /* LONG_ACK */
+                    : 50 /* ACK */);
+            }
+            catch (_a) {
+                // This is a best effort approach. Ignore errors.
+            }
+        }
+        async _isAvailable() {
+            try {
+                if (!indexedDB) {
+                    return false;
+                }
+                const db = await _openDatabase();
+                await _putObject(db, STORAGE_AVAILABLE_KEY, '1');
+                await _deleteObject(db, STORAGE_AVAILABLE_KEY);
+                return true;
+            }
+            catch (_a) { }
+            return false;
+        }
+        async _withPendingWrite(write) {
+            this.pendingWrites++;
+            try {
+                await write();
+            }
+            finally {
+                this.pendingWrites--;
+            }
+        }
+        async _set(key, value) {
+            return this._withPendingWrite(async () => {
+                await this._withRetries((db) => _putObject(db, key, value));
+                this.localCache[key] = value;
+                return this.notifyServiceWorker(key);
+            });
+        }
+        async _get(key) {
+            const obj = (await this._withRetries((db) => getObject(db, key)));
+            this.localCache[key] = obj;
+            return obj;
+        }
+        async _remove(key) {
+            return this._withPendingWrite(async () => {
+                await this._withRetries((db) => _deleteObject(db, key));
+                delete this.localCache[key];
+                return this.notifyServiceWorker(key);
+            });
+        }
+        async _poll() {
+            // TODO: check if we need to fallback if getAll is not supported
+            const result = await this._withRetries((db) => {
+                const getAllRequest = getObjectStore(db, false).getAll();
+                return new DBPromise(getAllRequest).toPromise();
+            });
+            if (!result) {
+                return [];
+            }
+            // If we have pending writes in progress abort, we'll get picked up on the next poll
+            if (this.pendingWrites !== 0) {
+                return [];
+            }
+            const keys = [];
+            const keysInResult = new Set();
+            for (const { fbase_key: key, value } of result) {
+                keysInResult.add(key);
+                if (JSON.stringify(this.localCache[key]) !== JSON.stringify(value)) {
+                    this.notifyListeners(key, value);
+                    keys.push(key);
+                }
+            }
+            for (const localKey of Object.keys(this.localCache)) {
+                if (this.localCache[localKey] && !keysInResult.has(localKey)) {
+                    // Deleted
+                    this.notifyListeners(localKey, null);
+                    keys.push(localKey);
+                }
+            }
+            return keys;
+        }
+        notifyListeners(key, newValue) {
+            this.localCache[key] = newValue;
+            const listeners = this.listeners[key];
+            if (listeners) {
+                for (const listener of Array.from(listeners)) {
+                    listener(newValue);
+                }
+            }
+        }
+        startPolling() {
+            this.stopPolling();
+            this.pollTimer = setInterval(async () => this._poll(), _POLLING_INTERVAL_MS);
+        }
+        stopPolling() {
+            if (this.pollTimer) {
+                clearInterval(this.pollTimer);
+                this.pollTimer = null;
+            }
+        }
+        _addListener(key, listener) {
+            if (Object.keys(this.listeners).length === 0) {
+                this.startPolling();
+            }
+            if (!this.listeners[key]) {
+                this.listeners[key] = new Set();
+                // Populate the cache to avoid spuriously triggering on first poll.
+                void this._get(key); // This can happen in the background async and we can return immediately.
+            }
+            this.listeners[key].add(listener);
+        }
+        _removeListener(key, listener) {
+            if (this.listeners[key]) {
+                this.listeners[key].delete(listener);
+                if (this.listeners[key].size === 0) {
+                    delete this.listeners[key];
+                }
+            }
+            if (Object.keys(this.listeners).length === 0) {
+                this.stopPolling();
+            }
+        }
+    }
+    IndexedDBLocalPersistence.type = 'LOCAL';
+    /**
+     * An implementation of {@link Persistence} of type `LOCAL` using `indexedDB`
+     * for the underlying storage.
+     *
+     * @public
+     */
+    const indexedDBLocalPersistence = IndexedDBLocalPersistence;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function getScriptParentElement() {
+        var _a, _b;
+        return (_b = (_a = document.getElementsByTagName('head')) === null || _a === void 0 ? void 0 : _a[0]) !== null && _b !== void 0 ? _b : document;
+    }
+    function _loadJS(url) {
+        // TODO: consider adding timeout support & cancellation
+        return new Promise((resolve, reject) => {
+            const el = document.createElement('script');
+            el.setAttribute('src', url);
+            el.onload = resolve;
+            el.onerror = e => {
+                const error = _createError("internal-error" /* INTERNAL_ERROR */);
+                error.customData = e;
+                reject(error);
+            };
+            el.type = 'text/javascript';
+            el.charset = 'UTF-8';
+            getScriptParentElement().appendChild(el);
+        });
+    }
+    function _generateCallbackName(prefix) {
+        return `__${prefix}${Math.floor(Math.random() * 1000000)}`;
+    }
+    new Delay(30000, 60000);
+
+    /**
+     * @license
+     * Copyright 2021 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Chooses a popup/redirect resolver to use. This prefers the override (which
+     * is directly passed in), and falls back to the property set on the auth
+     * object. If neither are available, this function errors w/ an argument error.
+     */
+    function _withDefaultResolver(auth, resolverOverride) {
+        if (resolverOverride) {
+            return _getInstance(resolverOverride);
+        }
+        _assert(auth._popupRedirectResolver, auth, "argument-error" /* ARGUMENT_ERROR */);
+        return auth._popupRedirectResolver;
+    }
+
+    /**
+     * @license
+     * Copyright 2019 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class IdpCredential extends AuthCredential {
+        constructor(params) {
+            super("custom" /* CUSTOM */, "custom" /* CUSTOM */);
+            this.params = params;
+        }
+        _getIdTokenResponse(auth) {
+            return signInWithIdp(auth, this._buildIdpRequest());
+        }
+        _linkToIdToken(auth, idToken) {
+            return signInWithIdp(auth, this._buildIdpRequest(idToken));
+        }
+        _getReauthenticationResolver(auth) {
+            return signInWithIdp(auth, this._buildIdpRequest());
+        }
+        _buildIdpRequest(idToken) {
+            const request = {
+                requestUri: this.params.requestUri,
+                sessionId: this.params.sessionId,
+                postBody: this.params.postBody,
+                tenantId: this.params.tenantId,
+                pendingToken: this.params.pendingToken,
+                returnSecureToken: true,
+                returnIdpCredential: true
+            };
+            if (idToken) {
+                request.idToken = idToken;
+            }
+            return request;
+        }
+    }
+    function _signIn(params) {
+        return _signInWithCredential(params.auth, new IdpCredential(params), params.bypassAuthState);
+    }
+    function _reauth(params) {
+        const { auth, user } = params;
+        _assert(user, auth, "internal-error" /* INTERNAL_ERROR */);
+        return _reauthenticate(user, new IdpCredential(params), params.bypassAuthState);
+    }
+    async function _link(params) {
+        const { auth, user } = params;
+        _assert(user, auth, "internal-error" /* INTERNAL_ERROR */);
+        return _link$1(user, new IdpCredential(params), params.bypassAuthState);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Popup event manager. Handles the popup's entire lifecycle; listens to auth
+     * events
+     */
+    class AbstractPopupRedirectOperation {
+        constructor(auth, filter, resolver, user, bypassAuthState = false) {
+            this.auth = auth;
+            this.resolver = resolver;
+            this.user = user;
+            this.bypassAuthState = bypassAuthState;
+            this.pendingPromise = null;
+            this.eventManager = null;
+            this.filter = Array.isArray(filter) ? filter : [filter];
+        }
+        execute() {
+            return new Promise(async (resolve, reject) => {
+                this.pendingPromise = { resolve, reject };
+                try {
+                    this.eventManager = await this.resolver._initialize(this.auth);
+                    await this.onExecution();
+                    this.eventManager.registerConsumer(this);
+                }
+                catch (e) {
+                    this.reject(e);
+                }
+            });
+        }
+        async onAuthEvent(event) {
+            const { urlResponse, sessionId, postBody, tenantId, error, type } = event;
+            if (error) {
+                this.reject(error);
+                return;
+            }
+            const params = {
+                auth: this.auth,
+                requestUri: urlResponse,
+                sessionId: sessionId,
+                tenantId: tenantId || undefined,
+                postBody: postBody || undefined,
+                user: this.user,
+                bypassAuthState: this.bypassAuthState
+            };
+            try {
+                this.resolve(await this.getIdpTask(type)(params));
+            }
+            catch (e) {
+                this.reject(e);
+            }
+        }
+        onError(error) {
+            this.reject(error);
+        }
+        getIdpTask(type) {
+            switch (type) {
+                case "signInViaPopup" /* SIGN_IN_VIA_POPUP */:
+                case "signInViaRedirect" /* SIGN_IN_VIA_REDIRECT */:
+                    return _signIn;
+                case "linkViaPopup" /* LINK_VIA_POPUP */:
+                case "linkViaRedirect" /* LINK_VIA_REDIRECT */:
+                    return _link;
+                case "reauthViaPopup" /* REAUTH_VIA_POPUP */:
+                case "reauthViaRedirect" /* REAUTH_VIA_REDIRECT */:
+                    return _reauth;
+                default:
+                    _fail(this.auth, "internal-error" /* INTERNAL_ERROR */);
+            }
+        }
+        resolve(cred) {
+            debugAssert(this.pendingPromise, 'Pending promise was never set');
+            this.pendingPromise.resolve(cred);
+            this.unregisterAndCleanUp();
+        }
+        reject(error) {
+            debugAssert(this.pendingPromise, 'Pending promise was never set');
+            this.pendingPromise.reject(error);
+            this.unregisterAndCleanUp();
+        }
+        unregisterAndCleanUp() {
+            if (this.eventManager) {
+                this.eventManager.unregisterConsumer(this);
+            }
+            this.pendingPromise = null;
+            this.cleanUp();
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const _POLL_WINDOW_CLOSE_TIMEOUT = new Delay(2000, 10000);
+    /**
+     * Authenticates a Firebase client using a popup-based OAuth authentication flow.
+     *
+     * @remarks
+     * If succeeds, returns the signed in user along with the provider's credential. If sign in was
+     * unsuccessful, returns an error object containing additional information about the error.
+     *
+     * @example
+     * ```javascript
+     * // Sign in using a popup.
+     * const provider = new FacebookAuthProvider();
+     * const result = await signInWithPopup(auth, provider);
+     *
+     * // The signed-in user info.
+     * const user = result.user;
+     * // This gives you a Facebook Access Token.
+     * const credential = provider.credentialFromResult(auth, result);
+     * const token = credential.accessToken;
+     * ```
+     *
+     * @param auth - The {@link Auth} instance.
+     * @param provider - The provider to authenticate. The provider has to be an {@link OAuthProvider}.
+     * Non-OAuth providers like {@link EmailAuthProvider} will throw an error.
+     * @param resolver - An instance of {@link PopupRedirectResolver}, optional
+     * if already supplied to {@link initializeAuth} or provided by {@link getAuth}.
+     *
+     *
+     * @public
+     */
+    async function signInWithPopup(auth, provider, resolver) {
+        const authInternal = _castAuth(auth);
+        _assertInstanceOf(auth, provider, FederatedAuthProvider);
+        const resolverInternal = _withDefaultResolver(authInternal, resolver);
+        const action = new PopupOperation(authInternal, "signInViaPopup" /* SIGN_IN_VIA_POPUP */, provider, resolverInternal);
+        return action.executeNotNull();
+    }
+    /**
+     * Popup event manager. Handles the popup's entire lifecycle; listens to auth
+     * events
+     *
+     */
+    class PopupOperation extends AbstractPopupRedirectOperation {
+        constructor(auth, filter, provider, resolver, user) {
+            super(auth, filter, resolver, user);
+            this.provider = provider;
+            this.authWindow = null;
+            this.pollId = null;
+            if (PopupOperation.currentPopupAction) {
+                PopupOperation.currentPopupAction.cancel();
+            }
+            PopupOperation.currentPopupAction = this;
+        }
+        async executeNotNull() {
+            const result = await this.execute();
+            _assert(result, this.auth, "internal-error" /* INTERNAL_ERROR */);
+            return result;
+        }
+        async onExecution() {
+            debugAssert(this.filter.length === 1, 'Popup operations only handle one event');
+            const eventId = _generateEventId();
+            this.authWindow = await this.resolver._openPopup(this.auth, this.provider, this.filter[0], // There's always one, see constructor
+            eventId);
+            this.authWindow.associatedEvent = eventId;
+            // Check for web storage support and origin validation _after_ the popup is
+            // loaded. These operations are slow (~1 second or so) Rather than
+            // waiting on them before opening the window, optimistically open the popup
+            // and check for storage support at the same time. If storage support is
+            // not available, this will cause the whole thing to reject properly. It
+            // will also close the popup, but since the promise has already rejected,
+            // the popup closed by user poll will reject into the void.
+            this.resolver._originValidation(this.auth).catch(e => {
+                this.reject(e);
+            });
+            this.resolver._isIframeWebStorageSupported(this.auth, isSupported => {
+                if (!isSupported) {
+                    this.reject(_createError(this.auth, "web-storage-unsupported" /* WEB_STORAGE_UNSUPPORTED */));
+                }
+            });
+            // Handle user closure. Notice this does *not* use await
+            this.pollUserCancellation();
+        }
+        get eventId() {
+            var _a;
+            return ((_a = this.authWindow) === null || _a === void 0 ? void 0 : _a.associatedEvent) || null;
+        }
+        cancel() {
+            this.reject(_createError(this.auth, "cancelled-popup-request" /* EXPIRED_POPUP_REQUEST */));
+        }
+        cleanUp() {
+            if (this.authWindow) {
+                this.authWindow.close();
+            }
+            if (this.pollId) {
+                window.clearTimeout(this.pollId);
+            }
+            this.authWindow = null;
+            this.pollId = null;
+            PopupOperation.currentPopupAction = null;
+        }
+        pollUserCancellation() {
+            const poll = () => {
+                var _a, _b;
+                if ((_b = (_a = this.authWindow) === null || _a === void 0 ? void 0 : _a.window) === null || _b === void 0 ? void 0 : _b.closed) {
+                    // Make sure that there is sufficient time for whatever action to
+                    // complete. The window could have closed but the sign in network
+                    // call could still be in flight.
+                    this.pollId = window.setTimeout(() => {
+                        this.pollId = null;
+                        this.reject(_createError(this.auth, "popup-closed-by-user" /* POPUP_CLOSED_BY_USER */));
+                    }, 2000 /* AUTH_EVENT */);
+                    return;
+                }
+                this.pollId = window.setTimeout(poll, _POLL_WINDOW_CLOSE_TIMEOUT.get());
+            };
+            poll();
+        }
+    }
+    // Only one popup is ever shown at once. The lifecycle of the current popup
+    // can be managed / cancelled by the constructor.
+    PopupOperation.currentPopupAction = null;
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const PENDING_REDIRECT_KEY = 'pendingRedirect';
+    // We only get one redirect outcome for any one auth, so just store it
+    // in here.
+    const redirectOutcomeMap = new Map();
+    class RedirectAction extends AbstractPopupRedirectOperation {
+        constructor(auth, resolver, bypassAuthState = false) {
+            super(auth, [
+                "signInViaRedirect" /* SIGN_IN_VIA_REDIRECT */,
+                "linkViaRedirect" /* LINK_VIA_REDIRECT */,
+                "reauthViaRedirect" /* REAUTH_VIA_REDIRECT */,
+                "unknown" /* UNKNOWN */
+            ], resolver, undefined, bypassAuthState);
+            this.eventId = null;
+        }
+        /**
+         * Override the execute function; if we already have a redirect result, then
+         * just return it.
+         */
+        async execute() {
+            let readyOutcome = redirectOutcomeMap.get(this.auth._key());
+            if (!readyOutcome) {
+                try {
+                    const hasPendingRedirect = await _getAndClearPendingRedirectStatus(this.resolver, this.auth);
+                    const result = hasPendingRedirect ? await super.execute() : null;
+                    readyOutcome = () => Promise.resolve(result);
+                }
+                catch (e) {
+                    readyOutcome = () => Promise.reject(e);
+                }
+                redirectOutcomeMap.set(this.auth._key(), readyOutcome);
+            }
+            // If we're not bypassing auth state, the ready outcome should be set to
+            // null.
+            if (!this.bypassAuthState) {
+                redirectOutcomeMap.set(this.auth._key(), () => Promise.resolve(null));
+            }
+            return readyOutcome();
+        }
+        async onAuthEvent(event) {
+            if (event.type === "signInViaRedirect" /* SIGN_IN_VIA_REDIRECT */) {
+                return super.onAuthEvent(event);
+            }
+            else if (event.type === "unknown" /* UNKNOWN */) {
+                // This is a sentinel value indicating there's no pending redirect
+                this.resolve(null);
+                return;
+            }
+            if (event.eventId) {
+                const user = await this.auth._redirectUserForId(event.eventId);
+                if (user) {
+                    this.user = user;
+                    return super.onAuthEvent(event);
+                }
+                else {
+                    this.resolve(null);
+                }
+            }
+        }
+        async onExecution() { }
+        cleanUp() { }
+    }
+    async function _getAndClearPendingRedirectStatus(resolver, auth) {
+        const key = pendingRedirectKey(auth);
+        const persistence = resolverPersistence(resolver);
+        if (!(await persistence._isAvailable())) {
+            return false;
+        }
+        const hasPendingRedirect = (await persistence._get(key)) === 'true';
+        await persistence._remove(key);
+        return hasPendingRedirect;
+    }
+    function resolverPersistence(resolver) {
+        return _getInstance(resolver._redirectPersistence);
+    }
+    function pendingRedirectKey(auth) {
+        return _persistenceKeyName(PENDING_REDIRECT_KEY, auth.config.apiKey, auth.name);
+    }
+    async function _getRedirectResult(auth, resolverExtern, bypassAuthState = false) {
+        const authInternal = _castAuth(auth);
+        const resolver = _withDefaultResolver(authInternal, resolverExtern);
+        const action = new RedirectAction(authInternal, resolver, bypassAuthState);
+        const result = await action.execute();
+        if (result && !bypassAuthState) {
+            delete result.user._redirectEventId;
+            await authInternal._persistUserIfCurrent(result.user);
+            await authInternal._setRedirectUser(null, resolverExtern);
+        }
+        return result;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    // The amount of time to store the UIDs of seen events; this is
+    // set to 10 min by default
+    const EVENT_DUPLICATION_CACHE_DURATION_MS = 10 * 60 * 1000;
+    class AuthEventManager {
+        constructor(auth) {
+            this.auth = auth;
+            this.cachedEventUids = new Set();
+            this.consumers = new Set();
+            this.queuedRedirectEvent = null;
+            this.hasHandledPotentialRedirect = false;
+            this.lastProcessedEventTime = Date.now();
+        }
+        registerConsumer(authEventConsumer) {
+            this.consumers.add(authEventConsumer);
+            if (this.queuedRedirectEvent &&
+                this.isEventForConsumer(this.queuedRedirectEvent, authEventConsumer)) {
+                this.sendToConsumer(this.queuedRedirectEvent, authEventConsumer);
+                this.saveEventToCache(this.queuedRedirectEvent);
+                this.queuedRedirectEvent = null;
+            }
+        }
+        unregisterConsumer(authEventConsumer) {
+            this.consumers.delete(authEventConsumer);
+        }
+        onEvent(event) {
+            // Check if the event has already been handled
+            if (this.hasEventBeenHandled(event)) {
+                return false;
+            }
+            let handled = false;
+            this.consumers.forEach(consumer => {
+                if (this.isEventForConsumer(event, consumer)) {
+                    handled = true;
+                    this.sendToConsumer(event, consumer);
+                    this.saveEventToCache(event);
+                }
+            });
+            if (this.hasHandledPotentialRedirect || !isRedirectEvent(event)) {
+                // If we've already seen a redirect before, or this is a popup event,
+                // bail now
+                return handled;
+            }
+            this.hasHandledPotentialRedirect = true;
+            // If the redirect wasn't handled, hang on to it
+            if (!handled) {
+                this.queuedRedirectEvent = event;
+                handled = true;
+            }
+            return handled;
+        }
+        sendToConsumer(event, consumer) {
+            var _a;
+            if (event.error && !isNullRedirectEvent(event)) {
+                const code = ((_a = event.error.code) === null || _a === void 0 ? void 0 : _a.split('auth/')[1]) ||
+                    "internal-error" /* INTERNAL_ERROR */;
+                consumer.onError(_createError(this.auth, code));
+            }
+            else {
+                consumer.onAuthEvent(event);
+            }
+        }
+        isEventForConsumer(event, consumer) {
+            const eventIdMatches = consumer.eventId === null ||
+                (!!event.eventId && event.eventId === consumer.eventId);
+            return consumer.filter.includes(event.type) && eventIdMatches;
+        }
+        hasEventBeenHandled(event) {
+            if (Date.now() - this.lastProcessedEventTime >=
+                EVENT_DUPLICATION_CACHE_DURATION_MS) {
+                this.cachedEventUids.clear();
+            }
+            return this.cachedEventUids.has(eventUid(event));
+        }
+        saveEventToCache(event) {
+            this.cachedEventUids.add(eventUid(event));
+            this.lastProcessedEventTime = Date.now();
+        }
+    }
+    function eventUid(e) {
+        return [e.type, e.eventId, e.sessionId, e.tenantId].filter(v => v).join('-');
+    }
+    function isNullRedirectEvent({ type, error }) {
+        return (type === "unknown" /* UNKNOWN */ &&
+            (error === null || error === void 0 ? void 0 : error.code) === `auth/${"no-auth-event" /* NO_AUTH_EVENT */}`);
+    }
+    function isRedirectEvent(event) {
+        switch (event.type) {
+            case "signInViaRedirect" /* SIGN_IN_VIA_REDIRECT */:
+            case "linkViaRedirect" /* LINK_VIA_REDIRECT */:
+            case "reauthViaRedirect" /* REAUTH_VIA_REDIRECT */:
+                return true;
+            case "unknown" /* UNKNOWN */:
+                return isNullRedirectEvent(event);
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    async function _getProjectConfig(auth, request = {}) {
+        return _performApiRequest(auth, "GET" /* GET */, "/v1/projects" /* GET_PROJECT_CONFIG */, request);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const IP_ADDRESS_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    const HTTP_REGEX = /^https?/;
+    async function _validateOrigin(auth) {
+        // Skip origin validation if we are in an emulated environment
+        if (auth.config.emulator) {
+            return;
+        }
+        const { authorizedDomains } = await _getProjectConfig(auth);
+        for (const domain of authorizedDomains) {
+            try {
+                if (matchDomain(domain)) {
+                    return;
+                }
+            }
+            catch (_a) {
+                // Do nothing if there's a URL error; just continue searching
+            }
+        }
+        // In the old SDK, this error also provides helpful messages.
+        _fail(auth, "unauthorized-domain" /* INVALID_ORIGIN */);
+    }
+    function matchDomain(expected) {
+        const currentUrl = _getCurrentUrl();
+        const { protocol, hostname } = new URL(currentUrl);
+        if (expected.startsWith('chrome-extension://')) {
+            const ceUrl = new URL(expected);
+            if (ceUrl.hostname === '' && hostname === '') {
+                // For some reason we're not parsing chrome URLs properly
+                return (protocol === 'chrome-extension:' &&
+                    expected.replace('chrome-extension://', '') ===
+                        currentUrl.replace('chrome-extension://', ''));
+            }
+            return protocol === 'chrome-extension:' && ceUrl.hostname === hostname;
+        }
+        if (!HTTP_REGEX.test(protocol)) {
+            return false;
+        }
+        if (IP_ADDRESS_REGEX.test(expected)) {
+            // The domain has to be exactly equal to the pattern, as an IP domain will
+            // only contain the IP, no extra character.
+            return hostname === expected;
+        }
+        // Dots in pattern should be escaped.
+        const escapedDomainPattern = expected.replace(/\./g, '\\.');
+        // Non ip address domains.
+        // domain.com = *.domain.com OR domain.com
+        const re = new RegExp('^(.+\\.' + escapedDomainPattern + '|' + escapedDomainPattern + ')$', 'i');
+        return re.test(hostname);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const NETWORK_TIMEOUT = new Delay(30000, 60000);
+    /**
+     * Reset unlaoded GApi modules. If gapi.load fails due to a network error,
+     * it will stop working after a retrial. This is a hack to fix this issue.
+     */
+    function resetUnloadedGapiModules() {
+        // Clear last failed gapi.load state to force next gapi.load to first
+        // load the failed gapi.iframes module.
+        // Get gapix.beacon context.
+        const beacon = _window().___jsl;
+        // Get current hint.
+        if (beacon === null || beacon === void 0 ? void 0 : beacon.H) {
+            // Get gapi hint.
+            for (const hint of Object.keys(beacon.H)) {
+                // Requested modules.
+                beacon.H[hint].r = beacon.H[hint].r || [];
+                // Loaded modules.
+                beacon.H[hint].L = beacon.H[hint].L || [];
+                // Set requested modules to a copy of the loaded modules.
+                beacon.H[hint].r = [...beacon.H[hint].L];
+                // Clear pending callbacks.
+                if (beacon.CP) {
+                    for (let i = 0; i < beacon.CP.length; i++) {
+                        // Remove all failed pending callbacks.
+                        beacon.CP[i] = null;
+                    }
+                }
+            }
+        }
+    }
+    function loadGapi(auth) {
+        return new Promise((resolve, reject) => {
+            var _a, _b, _c;
+            // Function to run when gapi.load is ready.
+            function loadGapiIframe() {
+                // The developer may have tried to previously run gapi.load and failed.
+                // Run this to fix that.
+                resetUnloadedGapiModules();
+                gapi.load('gapi.iframes', {
+                    callback: () => {
+                        resolve(gapi.iframes.getContext());
+                    },
+                    ontimeout: () => {
+                        // The above reset may be sufficient, but having this reset after
+                        // failure ensures that if the developer calls gapi.load after the
+                        // connection is re-established and before another attempt to embed
+                        // the iframe, it would work and would not be broken because of our
+                        // failed attempt.
+                        // Timeout when gapi.iframes.Iframe not loaded.
+                        resetUnloadedGapiModules();
+                        reject(_createError(auth, "network-request-failed" /* NETWORK_REQUEST_FAILED */));
+                    },
+                    timeout: NETWORK_TIMEOUT.get()
+                });
+            }
+            if ((_b = (_a = _window().gapi) === null || _a === void 0 ? void 0 : _a.iframes) === null || _b === void 0 ? void 0 : _b.Iframe) {
+                // If gapi.iframes.Iframe available, resolve.
+                resolve(gapi.iframes.getContext());
+            }
+            else if (!!((_c = _window().gapi) === null || _c === void 0 ? void 0 : _c.load)) {
+                // Gapi loader ready, load gapi.iframes.
+                loadGapiIframe();
+            }
+            else {
+                // Create a new iframe callback when this is called so as not to overwrite
+                // any previous defined callback. This happens if this method is called
+                // multiple times in parallel and could result in the later callback
+                // overwriting the previous one. This would end up with a iframe
+                // timeout.
+                const cbName = _generateCallbackName('iframefcb');
+                // GApi loader not available, dynamically load platform.js.
+                _window()[cbName] = () => {
+                    // GApi loader should be ready.
+                    if (!!gapi.load) {
+                        loadGapiIframe();
+                    }
+                    else {
+                        // Gapi loader failed, throw error.
+                        reject(_createError(auth, "network-request-failed" /* NETWORK_REQUEST_FAILED */));
+                    }
+                };
+                // Load GApi loader.
+                return _loadJS(`https://apis.google.com/js/api.js?onload=${cbName}`).catch(e => reject(e));
+            }
+        }).catch(error => {
+            // Reset cached promise to allow for retrial.
+            cachedGApiLoader = null;
+            throw error;
+        });
+    }
+    let cachedGApiLoader = null;
+    function _loadGapi(auth) {
+        cachedGApiLoader = cachedGApiLoader || loadGapi(auth);
+        return cachedGApiLoader;
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const PING_TIMEOUT = new Delay(5000, 15000);
+    const IFRAME_PATH = '__/auth/iframe';
+    const EMULATED_IFRAME_PATH = 'emulator/auth/iframe';
+    const IFRAME_ATTRIBUTES = {
+        style: {
+            position: 'absolute',
+            top: '-100px',
+            width: '1px',
+            height: '1px'
+        },
+        'aria-hidden': 'true',
+        tabindex: '-1'
+    };
+    // Map from apiHost to endpoint ID for passing into iframe. In current SDK, apiHost can be set to
+    // anything (not from a list of endpoints with IDs as in legacy), so this is the closest we can get.
+    const EID_FROM_APIHOST = new Map([
+        ["identitytoolkit.googleapis.com" /* API_HOST */, 'p'],
+        ['staging-identitytoolkit.sandbox.googleapis.com', 's'],
+        ['test-identitytoolkit.sandbox.googleapis.com', 't'] // test
+    ]);
+    function getIframeUrl(auth) {
+        const config = auth.config;
+        _assert(config.authDomain, auth, "auth-domain-config-required" /* MISSING_AUTH_DOMAIN */);
+        const url = config.emulator
+            ? _emulatorUrl(config, EMULATED_IFRAME_PATH)
+            : `https://${auth.config.authDomain}/${IFRAME_PATH}`;
+        const params = {
+            apiKey: config.apiKey,
+            appName: auth.name,
+            v: SDK_VERSION
+        };
+        const eid = EID_FROM_APIHOST.get(auth.config.apiHost);
+        if (eid) {
+            params.eid = eid;
+        }
+        const frameworks = auth._getFrameworks();
+        if (frameworks.length) {
+            params.fw = frameworks.join(',');
+        }
+        return `${url}?${querystring(params).slice(1)}`;
+    }
+    async function _openIframe(auth) {
+        const context = await _loadGapi(auth);
+        const gapi = _window().gapi;
+        _assert(gapi, auth, "internal-error" /* INTERNAL_ERROR */);
+        return context.open({
+            where: document.body,
+            url: getIframeUrl(auth),
+            messageHandlersFilter: gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER,
+            attributes: IFRAME_ATTRIBUTES,
+            dontclear: true
+        }, (iframe) => new Promise(async (resolve, reject) => {
+            await iframe.restyle({
+                // Prevent iframe from closing on mouse out.
+                setHideOnLeave: false
+            });
+            const networkError = _createError(auth, "network-request-failed" /* NETWORK_REQUEST_FAILED */);
+            // Confirm iframe is correctly loaded.
+            // To fallback on failure, set a timeout.
+            const networkErrorTimer = _window().setTimeout(() => {
+                reject(networkError);
+            }, PING_TIMEOUT.get());
+            // Clear timer and resolve pending iframe ready promise.
+            function clearTimerAndResolve() {
+                _window().clearTimeout(networkErrorTimer);
+                resolve(iframe);
+            }
+            // This returns an IThenable. However the reject part does not call
+            // when the iframe is not loaded.
+            iframe.ping(clearTimerAndResolve).then(clearTimerAndResolve, () => {
+                reject(networkError);
+            });
+        }));
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC.
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    const BASE_POPUP_OPTIONS = {
+        location: 'yes',
+        resizable: 'yes',
+        statusbar: 'yes',
+        toolbar: 'no'
+    };
+    const DEFAULT_WIDTH = 500;
+    const DEFAULT_HEIGHT = 600;
+    const TARGET_BLANK = '_blank';
+    const FIREFOX_EMPTY_URL = 'http://localhost';
+    class AuthPopup {
+        constructor(window) {
+            this.window = window;
+            this.associatedEvent = null;
+        }
+        close() {
+            if (this.window) {
+                try {
+                    this.window.close();
+                }
+                catch (e) { }
+            }
+        }
+    }
+    function _open(auth, url, name, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT) {
+        const top = Math.max((window.screen.availHeight - height) / 2, 0).toString();
+        const left = Math.max((window.screen.availWidth - width) / 2, 0).toString();
+        let target = '';
+        const options = Object.assign(Object.assign({}, BASE_POPUP_OPTIONS), { width: width.toString(), height: height.toString(), top,
+            left });
+        // Chrome iOS 7 and 8 is returning an undefined popup win when target is
+        // specified, even though the popup is not necessarily blocked.
+        const ua = getUA().toLowerCase();
+        if (name) {
+            target = _isChromeIOS(ua) ? TARGET_BLANK : name;
+        }
+        if (_isFirefox(ua)) {
+            // Firefox complains when invalid URLs are popped out. Hacky way to bypass.
+            url = url || FIREFOX_EMPTY_URL;
+            // Firefox disables by default scrolling on popup windows, which can create
+            // issues when the user has many Google accounts, for instance.
+            options.scrollbars = 'yes';
+        }
+        const optionsString = Object.entries(options).reduce((accum, [key, value]) => `${accum}${key}=${value},`, '');
+        if (_isIOSStandalone(ua) && target !== '_self') {
+            openAsNewWindowIOS(url || '', target);
+            return new AuthPopup(null);
+        }
+        // about:blank getting sanitized causing browsers like IE/Edge to display
+        // brief error message before redirecting to handler.
+        const newWin = window.open(url || '', target, optionsString);
+        _assert(newWin, auth, "popup-blocked" /* POPUP_BLOCKED */);
+        // Flaky on IE edge, encapsulate with a try and catch.
+        try {
+            newWin.focus();
+        }
+        catch (e) { }
+        return new AuthPopup(newWin);
+    }
+    function openAsNewWindowIOS(url, target) {
+        const el = document.createElement('a');
+        el.href = url;
+        el.target = target;
+        const click = document.createEvent('MouseEvent');
+        click.initMouseEvent('click', true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 1, null);
+        el.dispatchEvent(click);
+    }
+
+    /**
+     * @license
+     * Copyright 2021 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * URL for Authentication widget which will initiate the OAuth handshake
+     *
+     * @internal
+     */
+    const WIDGET_PATH = '__/auth/handler';
+    /**
+     * URL for emulated environment
+     *
+     * @internal
+     */
+    const EMULATOR_WIDGET_PATH = 'emulator/auth/handler';
+    function _getRedirectUrl(auth, provider, authType, redirectUrl, eventId, additionalParams) {
+        _assert(auth.config.authDomain, auth, "auth-domain-config-required" /* MISSING_AUTH_DOMAIN */);
+        _assert(auth.config.apiKey, auth, "invalid-api-key" /* INVALID_API_KEY */);
+        const params = {
+            apiKey: auth.config.apiKey,
+            appName: auth.name,
+            authType,
+            redirectUrl,
+            v: SDK_VERSION,
+            eventId
+        };
+        if (provider instanceof FederatedAuthProvider) {
+            provider.setDefaultLanguage(auth.languageCode);
+            params.providerId = provider.providerId || '';
+            if (!isEmpty(provider.getCustomParameters())) {
+                params.customParameters = JSON.stringify(provider.getCustomParameters());
+            }
+            // TODO set additionalParams from the provider as well?
+            for (const [key, value] of Object.entries(additionalParams || {})) {
+                params[key] = value;
+            }
+        }
+        if (provider instanceof BaseOAuthProvider) {
+            const scopes = provider.getScopes().filter(scope => scope !== '');
+            if (scopes.length > 0) {
+                params.scopes = scopes.join(',');
+            }
+        }
+        if (auth.tenantId) {
+            params.tid = auth.tenantId;
+        }
+        // TODO: maybe set eid as endipointId
+        // TODO: maybe set fw as Frameworks.join(",")
+        const paramsDict = params;
+        for (const key of Object.keys(paramsDict)) {
+            if (paramsDict[key] === undefined) {
+                delete paramsDict[key];
+            }
+        }
+        return `${getHandlerBase(auth)}?${querystring(paramsDict).slice(1)}`;
+    }
+    function getHandlerBase({ config }) {
+        if (!config.emulator) {
+            return `https://${config.authDomain}/${WIDGET_PATH}`;
+        }
+        return _emulatorUrl(config, EMULATOR_WIDGET_PATH);
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * The special web storage event
+     *
+     */
+    const WEB_STORAGE_SUPPORT_KEY = 'webStorageSupport';
+    class BrowserPopupRedirectResolver {
+        constructor() {
+            this.eventManagers = {};
+            this.iframes = {};
+            this.originValidationPromises = {};
+            this._redirectPersistence = browserSessionPersistence;
+            this._completeRedirectFn = _getRedirectResult;
+        }
+        // Wrapping in async even though we don't await anywhere in order
+        // to make sure errors are raised as promise rejections
+        async _openPopup(auth, provider, authType, eventId) {
+            var _a;
+            debugAssert((_a = this.eventManagers[auth._key()]) === null || _a === void 0 ? void 0 : _a.manager, '_initialize() not called before _openPopup()');
+            const url = _getRedirectUrl(auth, provider, authType, _getCurrentUrl(), eventId);
+            return _open(auth, url, _generateEventId());
+        }
+        async _openRedirect(auth, provider, authType, eventId) {
+            await this._originValidation(auth);
+            _setWindowLocation(_getRedirectUrl(auth, provider, authType, _getCurrentUrl(), eventId));
+            return new Promise(() => { });
+        }
+        _initialize(auth) {
+            const key = auth._key();
+            if (this.eventManagers[key]) {
+                const { manager, promise } = this.eventManagers[key];
+                if (manager) {
+                    return Promise.resolve(manager);
+                }
+                else {
+                    debugAssert(promise, 'If manager is not set, promise should be');
+                    return promise;
+                }
+            }
+            const promise = this.initAndGetManager(auth);
+            this.eventManagers[key] = { promise };
+            // If the promise is rejected, the key should be removed so that the
+            // operation can be retried later.
+            promise.catch(() => {
+                delete this.eventManagers[key];
+            });
+            return promise;
+        }
+        async initAndGetManager(auth) {
+            const iframe = await _openIframe(auth);
+            const manager = new AuthEventManager(auth);
+            iframe.register('authEvent', (iframeEvent) => {
+                _assert(iframeEvent === null || iframeEvent === void 0 ? void 0 : iframeEvent.authEvent, auth, "invalid-auth-event" /* INVALID_AUTH_EVENT */);
+                // TODO: Consider splitting redirect and popup events earlier on
+                const handled = manager.onEvent(iframeEvent.authEvent);
+                return { status: handled ? "ACK" /* ACK */ : "ERROR" /* ERROR */ };
+            }, gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
+            this.eventManagers[auth._key()] = { manager };
+            this.iframes[auth._key()] = iframe;
+            return manager;
+        }
+        _isIframeWebStorageSupported(auth, cb) {
+            const iframe = this.iframes[auth._key()];
+            iframe.send(WEB_STORAGE_SUPPORT_KEY, { type: WEB_STORAGE_SUPPORT_KEY }, result => {
+                var _a;
+                const isSupported = (_a = result === null || result === void 0 ? void 0 : result[0]) === null || _a === void 0 ? void 0 : _a[WEB_STORAGE_SUPPORT_KEY];
+                if (isSupported !== undefined) {
+                    cb(!!isSupported);
+                }
+                _fail(auth, "internal-error" /* INTERNAL_ERROR */);
+            }, gapi.iframes.CROSS_ORIGIN_IFRAMES_FILTER);
+        }
+        _originValidation(auth) {
+            const key = auth._key();
+            if (!this.originValidationPromises[key]) {
+                this.originValidationPromises[key] = _validateOrigin(auth);
+            }
+            return this.originValidationPromises[key];
+        }
+        get _shouldInitProactively() {
+            // Mobile browsers and Safari need to optimistically initialize
+            return _isMobileBrowser() || _isSafari() || _isIOS();
+        }
+    }
+    /**
+     * An implementation of {@link PopupRedirectResolver} suitable for browser
+     * based applications.
+     *
+     * @public
+     */
+    const browserPopupRedirectResolver = BrowserPopupRedirectResolver;
+
+    var name = "@firebase/auth";
+    var version = "0.19.9";
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    class AuthInterop {
+        constructor(auth) {
+            this.auth = auth;
+            this.internalListeners = new Map();
+        }
+        getUid() {
+            var _a;
+            this.assertAuthConfigured();
+            return ((_a = this.auth.currentUser) === null || _a === void 0 ? void 0 : _a.uid) || null;
+        }
+        async getToken(forceRefresh) {
+            this.assertAuthConfigured();
+            await this.auth._initializationPromise;
+            if (!this.auth.currentUser) {
+                return null;
+            }
+            const accessToken = await this.auth.currentUser.getIdToken(forceRefresh);
+            return { accessToken };
+        }
+        addAuthTokenListener(listener) {
+            this.assertAuthConfigured();
+            if (this.internalListeners.has(listener)) {
+                return;
+            }
+            const unsubscribe = this.auth.onIdTokenChanged(user => {
+                var _a;
+                listener(((_a = user) === null || _a === void 0 ? void 0 : _a.stsTokenManager.accessToken) || null);
+            });
+            this.internalListeners.set(listener, unsubscribe);
+            this.updateProactiveRefresh();
+        }
+        removeAuthTokenListener(listener) {
+            this.assertAuthConfigured();
+            const unsubscribe = this.internalListeners.get(listener);
+            if (!unsubscribe) {
+                return;
+            }
+            this.internalListeners.delete(listener);
+            unsubscribe();
+            this.updateProactiveRefresh();
+        }
+        assertAuthConfigured() {
+            _assert(this.auth._initializationPromise, "dependent-sdk-initialized-before-auth" /* DEPENDENT_SDK_INIT_BEFORE_AUTH */);
+        }
+        updateProactiveRefresh() {
+            if (this.internalListeners.size > 0) {
+                this.auth._startProactiveRefresh();
+            }
+            else {
+                this.auth._stopProactiveRefresh();
+            }
+        }
+    }
+
+    /**
+     * @license
+     * Copyright 2020 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    function getVersionForPlatform(clientPlatform) {
+        switch (clientPlatform) {
+            case "Node" /* NODE */:
+                return 'node';
+            case "ReactNative" /* REACT_NATIVE */:
+                return 'rn';
+            case "Worker" /* WORKER */:
+                return 'webworker';
+            case "Cordova" /* CORDOVA */:
+                return 'cordova';
+            default:
+                return undefined;
+        }
+    }
+    /** @internal */
+    function registerAuth(clientPlatform) {
+        _registerComponent(new Component("auth" /* AUTH */, (container, { options: deps }) => {
+            const app = container.getProvider('app').getImmediate();
+            const { apiKey, authDomain } = app.options;
+            return (app => {
+                _assert(apiKey && !apiKey.includes(':'), "invalid-api-key" /* INVALID_API_KEY */, { appName: app.name });
+                // Auth domain is optional if IdP sign in isn't being used
+                _assert(!(authDomain === null || authDomain === void 0 ? void 0 : authDomain.includes(':')), "argument-error" /* ARGUMENT_ERROR */, {
+                    appName: app.name
+                });
+                const config = {
+                    apiKey,
+                    authDomain,
+                    clientPlatform,
+                    apiHost: "identitytoolkit.googleapis.com" /* API_HOST */,
+                    tokenApiHost: "securetoken.googleapis.com" /* TOKEN_API_HOST */,
+                    apiScheme: "https" /* API_SCHEME */,
+                    sdkClientVersion: _getClientVersion(clientPlatform)
+                };
+                const authInstance = new AuthImpl(app, config);
+                _initializeAuthInstance(authInstance, deps);
+                return authInstance;
+            })(app);
+        }, "PUBLIC" /* PUBLIC */)
+            /**
+             * Auth can only be initialized by explicitly calling getAuth() or initializeAuth()
+             * For why we do this, See go/firebase-next-auth-init
+             */
+            .setInstantiationMode("EXPLICIT" /* EXPLICIT */)
+            /**
+             * Because all firebase products that depend on auth depend on auth-internal directly,
+             * we need to initialize auth-internal after auth is initialized to make it available to other firebase products.
+             */
+            .setInstanceCreatedCallback((container, _instanceIdentifier, _instance) => {
+            const authInternalProvider = container.getProvider("auth-internal" /* AUTH_INTERNAL */);
+            authInternalProvider.initialize();
+        }));
+        _registerComponent(new Component("auth-internal" /* AUTH_INTERNAL */, container => {
+            const auth = _castAuth(container.getProvider("auth" /* AUTH */).getImmediate());
+            return (auth => new AuthInterop(auth))(auth);
+        }, "PRIVATE" /* PRIVATE */).setInstantiationMode("EXPLICIT" /* EXPLICIT */));
+        registerVersion(name, version, getVersionForPlatform(clientPlatform));
+        // BUILD_TARGET will be replaced by values like esm5, esm2017, cjs5, etc during the compilation
+        registerVersion(name, version, 'esm2017');
+    }
+
+    /**
+     * @license
+     * Copyright 2021 Google LLC
+     *
+     * Licensed under the Apache License, Version 2.0 (the "License");
+     * you may not use this file except in compliance with the License.
+     * You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    /**
+     * Returns the Auth instance associated with the provided {@link @firebase/app#FirebaseApp}.
+     * If no instance exists, initializes an Auth instance with platform-specific default dependencies.
+     *
+     * @param app - The Firebase App.
+     *
+     * @public
+     */
+    function getAuth(app = getApp()) {
+        const provider = _getProvider(app, 'auth');
+        if (provider.isInitialized()) {
+            return provider.getImmediate();
+        }
+        return initializeAuth(app, {
+            popupRedirectResolver: browserPopupRedirectResolver,
+            persistence: [
+                indexedDBLocalPersistence,
+                browserLocalPersistence,
+                browserSessionPersistence
+            ]
+        });
+    }
+    registerAuth("Browser" /* BROWSER */);
+
+    /* src\components\Auth\Auth.svelte generated by Svelte v3.46.2 */
+
+    const { console: console_1$1 } = globals;
+
+    const file$1 = "src\\components\\Auth\\Auth.svelte";
+
+    const get_default_slot_changes = dirty => ({
+    	userDetails: dirty & /*userDetails*/ 1,
+    	loggedIn: dirty & /*loggedIn*/ 2
+    });
+
+    const get_default_slot_context = ctx => ({
+    	userDetails: /*userDetails*/ ctx[0],
+    	loggedIn: /*loggedIn*/ ctx[1]
+    });
+
+    // (60:8) {:else}
+    function create_else_block(ctx) {
+    	let p0;
+    	let t1;
+    	let p1;
+    	let t3;
+    	let p2;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			p0 = element("p");
+    			p0.textContent = "Hi there";
+    			t1 = space();
+    			p1 = element("p");
+    			p1.textContent = "🍺";
+    			t3 = space();
+    			p2 = element("p");
+    			p2.textContent = "SIGN IN";
+    			attr_dev(p0, "class", "auth-bar__welcome svelte-54kpwe");
+    			add_location(p0, file$1, 60, 12, 2085);
+    			attr_dev(p1, "class", "svelte-54kpwe");
+    			add_location(p1, file$1, 61, 12, 2140);
+    			attr_dev(p2, "class", "auth-bar__login svelte-54kpwe");
+    			add_location(p2, file$1, 62, 12, 2163);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p0, anchor);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, p1, anchor);
+    			insert_dev(target, t3, anchor);
+    			insert_dev(target, p2, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(p2, "click", /*signInTrigger*/ ctx[2], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p0);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(p1);
+    			if (detaching) detach_dev(t3);
+    			if (detaching) detach_dev(p2);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block.name,
+    		type: "else",
+    		source: "(60:8) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (56:8) {#if loggedIn}
+    function create_if_block$1(ctx) {
+    	let p0;
+    	let t0;
+    	let t1_value = /*userDetails*/ ctx[0].displayName + "";
+    	let t1;
+    	let t2;
+    	let p1;
+    	let t4;
+    	let p2;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			p0 = element("p");
+    			t0 = text("Welcome ");
+    			t1 = text(t1_value);
+    			t2 = space();
+    			p1 = element("p");
+    			p1.textContent = "🍺";
+    			t4 = space();
+    			p2 = element("p");
+    			p2.textContent = "SIGN OUT";
+    			attr_dev(p0, "class", "auth-bar__welcome svelte-54kpwe");
+    			add_location(p0, file$1, 56, 12, 1886);
+    			attr_dev(p1, "class", "svelte-54kpwe");
+    			add_location(p1, file$1, 57, 12, 1966);
+    			attr_dev(p2, "class", "auth-bar__login svelte-54kpwe");
+    			add_location(p2, file$1, 58, 12, 1989);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p0, anchor);
+    			append_dev(p0, t0);
+    			append_dev(p0, t1);
+    			insert_dev(target, t2, anchor);
+    			insert_dev(target, p1, anchor);
+    			insert_dev(target, t4, anchor);
+    			insert_dev(target, p2, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(p2, "click", /*signOutTrigger*/ ctx[3], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*userDetails*/ 1 && t1_value !== (t1_value = /*userDetails*/ ctx[0].displayName + "")) set_data_dev(t1, t1_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p0);
+    			if (detaching) detach_dev(t2);
+    			if (detaching) detach_dev(p1);
+    			if (detaching) detach_dev(t4);
+    			if (detaching) detach_dev(p2);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$1.name,
+    		type: "if",
+    		source: "(56:8) {#if loggedIn}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$1(ctx) {
+    	let div1;
+    	let t;
+    	let div0;
+    	let current;
+    	const default_slot_template = /*#slots*/ ctx[5].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[4], get_default_slot_context);
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*loggedIn*/ ctx[1]) return create_if_block$1;
+    		return create_else_block;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block = current_block_type(ctx);
+
+    	const block = {
+    		c: function create() {
+    			div1 = element("div");
+    			if (default_slot) default_slot.c();
+    			t = space();
+    			div0 = element("div");
+    			if_block.c();
+    			attr_dev(div0, "class", "auth-bar svelte-54kpwe");
+    			add_location(div0, file$1, 54, 4, 1826);
+    			add_location(div1, file$1, 51, 0, 1769);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div1, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(div1, null);
+    			}
+
+    			append_dev(div1, t);
+    			append_dev(div1, div0);
+    			if_block.m(div0, null);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty & /*$$scope, userDetails, loggedIn*/ 19)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[4],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[4])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[4], dirty, get_default_slot_changes),
+    						get_default_slot_context
+    					);
+    				}
+    			}
+
+    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
+    				if_block.p(ctx, dirty);
+    			} else {
+    				if_block.d(1);
+    				if_block = current_block_type(ctx);
+
+    				if (if_block) {
+    					if_block.c();
+    					if_block.m(div0, null);
+    				}
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div1);
+    			if (default_slot) default_slot.d(detaching);
+    			if_block.d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$1.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$1($$self, $$props, $$invalidate) {
+    	let loggedIn;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Auth', slots, ['default']);
+    	let { userDetails = null } = $$props;
+    	const provider = new GoogleAuthProvider();
+    	const auth = getAuth();
+
+    	getAuth().onAuthStateChanged(user => {
+    		if (user) {
+    			console.log('User is signed in.');
+    			console.log(user);
+    			$$invalidate(0, userDetails = user);
+    		} else {
+    			console.log(' User is signed out.');
+    		}
+    	});
+
+    	const signInTrigger = () => {
+    		signInWithPopup(auth, provider).then(result => {
+    			// This gives you a Google Access Token. You can use it to access the Google API.
+    			const credential = GoogleAuthProvider.credentialFromResult(result);
+
+    			credential.accessToken;
+
+    			// The signed-in user info.
+    			$$invalidate(0, userDetails = result.user);
+    		}).catch(error => {
+    			// Handle Errors here.
+    			error.code;
+
+    			error.message;
+
+    			// The email of the user's account used.
+    			error.email;
+
+    			// The AuthCredential type that was used.
+    			GoogleAuthProvider.credentialFromError(error);
+    		});
+    	};
+
+    	const signOutTrigger = () => {
+    		signOut(auth).then(() => {
+    			// Sign-out successful
+    			console.log('signed ou');
+
+    			$$invalidate(0, userDetails = null);
+    		}).catch(error => {
+    			
+    		}); // An error happened.
+    	};
+
+    	const writable_props = ['userDetails'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<Auth> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ('userDetails' in $$props) $$invalidate(0, userDetails = $$props.userDetails);
+    		if ('$$scope' in $$props) $$invalidate(4, $$scope = $$props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		getAuth,
+    		signInWithPopup,
+    		signOut,
+    		GoogleAuthProvider,
+    		setPersistence,
+    		browserLocalPersistence,
+    		userDetails,
+    		provider,
+    		auth,
+    		signInTrigger,
+    		signOutTrigger,
+    		loggedIn
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('userDetails' in $$props) $$invalidate(0, userDetails = $$props.userDetails);
+    		if ('loggedIn' in $$props) $$invalidate(1, loggedIn = $$props.loggedIn);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*userDetails*/ 1) {
+    			// reactive helper variable
+    			$$invalidate(1, loggedIn = userDetails !== null);
+    		}
+    	};
+
+    	return [userDetails, loggedIn, signInTrigger, signOutTrigger, $$scope, slots];
+    }
+
+    class Auth extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { userDetails: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Auth",
+    			options,
+    			id: create_fragment$1.name
+    		});
+    	}
+
+    	get userDetails() {
+    		throw new Error("<Auth>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set userDetails(value) {
+    		throw new Error("<Auth>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
     /* src\App.svelte generated by Svelte v3.46.2 */
 
     const { console: console_1 } = globals;
     const file = "src\\App.svelte";
 
-    // (51:8) {#key fullList}
+    // (67:8) {#if loggedIn}
+    function create_if_block_1(ctx) {
+    	let button;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "Add pub";
+    			attr_dev(button, "class", "svelte-1m5iylt");
+    			add_location(button, file, 67, 12, 1997);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*toggleAddPub*/ ctx[3], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1.name,
+    		type: "if",
+    		source: "(67:8) {#if loggedIn}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (60:4) <Auth          let:userDetails          let:loggedIn          let:loginWithGoogle          let:loginWithEmailPassword          let:logout      >
+    function create_default_slot(ctx) {
+    	let if_block_anchor;
+    	let if_block = /*loggedIn*/ ctx[4] && create_if_block_1(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*loggedIn*/ ctx[4]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+    				} else {
+    					if_block = create_if_block_1(ctx);
+    					if_block.c();
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot.name,
+    		type: "slot",
+    		source: "(60:4) <Auth          let:userDetails          let:loggedIn          let:loginWithGoogle          let:loginWithEmailPassword          let:logout      >",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (77:8) {#key fullList}
     function create_key_block(ctx) {
     	let publistings;
     	let current;
 
     	publistings = new PubListings({
-    			props: { data: /*fullList*/ ctx[0] },
+    			props: { data: /*fullList*/ ctx[1] },
     			$$inline: true
     		});
 
@@ -15056,7 +22349,7 @@ var app = (function () {
     		},
     		p: function update(ctx, dirty) {
     			const publistings_changes = {};
-    			if (dirty & /*fullList*/ 1) publistings_changes.data = /*fullList*/ ctx[0];
+    			if (dirty & /*fullList*/ 2) publistings_changes.data = /*fullList*/ ctx[1];
     			publistings.$set(publistings_changes);
     		},
     		i: function intro(local) {
@@ -15077,7 +22370,71 @@ var app = (function () {
     		block,
     		id: create_key_block.name,
     		type: "key",
-    		source: "(51:8) {#key fullList}",
+    		source: "(77:8) {#key fullList}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (81:8) {#if showForm}
+    function create_if_block(ctx) {
+    	let addpubs;
+    	let updating_formOpen;
+    	let current;
+
+    	function addpubs_formOpen_binding(value) {
+    		/*addpubs_formOpen_binding*/ ctx[5](value);
+    	}
+
+    	let addpubs_props = {};
+
+    	if (/*showForm*/ ctx[0] !== void 0) {
+    		addpubs_props.formOpen = /*showForm*/ ctx[0];
+    	}
+
+    	addpubs = new AddPubs({ props: addpubs_props, $$inline: true });
+    	binding_callbacks.push(() => bind(addpubs, 'formOpen', addpubs_formOpen_binding));
+    	addpubs.$on("form-submit", /*submitNewPub*/ ctx[2]);
+
+    	const block = {
+    		c: function create() {
+    			create_component(addpubs.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(addpubs, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const addpubs_changes = {};
+
+    			if (!updating_formOpen && dirty & /*showForm*/ 1) {
+    				updating_formOpen = true;
+    				addpubs_changes.formOpen = /*showForm*/ ctx[0];
+    				add_flush_callback(() => updating_formOpen = false);
+    			}
+
+    			addpubs.$set(addpubs_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(addpubs.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(addpubs.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(addpubs, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(81:8) {#if showForm}",
     		ctx
     	});
 
@@ -15086,63 +22443,138 @@ var app = (function () {
 
     function create_fragment(ctx) {
     	let main;
+    	let auth;
+    	let t0;
     	let div;
     	let h1;
-    	let t1;
-    	let previous_key = /*fullList*/ ctx[0];
+    	let t2;
+    	let previous_key = /*fullList*/ ctx[1];
+    	let t3;
+    	let div_class_value;
     	let current;
+
+    	auth = new Auth({
+    			props: {
+    				$$slots: {
+    					default: [
+    						create_default_slot,
+    						({ userDetails, loggedIn, loginWithGoogle, loginWithEmailPassword, logout }) => ({
+    							10: userDetails,
+    							4: loggedIn,
+    							11: loginWithGoogle,
+    							12: loginWithEmailPassword,
+    							13: logout
+    						}),
+    						({ userDetails, loggedIn, loginWithGoogle, loginWithEmailPassword, logout }) => (userDetails ? 1024 : 0) | (loggedIn ? 16 : 0) | (loginWithGoogle ? 2048 : 0) | (loginWithEmailPassword ? 4096 : 0) | (logout ? 8192 : 0)
+    					]
+    				},
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
     	let key_block = create_key_block(ctx);
+    	let if_block = /*showForm*/ ctx[0] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
     			main = element("main");
+    			create_component(auth.$$.fragment);
+    			t0 = space();
     			div = element("div");
     			h1 = element("h1");
     			h1.textContent = "Edinburgh Pub Finder";
-    			t1 = space();
+    			t2 = space();
     			key_block.c();
+    			t3 = space();
+    			if (if_block) if_block.c();
     			attr_dev(h1, "class", "text-center text-4xl md:text-5xl p-6");
-    			add_location(h1, file, 48, 8, 1506);
-    			attr_dev(div, "class", "container mx-auto");
-    			add_location(div, file, 47, 1, 1465);
-    			add_location(main, file, 46, 0, 1456);
+    			add_location(h1, file, 74, 8, 2175);
+    			attr_dev(div, "class", div_class_value = "app-container container " + (/*showForm*/ ctx[0] ? 'form-visible' : '') + " svelte-1m5iylt");
+    			add_location(div, file, 71, 4, 2083);
+    			add_location(main, file, 58, 0, 1803);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
+    			mount_component(auth, main, null);
+    			append_dev(main, t0);
     			append_dev(main, div);
     			append_dev(div, h1);
-    			append_dev(div, t1);
+    			append_dev(div, t2);
     			key_block.m(div, null);
+    			append_dev(div, t3);
+    			if (if_block) if_block.m(div, null);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*fullList*/ 1 && safe_not_equal(previous_key, previous_key = /*fullList*/ ctx[0])) {
+    			const auth_changes = {};
+
+    			if (dirty & /*$$scope, loggedIn*/ 16400) {
+    				auth_changes.$$scope = { dirty, ctx };
+    			}
+
+    			auth.$set(auth_changes);
+
+    			if (dirty & /*fullList*/ 2 && safe_not_equal(previous_key, previous_key = /*fullList*/ ctx[1])) {
     				group_outros();
-    				transition_out(key_block, 1, 1, noop);
+    				transition_out(key_block, 1, 1, noop$1);
     				check_outros();
     				key_block = create_key_block(ctx);
     				key_block.c();
     				transition_in(key_block);
-    				key_block.m(div, null);
+    				key_block.m(div, t3);
     			} else {
     				key_block.p(ctx, dirty);
+    			}
+
+    			if (/*showForm*/ ctx[0]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*showForm*/ 1) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(div, null);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (!current || dirty & /*showForm*/ 1 && div_class_value !== (div_class_value = "app-container container " + (/*showForm*/ ctx[0] ? 'form-visible' : '') + " svelte-1m5iylt")) {
+    				attr_dev(div, "class", div_class_value);
     			}
     		},
     		i: function intro(local) {
     			if (current) return;
+    			transition_in(auth.$$.fragment, local);
     			transition_in(key_block);
+    			transition_in(if_block);
     			current = true;
     		},
     		o: function outro(local) {
+    			transition_out(auth.$$.fragment, local);
     			transition_out(key_block);
+    			transition_out(if_block);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
+    			destroy_component(auth);
     			key_block.d(detaching);
+    			if (if_block) if_block.d();
     		}
     	};
 
@@ -15160,6 +22592,8 @@ var app = (function () {
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
+    	let showForm = false;
+    	let loggedIn = false;
 
     	const firebaseApp = initializeApp({
     		apiKey: "AIzaSyD7IVKm4pg_IG3FIYjzqrjVVet7KocGKcM",
@@ -15171,33 +22605,39 @@ var app = (function () {
     		measurementId: "G-HC10EHXZBN"
     	});
 
-    	const db = Ba();
+    	const db = da();
     	let fullList = new Array();
 
+    	// database stuff
     	const readCollection = async () => {
     		const allPubs = [];
-    		const querySnapshot = await _h(Sa(db, "Pubs"));
+    		const querySnapshot = await qh(na(db, "Pubs"));
 
     		querySnapshot.forEach(doc => {
     			allPubs.push(doc.data());
     		});
 
-    		$$invalidate(0, fullList = allPubs);
+    		$$invalidate(1, fullList = allPubs);
     	};
 
-    	const push = async () => {
-    		try {
-    			const docRef = await Eh(Sa(db, "Pubs"), {
-    				name: "Bow Bar",
-    				atmosphere: 5,
-    				drink_choice: 5,
-    				max_group_size: 5
-    			});
+    	const submitNewPub = event => {
+    		console.log(event.detail);
+    		let payload = event.detail;
+    		payload.submittedBy = user.email;
+    		push(payload);
+    	};
 
+    	const push = async payload => {
+    		try {
+    			const docRef = await zh(na(db, "Pubs"), payload);
     			console.log("Document written with ID: ", docRef.id);
     		} catch(e) {
     			console.error("Error adding document: ", e);
     		}
+    	};
+
+    	const toggleAddPub = () => {
+    		$$invalidate(0, showForm = !showForm);
     	};
 
     	readCollection();
@@ -15207,29 +22647,49 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
+    	function addpubs_formOpen_binding(value) {
+    		showForm = value;
+    		$$invalidate(0, showForm);
+    	}
+
     	$$self.$capture_state = () => ({
     		initializeApp,
-    		getFirestore: Ba,
-    		collection: Sa,
-    		addDoc: Eh,
-    		getDocs: _h,
+    		getFirestore: da,
+    		collection: na,
+    		addDoc: zh,
+    		getDocs: qh,
     		PubListings,
+    		AddPubs,
+    		Auth,
+    		showForm,
+    		loggedIn,
     		firebaseApp,
     		db,
     		fullList,
     		readCollection,
-    		push
+    		submitNewPub,
+    		push,
+    		toggleAddPub
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ('fullList' in $$props) $$invalidate(0, fullList = $$props.fullList);
+    		if ('showForm' in $$props) $$invalidate(0, showForm = $$props.showForm);
+    		if ('loggedIn' in $$props) $$invalidate(4, loggedIn = $$props.loggedIn);
+    		if ('fullList' in $$props) $$invalidate(1, fullList = $$props.fullList);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [fullList];
+    	return [
+    		showForm,
+    		fullList,
+    		submitNewPub,
+    		toggleAddPub,
+    		loggedIn,
+    		addpubs_formOpen_binding
+    	];
     }
 
     class App extends SvelteComponentDev {
@@ -15248,6 +22708,7 @@ var app = (function () {
 
     const app = new App({
     	target: document.body,
+        // hydrate: true,
     });
 
     return app;

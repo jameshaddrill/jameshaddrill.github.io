@@ -9,14 +9,6 @@
     const toggleFilters = () => {
         showFilters = !showFilters;
     }
-
-    const filterClasses = () => {
-        if (!showFilters) {
-            return 'hidden';
-        } else {
-            return 'block'
-        }
-    }
 </script>
 
 <section class="filters flex flex-col md:flex-row justify-center">
@@ -38,25 +30,25 @@
         <input bind:value={name} type="text" id="name" class="filters__input" />
     </div> -->
     {#if showFilters}
-    <div class="filters__section text-center md:text-left md:mr-4 mb-4 md:mb-0">
+    <div class="filters__section">
         <label for="max_group">Group size</label>
-        <input bind:value={groupSize} type="number" id="max_group" class="filters__input w-full md:w-auto" />
+        <input bind:value={groupSize} type="number" id="max_group" class="filters__input" />
     </div>
 
-    <div class="filters__section text-center md:text-left  md:mr-4 mb-4 md:mb-0">
+    <div class="filters__section">
         <label for="food">Food?</label>
 
-        <select name="food" bind:value={food} class="w-full md:w-auto">
+        <select name="food" bind:value={food} class="filters__input">
             <option value="{'both'}">Don't care</option>
             <option value="{true}">Yes</option>
             <option value="{false}">No</option>
         </select>
     </div>
 
-    <div class="filters__section  text-center md:text-left md:mr-4 mb-4 md:mb-0">
+    <div class="filters__section">
         <label for="sport">Shows sport?</label>
 
-        <select name="food" bind:value={sport} class=" w-full md:w-auto">
+        <select name="food" bind:value={sport} class="filters__input">
             <option value="{'both'}">Don't care</option>
             <option value="{true}">Yes</option>
             <option value="{false}">No</option>
@@ -66,5 +58,26 @@
 </section>
 
 <style type="scss">
+    .filters {
+        &__section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        &__input {
+            width: 100%;
+            padding: 0.4rem;
+        }
 
+        @media (min-width: 756px) {
+            &__section {
+                text-align: left;
+                margin-bottom: 0;
+                margin-right: 2rem;
+            }
+
+            &__input {
+                width: auto;
+            }
+        }
+    }
 </style>
